@@ -1,0 +1,87 @@
+package com.nector.userservice.service;
+
+import com.nector.userservice.common.RoleType;
+import com.nector.userservice.common.features.Features;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Service;
+
+/**
+ * Service to initialize sample role-permission mappings
+ * This runs after EnumSyncService to set up default permissions for roles
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class DataInitializationService implements CommandLineRunner {
+    
+    private final RoleManagementService roleManagementService;
+    
+    @Override
+    public void run(String... args) throws Exception {
+        initializeDefaultPermissions();
+    }
+    
+    private void initializeDefaultPermissions() {
+        try {
+            // Admin gets all permissions
+            assignAllPermissionsToAdmin();
+            
+            // Business Development Manager permissions
+            assignPermissionsToRole(RoleType.BUSINESS_DEV_MGR, 
+                Features.DASHBOARD, Features.DISTRIBUTOR, Features.REPORTS);
+            
+            // Account roles permissions
+            assignPermissionsToRole(RoleType.ACCOUNT_MGR, 
+                Features.DASHBOARD, Features.ACCOUNTS, Features.REPORTS);
+            assignPermissionsToRole(RoleType.ACCOUNT_OFFICER, 
+                Features.DASHBOARD, Features.ACCOUNTS);
+            assignPermissionsToRole(RoleType.ACCOUNT_EXECUTIVE, 
+                Features.DASHBOARD, Features.ACCOUNTS);
+            
+            // Sales roles permissions
+            assignPermissionsToRole(RoleType.NATIONAL_SALES_MGR, 
+                Features.DASHBOARD, Features.DISTRIBUTOR, Features.REPORTS);
+            assignPermissionsToRole(RoleType.SALES_OFFICER, 
+                Features.DASHBOARD, Features.DISTRIBUTOR);
+            
+            // HR roles permissions
+            assignPermissionsToRole(RoleType.HR_MGR, 
+                Features.DASHBOARD, Features.HR, Features.USER_RIGHTS, Features.REPORTS);
+            assignPermissionsToRole(RoleType.HR_EXECUTIVE, 
+                Features.DASHBOARD, Features.HR);
+            
+            // Plant roles permissions
+            assignPermissionsToRole(RoleType.PLANT_MGR, 
+                Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_MASTERS, 
+                Features.INVENTORY_TRANSACTIONS, Features.REPORTS);
+            assignPermissionsToRole(RoleType.PLANT_OFFICER, 
+                Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_MASTERS);
+            
+            log.info("Default role-permission mappings initialized successfully");
+        } catch (Exception e) {
+            log.error("Error initializing default permissions: {}", e.getMessage());
+        }
+    }
+    
+    private void assignAllPermissionsToAdmin() {
+        for (Features feature : Features.values()) {
+            try {
+                roleManagementService.assignPermissionToRole(RoleType.ADMIN, feature);
+            } catch (Exception e) {
+                // Permission might already be assigned, ignore
+            }
+        }
+    }
+    
+    private void assignPermissionsToRole(RoleType roleType, Features... features) {
+        for (Features feature : features) {
+            try {
+                roleManagementService.assignPermissionToRole(roleType, feature);
+            } catch (Exception e) {
+                // Permission might already be assigned, ignore
+            }
+        }
+    }
+}

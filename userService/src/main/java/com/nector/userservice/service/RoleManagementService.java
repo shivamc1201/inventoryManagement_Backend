@@ -6,8 +6,10 @@ import com.nector.userservice.common.features.Features;
 import com.nector.userservice.model.Permission;
 import com.nector.userservice.model.Role;
 import com.nector.userservice.model.User;
+import com.nector.userservice.model.UserApproval;
 import com.nector.userservice.repository.PermissionRepository;
 import com.nector.userservice.repository.RoleRepository;
+import com.nector.userservice.repository.UserApprovalRepository;
 import com.nector.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ public class RoleManagementService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
+    private final UserApprovalRepository userApprovalRepository;
     
     @Transactional
     public void assignRoleToUser(Long userId, RoleType roleType) {
@@ -33,6 +36,16 @@ public class RoleManagementService {
         
         user.getRoles().add(role);
         user.setStatus(UserStatus.ACTIVE);
+        
+        UserApproval approval = userApprovalRepository.findByUser(user)
+            .orElseGet(() -> {
+                UserApproval newApproval = new UserApproval();
+                newApproval.setUser(user);
+                return newApproval;
+            });
+        approval.setApprovalStatus("APPROVED");
+        
+        userApprovalRepository.save(approval);
         userRepository.save(user);
     }
     

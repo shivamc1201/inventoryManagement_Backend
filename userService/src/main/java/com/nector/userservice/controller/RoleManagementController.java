@@ -24,7 +24,7 @@ public class RoleManagementController {
             @RequestParam Long userId, 
             @RequestParam RoleType roleType) {
         roleManagementService.assignRoleToUser(userId, roleType);
-        return ResponseEntity.ok("Role assigned successfully");
+        return ResponseEntity.ok("Role assigned successfully: " + roleType);
     }
     
     @DeleteMapping("/remove-user")

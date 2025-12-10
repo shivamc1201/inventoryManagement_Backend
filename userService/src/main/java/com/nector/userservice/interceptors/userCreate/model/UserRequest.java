@@ -55,6 +55,6 @@ public class UserRequest {
     private String zip;
     
     @NotNull(message = "Role type is required")
-    @Schema(description = "User role", example = "USER")
+    @Schema(description = "ACCOUNT_MGR", example = "ACCOUNT_MGR")
     private RoleType roleType;
 }

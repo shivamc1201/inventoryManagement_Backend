@@ -25,14 +25,11 @@ public class DataInitializationService implements CommandLineRunner {
     
     private void initializeDefaultPermissions() {
         try {
-            // Admin gets all permissions
             assignAllPermissionsToAdmin();
             
-            // Business Development Manager permissions
             assignPermissionsToRole(RoleType.BUSINESS_DEV_MGR, 
                 Features.DASHBOARD, Features.DISTRIBUTOR, Features.REPORTS);
             
-            // Account roles permissions
             assignPermissionsToRole(RoleType.ACCOUNT_MGR, 
                 Features.DASHBOARD, Features.ACCOUNTS, Features.REPORTS);
             assignPermissionsToRole(RoleType.ACCOUNT_OFFICER, 
@@ -40,24 +37,38 @@ public class DataInitializationService implements CommandLineRunner {
             assignPermissionsToRole(RoleType.ACCOUNT_EXECUTIVE, 
                 Features.DASHBOARD, Features.ACCOUNTS);
             
-            // Sales roles permissions
             assignPermissionsToRole(RoleType.NATIONAL_SALES_MGR, 
                 Features.DASHBOARD, Features.DISTRIBUTOR, Features.REPORTS);
+            assignPermissionsToRole(RoleType.STATE_SALES_MGR, 
+                Features.DASHBOARD, Features.DISTRIBUTOR, Features.REPORTS);
+            assignPermissionsToRole(RoleType.ZONAL_SALES_MGR, 
+                Features.DASHBOARD, Features.DISTRIBUTOR, Features.REPORTS);
+            assignPermissionsToRole(RoleType.REGIONAL_SALES_MGR, 
+                Features.DASHBOARD, Features.DISTRIBUTOR);
+            assignPermissionsToRole(RoleType.AREA_SALES_MGR, 
+                Features.DASHBOARD, Features.DISTRIBUTOR);
             assignPermissionsToRole(RoleType.SALES_OFFICER, 
                 Features.DASHBOARD, Features.DISTRIBUTOR);
+            assignPermissionsToRole(RoleType.SALES_EXECUTIVE, 
+                Features.DASHBOARD, Features.DISTRIBUTOR);
             
-            // HR roles permissions
             assignPermissionsToRole(RoleType.HR_MGR, 
                 Features.DASHBOARD, Features.HR, Features.USER_RIGHTS, Features.REPORTS);
             assignPermissionsToRole(RoleType.HR_EXECUTIVE, 
                 Features.DASHBOARD, Features.HR);
             
-            // Plant roles permissions
+            assignPermissionsToRole(RoleType.LOGISTICS_MGR, 
+                Features.DASHBOARD, Features.INVENTORY, Features.REPORTS);
+            assignPermissionsToRole(RoleType.LOGISTICS_OFFICER, 
+                Features.DASHBOARD, Features.INVENTORY);
+            
             assignPermissionsToRole(RoleType.PLANT_MGR, 
                 Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_MASTERS, 
                 Features.INVENTORY_TRANSACTIONS, Features.REPORTS);
             assignPermissionsToRole(RoleType.PLANT_OFFICER, 
                 Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_MASTERS);
+            assignPermissionsToRole(RoleType.PLANT_EXECUTIVE, 
+                Features.DASHBOARD, Features.INVENTORY);
             
             log.info("Default role-permission mappings initialized successfully");
         } catch (Exception e) {

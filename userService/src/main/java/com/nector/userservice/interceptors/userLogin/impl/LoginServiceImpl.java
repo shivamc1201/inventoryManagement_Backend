@@ -71,7 +71,8 @@ public class LoginServiceImpl implements LoginService {
             token,
             "Bearer",
             request.getUsername(),
-            "Login successful for =>" + request.getUsername(),
+            "Login successful for" + request.getUsername(),
+            user.getRoleType().name(),
             user.getId(),
             featureDetails,
             featureNames

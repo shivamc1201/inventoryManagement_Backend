@@ -21,6 +21,9 @@ public class LoginResponse {
     @Schema(description = "Login status message", example = "Login successful")
     private String message;
     
+    @Schema(description = "User role type")
+    private String roleType;
+    
     @Schema(description = "User ID")
     private Long userId;
     
@@ -37,11 +40,12 @@ public class LoginResponse {
         this.message = message;
     }
     
-    public LoginResponse(String token, String type, String username, String message, Long userId, List<Object> features, Set<String> featureNames) {
+    public LoginResponse(String token, String type, String username, String message, String roleType, Long userId, List<Object> features, Set<String> featureNames) {
         this.token = token;
         this.type = type;
         this.username = username;
         this.message = message;
+        this.roleType = roleType;
         this.userId = userId;
         this.features = features;
         this.featureNames = featureNames;

@@ -67,6 +67,7 @@ public class RbacService {
         return Map.of(
             "userId", user.getId(),
             "status", user.getStatus().name(),
+            "roleType", "SuperAdmin",
             "features", features.stream()
                 .map(feature -> Map.of(
                     "name", feature.name(),

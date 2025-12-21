@@ -2,6 +2,9 @@ package com.nector.userservice.common;
 
 
 public enum RoleType {
+
+    SUPER_ADMIN("Administration"),
+
     ADMIN("Administration"),
 
     // --- Department Managers/Directors ---

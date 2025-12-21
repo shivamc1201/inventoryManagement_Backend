@@ -48,10 +48,16 @@ public class LoginServiceImpl implements LoginService {
         user = userRepository.findByUsernameWithRolesAndPermissions(request.getUsername())
             .orElse(user);
         
-        Set<Features> features = user.getRoles().stream()
-            .flatMap(role -> role.getPermissions().stream())
-            .map(permission -> permission.getFeature())
-            .collect(Collectors.toSet());
+        Set<Features> features;
+        if (user.getRoleType() == com.nector.userservice.common.RoleType.SUPER_ADMIN) {
+            // Super admin gets all features
+            features = Set.of(Features.values());
+        } else {
+            features = user.getRoles().stream()
+                .flatMap(role -> role.getPermissions().stream())
+                .map(permission -> permission.getFeature())
+                .collect(Collectors.toSet());
+        }
         
         List<Object> featureDetails = features.stream()
             .map(feature -> Map.of(

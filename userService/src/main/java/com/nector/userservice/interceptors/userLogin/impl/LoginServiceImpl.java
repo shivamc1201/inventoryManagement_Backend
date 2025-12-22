@@ -27,20 +27,24 @@ public class LoginServiceImpl implements LoginService {
     
     @Override
     public LoginResponse authenticateUser(LoginRequest request) {
+        log.info("Entering authenticateUser() for username: {}", request.getUsername());
         log.error("Login attempt - Username: {}, Password: {}", request.getUsername(), request.getPassword());
         
         User user = userRepository.findByUsername(request.getUsername())
             .orElse(null);
         
         if (user == null) {
+            log.warn("Exiting authenticateUser() - Username not available: {}", request.getUsername());
             throw new RuntimeException("Username not available");
         }
         
         if (user.getStatus() != UserStatus.ACTIVE) {
+            log.warn("Exiting authenticateUser() - Username inactive: {}", request.getUsername());
             throw new RuntimeException("Username inactive, Contact ADMIN");
         }
         
         if (!user.getPassword().equals(request.getPassword())) {
+            log.warn("Exiting authenticateUser() - Invalid password for username: {}", request.getUsername());
             throw new RuntimeException("Invalid password");
         }
         
@@ -73,7 +77,7 @@ public class LoginServiceImpl implements LoginService {
         
         String token = jwtService.generateToken(request.getUsername());
         
-        return new LoginResponse(
+        LoginResponse response = new LoginResponse(
             token,
             "Bearer",
             request.getUsername(),
@@ -83,5 +87,8 @@ public class LoginServiceImpl implements LoginService {
             featureDetails,
             featureNames
         );
+        
+        log.info("Exiting authenticateUser() - Login successful for username: {}", request.getUsername());
+        return response;
     }
 }

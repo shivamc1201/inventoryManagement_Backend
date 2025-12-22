@@ -12,6 +12,7 @@ import com.nector.userservice.repository.RoleRepository;
 import com.nector.userservice.repository.UserApprovalRepository;
 import com.nector.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,7 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RoleManagementService {
     
     private final UserRepository userRepository;
@@ -28,11 +30,19 @@ public class RoleManagementService {
     
     @Transactional
     public void assignRoleToUser(Long userId, RoleType roleType) {
+        log.info("Entering assignRoleToUser() for userId: {}, roleType: {}", userId, roleType);
+        
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+            .orElseThrow(() -> {
+                log.warn("Exiting assignRoleToUser() - User not found: {}", userId);
+                return new RuntimeException("User not found");
+            });
         
         Role role = roleRepository.findByRoleType(roleType)
-            .orElseThrow(() -> new RuntimeException("Role not found"));
+            .orElseThrow(() -> {
+                log.warn("Exiting assignRoleToUser() - Role not found: {}", roleType);
+                return new RuntimeException("Role not found");
+            });
         
         user.getRoles().add(role);
         user.setStatus(UserStatus.ACTIVE);
@@ -47,51 +57,89 @@ public class RoleManagementService {
         
         userApprovalRepository.save(approval);
         userRepository.save(user);
+        
+        log.info("Exiting assignRoleToUser() - Role assigned successfully for userId: {}, roleType: {}", userId, roleType);
     }
     
     @Transactional
     public void removeRoleFromUser(Long userId, RoleType roleType) {
+        log.info("Entering removeRoleFromUser() for userId: {}, roleType: {}", userId, roleType);
+        
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+            .orElseThrow(() -> {
+                log.warn("Exiting removeRoleFromUser() - User not found: {}", userId);
+                return new RuntimeException("User not found");
+            });
         
         Role role = roleRepository.findByRoleType(roleType)
-            .orElseThrow(() -> new RuntimeException("Role not found"));
+            .orElseThrow(() -> {
+                log.warn("Exiting removeRoleFromUser() - Role not found: {}", roleType);
+                return new RuntimeException("Role not found");
+            });
         
         user.getRoles().remove(role);
         userRepository.save(user);
+        
+        log.info("Exiting removeRoleFromUser() - Role removed successfully for userId: {}, roleType: {}", userId, roleType);
     }
     
     @Transactional
     public void assignPermissionToRole(RoleType roleType, Features feature) {
+        log.info("Entering assignPermissionToRole() for roleType: {}, feature: {}", roleType, feature);
+        
         Role role = roleRepository.findByRoleType(roleType)
-            .orElseThrow(() -> new RuntimeException("Role not found"));
+            .orElseThrow(() -> {
+                log.warn("Exiting assignPermissionToRole() - Role not found: {}", roleType);
+                return new RuntimeException("Role not found");
+            });
         
         Permission permission = permissionRepository.findByFeature(feature)
-            .orElseThrow(() -> new RuntimeException("Permission not found"));
+            .orElseThrow(() -> {
+                log.warn("Exiting assignPermissionToRole() - Permission not found: {}", feature);
+                return new RuntimeException("Permission not found");
+            });
         
         role.getPermissions().add(permission);
         roleRepository.save(role);
+        
+        log.info("Exiting assignPermissionToRole() - Permission assigned successfully for roleType: {}, feature: {}", roleType, feature);
     }
     
     @Transactional
     public void removePermissionFromRole(RoleType roleType, Features feature) {
+        log.info("Entering removePermissionFromRole() for roleType: {}, feature: {}", roleType, feature);
+        
         Role role = roleRepository.findByRoleType(roleType)
-            .orElseThrow(() -> new RuntimeException("Role not found"));
+            .orElseThrow(() -> {
+                log.warn("Exiting removePermissionFromRole() - Role not found: {}", roleType);
+                return new RuntimeException("Role not found");
+            });
         
         Permission permission = permissionRepository.findByFeature(feature)
-            .orElseThrow(() -> new RuntimeException("Permission not found"));
+            .orElseThrow(() -> {
+                log.warn("Exiting removePermissionFromRole() - Permission not found: {}", feature);
+                return new RuntimeException("Permission not found");
+            });
         
         role.getPermissions().remove(permission);
         roleRepository.save(role);
+        
+        log.info("Exiting removePermissionFromRole() - Permission removed successfully for roleType: {}, feature: {}", roleType, feature);
     }
     
     @Transactional(readOnly = true)
     public Set<Role> getAllRoles() {
-        return Set.copyOf(roleRepository.findAll());
+        log.info("Entering getAllRoles()");
+        Set<Role> roles = Set.copyOf(roleRepository.findAll());
+        log.info("Exiting getAllRoles() with {} roles", roles.size());
+        return roles;
     }
     
     @Transactional(readOnly = true)
     public Set<Permission> getAllPermissions() {
-        return Set.copyOf(permissionRepository.findAll());
+        log.info("Entering getAllPermissions()");
+        Set<Permission> permissions = Set.copyOf(permissionRepository.findAll());
+        log.info("Exiting getAllPermissions() with {} permissions", permissions.size());
+        return permissions;
     }
 }

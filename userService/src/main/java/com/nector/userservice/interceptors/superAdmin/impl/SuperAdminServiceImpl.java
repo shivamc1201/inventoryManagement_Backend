@@ -12,12 +12,14 @@ import com.nector.userservice.repository.SuperAdminRepository;
 import com.nector.userservice.repository.UserApprovalRepository;
 import com.nector.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SuperAdminServiceImpl implements SuperAdminService {
     
     private final UserApprovalRepository userApprovalRepository;
@@ -26,18 +28,26 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     
     @Override
     public List<UserApproval> getPendingApprovals() {
-        return userApprovalRepository.findByApprovalStatus("PENDING");
+        log.info("Entering getPendingApprovals()");
+        List<UserApproval> result = userApprovalRepository.findByApprovalStatus("PENDING");
+        log.info("Exiting getPendingApprovals() with {} pending approvals", result.size());
+        return result;
     }
     
     @Override
     public String processApproval(ApprovalRequest request, String superAdminUsername) {
+        log.info("Entering processApproval() with userId: {}, action: {}, superAdmin: {}", 
+                request.getUserId(), request.getAction(), superAdminUsername);
+        
         UserApproval approval = userApprovalRepository.findByUserId(request.getUserId());
         if (approval == null) {
+            log.warn("Exiting processApproval() - Approval request not found for userId: {}", request.getUserId());
             return "Approval request not found";
         }
         
         SuperAdmin superAdmin = superAdminRepository.findByUsername(superAdminUsername);
         if (superAdmin == null) {
+            log.warn("Exiting processApproval() - SuperAdmin not found: {}", superAdminUsername);
             return "SuperAdmin not found";
         }
         
@@ -58,11 +68,15 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         userRepository.save(user);
         userApprovalRepository.save(approval);
         
-        return "User " + request.getAction().toLowerCase() + "d successfully";
+        String result = "User " + request.getAction().toLowerCase() + "d successfully";
+        log.info("Exiting processApproval() with result: {}", result);
+        return result;
     }
     
     @Override
     public SuperAdminLoginResponse login(SuperAdminLoginRequest request) {
+        log.info("Entering login() for username: {}", request.getUsername());
+        
         SuperAdmin superAdmin = superAdminRepository.findByUsername(request.getUsername());
         SuperAdminLoginResponse response = new SuperAdminLoginResponse();
         
@@ -76,8 +90,10 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             response.setFirstName(superAdmin.getFirstName());
             response.setLastName(superAdmin.getLastName());
             response.setMessage("Login successful");
+            log.info("Exiting login() - Login successful for username: {}", request.getUsername());
         } else {
             response.setMessage("Invalid credentials");
+            log.warn("Exiting login() - Invalid credentials for username: {}", request.getUsername());
         }
         
         return response;

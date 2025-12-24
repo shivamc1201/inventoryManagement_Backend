@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -45,6 +46,20 @@ public class User {
     
     @Column(length = 15)
     private String contactNo;
+    
+    @Column(length = 15)
+    private String alternateContactNo;
+    
+    @Column(length = 10)
+    private String bloodGroup;
+    
+    @Column(length = 200)
+    private String completeAddress;
+    
+    private LocalDate dateOfBirth;
+    
+    @Column(length = 10)
+    private String gender;
 
     @Column(length = 50)
     private String otp;

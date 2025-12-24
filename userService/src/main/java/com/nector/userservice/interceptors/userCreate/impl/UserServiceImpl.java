@@ -10,10 +10,12 @@ import com.nector.userservice.model.UserApproval;
 import com.nector.userservice.repository.UserRepository;
 import com.nector.userservice.repository.UserApprovalRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserServiceImpl implements UserService {
     
     private final UserRepository userRepository;
@@ -21,11 +23,15 @@ public class UserServiceImpl implements UserService {
     
     @Override
     public UserResponse registerNewUser(UserRequest request) throws UsernameAlreadyExistsException {
+        log.info("Entering registerNewUser() for username: {}, email: {}", request.getUsername(), request.getEmail());
+        
         if (userRepository.existsByUsername(request.getUsername())) {
+            log.warn("Exiting registerNewUser() - Username already exists: {}", request.getUsername());
             throw new UsernameAlreadyExistsException("Username already exists: " + request.getUsername());
         }
         
         if (userRepository.existsByEmail(request.getEmail())) {
+            log.warn("Exiting registerNewUser() - Email already exists: {}", request.getEmail());
             throw new UsernameAlreadyExistsException("Email already exists: " + request.getEmail());
         }
         
@@ -61,6 +67,7 @@ public class UserServiceImpl implements UserService {
         response.setRoleType(savedUser.getRoleType());
         response.setCreatedOn(savedUser.getCreatedOn());
         
+        log.info("Exiting registerNewUser() - User registered successfully with ID: {}", savedUser.getId());
         return response;
     }
 }

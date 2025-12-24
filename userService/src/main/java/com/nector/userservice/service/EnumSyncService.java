@@ -23,12 +23,18 @@ public class EnumSyncService {
     @PostConstruct
     @Transactional
     public void syncEnumsWithDatabase() {
+        log.info("Entering syncEnumsWithDatabase()");
+        
         syncRoles();
         syncPermissions();
         log.info("Enum synchronization completed");
+        
+        log.info("Exiting syncEnumsWithDatabase()");
     }
     
     private void syncRoles() {
+        log.debug("Entering syncRoles()");
+        
         for (RoleType roleType : RoleType.values()) {
             roleRepository.findByRoleType(roleType)
                 .orElseGet(() -> {
@@ -39,9 +45,13 @@ public class EnumSyncService {
                     return saved;
                 });
         }
+        
+        log.debug("Exiting syncRoles()");
     }
     
     private void syncPermissions() {
+        log.debug("Entering syncPermissions()");
+        
         for (Features feature : Features.values()) {
             permissionRepository.findByFeature(feature)
                 .orElseGet(() -> {
@@ -52,5 +62,7 @@ public class EnumSyncService {
                     return saved;
                 });
         }
+        
+        log.debug("Exiting syncPermissions()");
     }
 }

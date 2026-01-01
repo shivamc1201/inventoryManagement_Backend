@@ -1,9 +1,9 @@
-package com.nector.userservice.interceptors.superAdmin.model;
+package com.nector.userservice.interceptors.hrMaster.model;
 
 import lombok.Data;
 
 @Data
-public class SuperAdminLoginResponse {
+public class HrMasterLoginResponse {
     private Long id;
     private String username;
     private String email;

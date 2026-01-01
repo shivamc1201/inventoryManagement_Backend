@@ -17,7 +17,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional
 @Slf4j
-public class HrMasterService {
+public class HrService {
     
     private final DepartmentRepository departmentRepository;
     private final DesignationRepository designationRepository;

@@ -1,4 +1,4 @@
-package com.nector.userservice.interceptors.superAdmin.model;
+package com.nector.userservice.interceptors.hrMaster.model;
 
 import lombok.Data;
 

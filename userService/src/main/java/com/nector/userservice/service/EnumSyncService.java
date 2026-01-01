@@ -41,7 +41,7 @@ public class EnumSyncService {
                     Role role = new Role(roleType, roleType.name(), 
                         "Role for " + roleType.getDepartment() + " department");
                     Role saved = roleRepository.save(role);
-                    log.info("Created new role: {}", roleType);
+//                    log.info("Created new role: {}", roleType);
                     return saved;
                 });
         }
@@ -58,7 +58,7 @@ public class EnumSyncService {
                     Permission permission = new Permission(feature, feature.getDisplayName(), 
                         "Permission for " + feature.getDisplayName(), feature.getPath());
                     Permission saved = permissionRepository.save(permission);
-                    log.info("Created new permission: {}", feature);
+//                    log.info("Created new permission: {}", feature);
                     return saved;
                 });
         }

@@ -1,4 +1,5 @@
-inventorypackage com.nector.userservice.dto;
+package com.nector.userservice.dto;
+
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -85,24 +85,24 @@ public class RoleManagementService {
     
     @Transactional
     public void assignPermissionToRole(RoleType roleType, Features feature) {
-        log.info("Entering assignPermissionToRole() for roleType: {}, feature: {}", roleType, feature);
+//        log.info("Entering assignPermissionToRole() for roleType: {}, feature: {}", roleType, feature);
         
         Role role = roleRepository.findByRoleType(roleType)
             .orElseThrow(() -> {
-                log.warn("Exiting assignPermissionToRole() - Role not found: {}", roleType);
+//                log.warn("Exiting assignPermissionToRole() - Role not found: {}", roleType);
                 return new RuntimeException("Role not found");
             });
         
         Permission permission = permissionRepository.findByFeature(feature)
             .orElseThrow(() -> {
-                log.warn("Exiting assignPermissionToRole() - Permission not found: {}", feature);
+//                log.warn("Exiting assignPermissionToRole() - Permission not found: {}", feature);
                 return new RuntimeException("Permission not found");
             });
         
         role.getPermissions().add(permission);
         roleRepository.save(role);
         
-        log.info("Exiting assignPermissionToRole() - Permission assigned successfully for roleType: {}, feature: {}", roleType, feature);
+//        log.info("Exiting assignPermissionToRole() - Permission assigned successfully for roleType: {}, feature: {}", roleType, feature);
     }
     
     @Transactional

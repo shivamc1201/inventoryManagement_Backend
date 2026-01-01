@@ -1,14 +1,14 @@
-package com.nector.userservice.interceptors.superAdmin.impl;
+package com.nector.userservice.interceptors.hrMaster.impl;
 
 import com.nector.userservice.common.UserStatus;
-import com.nector.userservice.interceptors.superAdmin.model.ApprovalRequest;
-import com.nector.userservice.interceptors.superAdmin.model.SuperAdminLoginRequest;
-import com.nector.userservice.interceptors.superAdmin.model.SuperAdminLoginResponse;
-import com.nector.userservice.interceptors.superAdmin.service.SuperAdminService;
-import com.nector.userservice.model.SuperAdmin;
+import com.nector.userservice.interceptors.hrMaster.model.ApprovalRequest;
+import com.nector.userservice.interceptors.hrMaster.model.HrMasterLoginRequest;
+import com.nector.userservice.interceptors.hrMaster.model.HrMasterLoginResponse;
+import com.nector.userservice.interceptors.hrMaster.service.HrMasterService;
+import com.nector.userservice.model.HrMaster;
 import com.nector.userservice.model.User;
 import com.nector.userservice.model.UserApproval;
-import com.nector.userservice.repository.SuperAdminRepository;
+import com.nector.userservice.repository.HrMasterRepository;
 import com.nector.userservice.repository.UserApprovalRepository;
 import com.nector.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,11 +20,11 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class SuperAdminServiceImpl implements SuperAdminService {
+public class HrMasterServiceImpl implements HrMasterService {
     
     private final UserApprovalRepository userApprovalRepository;
     private final UserRepository userRepository;
-    private final SuperAdminRepository superAdminRepository;
+    private final HrMasterRepository hrMasterRepository;
     
     @Override
     public List<UserApproval> getPendingApprovals() {
@@ -35,9 +35,9 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     }
     
     @Override
-    public String processApproval(ApprovalRequest request, String superAdminUsername) {
-        log.info("Entering processApproval() with userId: {}, action: {}, superAdmin: {}", 
-                request.getUserId(), request.getAction(), superAdminUsername);
+    public String processApproval(ApprovalRequest request, String hrMasterUsername) {
+        log.info("Entering processApproval() with userId: {}, action: {}, hrMaster: {}", 
+                request.getUserId(), request.getAction(), hrMasterUsername);
         
         UserApproval approval = userApprovalRepository.findByUserId(request.getUserId());
         if (approval == null) {
@@ -45,10 +45,10 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             return "Approval request not found";
         }
         
-        SuperAdmin superAdmin = superAdminRepository.findByUsername(superAdminUsername);
-        if (superAdmin == null) {
-            log.warn("Exiting processApproval() - SuperAdmin not found: {}", superAdminUsername);
-            return "SuperAdmin not found";
+        HrMaster hrMaster = hrMasterRepository.findByUsername(hrMasterUsername);
+        if (hrMaster == null) {
+            log.warn("Exiting processApproval() - HrMaster not found: {}", hrMasterUsername);
+            return "HrMaster not found";
         }
         
         User user = approval.getUser();
@@ -61,7 +61,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             approval.setApprovalStatus("REJECTED");
         }
         
-        approval.setReviewedBy(superAdmin);
+        approval.setReviewedBy(hrMaster);
         approval.setReviewedOn(LocalDateTime.now());
         approval.setReviewComments(request.getComments());
         
@@ -74,21 +74,21 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     }
     
     @Override
-    public SuperAdminLoginResponse login(SuperAdminLoginRequest request) {
+    public HrMasterLoginResponse login(HrMasterLoginRequest request) {
         log.info("Entering login() for username: {}", request.getUsername());
         
-        SuperAdmin superAdmin = superAdminRepository.findByUsername(request.getUsername());
-        SuperAdminLoginResponse response = new SuperAdminLoginResponse();
+        HrMaster hrMaster = hrMasterRepository.findByUsername(request.getUsername());
+        HrMasterLoginResponse response = new HrMasterLoginResponse();
         
-        if (superAdmin != null && superAdmin.getPassword().equals(request.getPassword())) {
-            superAdmin.setLastLoginTime(LocalDateTime.now());
-            superAdminRepository.save(superAdmin);
+        if (hrMaster != null && hrMaster.getPassword().equals(request.getPassword())) {
+            hrMaster.setLastLoginTime(LocalDateTime.now());
+            hrMasterRepository.save(hrMaster);
             
-            response.setId(superAdmin.getId());
-            response.setUsername(superAdmin.getUsername());
-            response.setEmail(superAdmin.getEmail());
-            response.setFirstName(superAdmin.getFirstName());
-            response.setLastName(superAdmin.getLastName());
+            response.setId(hrMaster.getId());
+            response.setUsername(hrMaster.getUsername());
+            response.setEmail(hrMaster.getEmail());
+            response.setFirstName(hrMaster.getFirstName());
+            response.setLastName(hrMaster.getLastName());
             response.setMessage("Login successful");
             log.info("Exiting login() - Login successful for username: {}", request.getUsername());
         } else {

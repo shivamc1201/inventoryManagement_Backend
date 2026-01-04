@@ -86,7 +86,7 @@ public class UserPermissionController {
     }
 
     //TODO wee will add @preauth to only allow superAdmin
-    @PatchMapping("/user/{userId}")
+    @PatchMapping("/user_edit/{userId}")
     @Operation(summary = "Update user", description = "Updates user information and status")
     @ApiResponse(responseCode = "200", description = "User updated successfully")
     @ApiResponse(responseCode = "400", description = "Invalid input data")

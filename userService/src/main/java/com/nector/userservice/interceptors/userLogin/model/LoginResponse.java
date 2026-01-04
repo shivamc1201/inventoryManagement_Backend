@@ -32,15 +32,19 @@ public class LoginResponse {
     
     @Schema(description = "Feature names for quick lookup")
     private Set<String> featureNames;
+
+    @Schema(description = "LOGIN/LOGOUT status")
+    private String loginStatus;
     
     public LoginResponse(String token, String type, String username, String message) {
         this.token = token;
         this.type = type;
         this.username = username;
         this.message = message;
+        this.loginStatus = "LOGGED_IN";
     }
     
-    public LoginResponse(String token, String type, String username, String message, String roleType, Long userId, List<Object> features, Set<String> featureNames) {
+    public LoginResponse(String token, String type, String username, String message, String roleType, Long userId, List<Object> features, Set<String> featureNames, String loginStatus) {
         this.token = token;
         this.type = type;
         this.username = username;
@@ -49,5 +53,6 @@ public class LoginResponse {
         this.userId = userId;
         this.features = features;
         this.featureNames = featureNames;
+        this.loginStatus = loginStatus;
     }
 }

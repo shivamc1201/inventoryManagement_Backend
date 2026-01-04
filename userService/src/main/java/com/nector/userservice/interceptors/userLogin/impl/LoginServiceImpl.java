@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,6 +44,11 @@ public class LoginServiceImpl implements LoginService {
             throw new RuntimeException("Username inactive, Contact ADMIN");
         }
         
+        if (user.isLoggedIn()) {
+            log.warn("Exiting authenticateUser() - User already logged in: {}", request.getUsername());
+            throw new RuntimeException("User is already logged in");
+        }
+        
         if (!user.getPassword().equals(request.getPassword())) {
             log.warn("Exiting authenticateUser() - Invalid password for username: {}", request.getUsername());
             throw new RuntimeException("Invalid password");
@@ -51,6 +57,11 @@ public class LoginServiceImpl implements LoginService {
         // Get user with roles and permissions for active users
         user = userRepository.findByUsernameWithRolesAndPermissions(request.getUsername())
             .orElse(user);
+        
+        // Update user login status and last login time
+        user.setLoggedIn(true);
+        user.setLastLoginTime(LocalDateTime.now());
+        userRepository.save(user);
         
         Set<Features> features;
         if (user.getRoleType() == com.nector.userservice.common.RoleType.SUPER_ADMIN) {
@@ -85,7 +96,8 @@ public class LoginServiceImpl implements LoginService {
             user.getRoleType().name(),
             user.getId(),
             featureDetails,
-            featureNames
+            featureNames,
+            "LOGGED_IN"
         );
         
         log.info("Exiting authenticateUser() - Login successful for username: {}", request.getUsername());

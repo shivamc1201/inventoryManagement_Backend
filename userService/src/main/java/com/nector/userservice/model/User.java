@@ -77,6 +77,9 @@ public class User {
     private LocalDateTime lastLoginTime;
     
     @Column(nullable = false)
+    private boolean isLoggedIn = false;
+    
+    @Column(nullable = false)
     private LocalDateTime passwordSetDate;
 
     @Enumerated(EnumType.STRING)

@@ -97,7 +97,7 @@ public class UserPermissionController {
         User updatedUser = userService.updateUser(userId, request);
 
         return ResponseEntity.ok(
-                Map.of("message", "User updated successfully", "user", updatedUser)
+                Map.of("message", "User updated successfully", "username", updatedUser.getUsername())
         );
     }
 

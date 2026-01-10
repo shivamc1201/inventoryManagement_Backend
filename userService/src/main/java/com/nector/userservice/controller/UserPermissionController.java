@@ -1,8 +1,10 @@
 package com.nector.userservice.controller;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.nector.userservice.common.UserStatus;
 import com.nector.userservice.common.UserUpdateRequest;
 import com.nector.userservice.common.features.Features;
+import com.nector.userservice.interceptors.userCreate.model.UserResponse;
 import com.nector.userservice.model.User;
 import com.nector.userservice.repository.UserRepository;
 import com.nector.userservice.service.RbacService;
@@ -80,9 +82,24 @@ public class UserPermissionController {
     @GetMapping("/all-users")
     @Operation(summary = "Get all users", description = "Retrieves all users in the system")
     @ApiResponse(responseCode = "200", description = "Users retrieved successfully")
-    public ResponseEntity<List<User>> getAllUsers() {
-        List<User> users = userRepository.findAll();
+    public ResponseEntity<List<UserResponse>> getAllUsers() {
+        List<UserResponse> users = userRepository.findAll().stream()
+            .map(this::mapToUserResponse)
+            .collect(Collectors.toList());
         return ResponseEntity.ok(users);
+    }
+    
+    private UserResponse mapToUserResponse(User user) {
+        UserResponse response = new UserResponse();
+        response.setId(user.getId());
+        response.setUsername(user.getUsername());
+        response.setEmail(user.getEmail());
+        response.setStatus(user.getStatus());
+        response.setFirstName(user.getFirstName());
+        response.setLastName(user.getLastName());
+        response.setCreatedOn(user.getCreatedOn());
+        response.setRoleType(user.getRoleType());
+        return response;
     }
 
     //TODO wee will add @preauth to only allow superAdmin

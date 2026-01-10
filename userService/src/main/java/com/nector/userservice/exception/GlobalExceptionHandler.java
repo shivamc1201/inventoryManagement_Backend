@@ -79,6 +79,27 @@ public class GlobalExceptionHandler {
         error.put("error", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
+    
+    @ExceptionHandler(FinishedProductNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleFinishedProductNotFound(FinishedProductNotFoundException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+    
+    @ExceptionHandler(RawProductNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleRawProductNotFound(RawProductNotFoundException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+    
+    @ExceptionHandler(MachinePartNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleMachinePartNotFound(MachinePartNotFoundException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
 
 }
 

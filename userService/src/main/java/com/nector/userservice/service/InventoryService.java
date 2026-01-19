@@ -24,7 +24,7 @@ public class InventoryService {
     
     @Transactional
     public ItemResponse createItem(ItemRequest request) {
-        log.info("Creating item with SKU: {}", request.getSku());
+         log.info("Creating item with SKU: {}", request.getSku());
         
         if (itemRepository.existsBySku(request.getSku())) {
             throw new DataIntegrityViolationException("Item with SKU " + request.getSku() + " already exists");

@@ -38,7 +38,7 @@ public class FinishedProduct {
     @Column(nullable = false)
     private Integer quantity = 0;
     
-    @Column(nullable = false)
+    @Column(nullable = false, name = "minimum_threshold")
     private Integer minimumThreshold = 0;
     
     @Column(nullable = false)

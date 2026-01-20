@@ -39,15 +39,18 @@ public class UserServiceImpl implements UserService {
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         user.setPassword(request.getPassword());
-        user.setStatus(request.getStatus());
+        user.setStatus(UserStatus.PENDING);
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setContactNo(request.getContactNo());
+        user.setAlternateContactNo(request.getAlternateContactNo());
+        user.setBloodGroup(request.getBloodGroup());
+        user.setCompleteAddress(request.getCompleteAddress());
+        user.setGender(request.getGender());
         user.setCity(request.getCity());
         user.setCountry(request.getCountry());
         user.setZip(request.getZip());
         user.setRoleType(request.getRoleType());
-        user.setStatus(UserStatus.PENDING);
         user.setDateOfBirth(request.getDateOfBirth());
         user.setOtp("1234"); // Default OTP since OTP service is disabled
         
@@ -66,12 +69,19 @@ public class UserServiceImpl implements UserService {
         response.setLastName(savedUser.getLastName());
         response.setStatus(savedUser.getStatus());
         response.setContactNo(savedUser.getContactNo());
+        response.setAlternateContactNo(savedUser.getAlternateContactNo());
+        response.setBloodGroup(savedUser.getBloodGroup());
+        response.setCompleteAddress(savedUser.getCompleteAddress());
+        response.setGender(savedUser.getGender());
         response.setCity(savedUser.getCity());
         response.setCountry(savedUser.getCountry());
         response.setZip(savedUser.getZip());
         response.setRoleType(savedUser.getRoleType());
         response.setDateOfBirth(savedUser.getDateOfBirth());
         response.setCreatedOn(savedUser.getCreatedOn());
+        response.setLastLoginTime(savedUser.getLastLoginTime());
+        response.setLoggedIn(savedUser.isLoggedIn());
+        response.setPasswordSetDate(savedUser.getPasswordSetDate());
         
         log.info("Exiting registerNewUser() - User registered successfully with ID: {}", savedUser.getId());
         return response;

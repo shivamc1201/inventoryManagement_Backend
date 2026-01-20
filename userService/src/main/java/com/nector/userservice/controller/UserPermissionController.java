@@ -89,16 +89,28 @@ public class UserPermissionController {
         return ResponseEntity.ok(users);
     }
     
-    private UserResponse mapToUserResponse(User user) {
+    private UserResponse mapToUserResponse(User savedUser) {
         UserResponse response = new UserResponse();
-        response.setId(user.getId());
-        response.setUsername(user.getUsername());
-        response.setEmail(user.getEmail());
-        response.setStatus(user.getStatus());
-        response.setFirstName(user.getFirstName());
-        response.setLastName(user.getLastName());
-        response.setCreatedOn(user.getCreatedOn());
-        response.setRoleType(user.getRoleType());
+        response.setId(savedUser.getId());
+        response.setUsername(savedUser.getUsername());
+        response.setEmail(savedUser.getEmail());
+        response.setFirstName(savedUser.getFirstName());
+        response.setLastName(savedUser.getLastName());
+        response.setStatus(savedUser.getStatus());
+        response.setContactNo(savedUser.getContactNo());
+        response.setAlternateContactNo(savedUser.getAlternateContactNo());
+        response.setBloodGroup(savedUser.getBloodGroup());
+        response.setCompleteAddress(savedUser.getCompleteAddress());
+        response.setGender(savedUser.getGender());
+        response.setCity(savedUser.getCity());
+        response.setCountry(savedUser.getCountry());
+        response.setZip(savedUser.getZip());
+        response.setRoleType(savedUser.getRoleType());
+        response.setDateOfBirth(savedUser.getDateOfBirth());
+        response.setCreatedOn(savedUser.getCreatedOn());
+        response.setLastLoginTime(savedUser.getLastLoginTime());
+        response.setLoggedIn(savedUser.isLoggedIn());
+        response.setPasswordSetDate(savedUser.getPasswordSetDate());
         return response;
     }
 

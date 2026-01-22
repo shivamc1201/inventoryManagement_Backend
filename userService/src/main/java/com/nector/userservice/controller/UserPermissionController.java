@@ -1,6 +1,7 @@
 package com.nector.userservice.controller;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.nector.userservice.common.RoleType;
 import com.nector.userservice.common.UserStatus;
 import com.nector.userservice.common.UserUpdateRequest;
 import com.nector.userservice.common.features.Features;
@@ -127,6 +128,20 @@ public class UserPermissionController {
 
         return ResponseEntity.ok(
                 Map.of("message", "User updated successfully", "username", updatedUser.getUsername())
+        );
+    }
+
+
+    @PutMapping("/user_edit/{userId}")
+    @Operation(summary = "Remove user", description = "Rejects a specific user")
+    @ApiResponse(responseCode = "200", description = "User removed successfully")
+    public ResponseEntity<?> removalOfUser(
+            @PathVariable Long userId,
+            @Valid @RequestBody UserUpdateRequest request)  {
+        User updatedUser = userService.updateUser(userId, request);
+
+        return ResponseEntity.ok(
+                Map.of("message", "User rejected successfully", "username", updatedUser.getUsername() )
         );
     }
 

@@ -1,6 +1,7 @@
 package com.nector.userservice.interceptors.hrMaster.impl;
 
 import com.nector.userservice.common.UserStatus;
+import com.nector.userservice.common.RoleType;
 import com.nector.userservice.interceptors.hrMaster.model.ApprovalRequest;
 import com.nector.userservice.interceptors.hrMaster.model.HrMasterLoginRequest;
 import com.nector.userservice.interceptors.hrMaster.model.HrMasterLoginResponse;
@@ -97,5 +98,21 @@ public class HrMasterServiceImpl implements HrMasterService {
         }
         
         return response;
+    }
+    
+    @Override
+    public List<User> getAllSalespersons() {
+        log.info("Entering getAllSalespersons()");
+        List<User> salespersons = userRepository.findByRoleTypeIn(List.of(
+            RoleType.NATIONAL_SALES_MGR,
+            RoleType.STATE_SALES_MGR,
+            RoleType.ZONAL_SALES_MGR,
+            RoleType.REGIONAL_SALES_MGR,
+            RoleType.AREA_SALES_MGR,
+            RoleType.SALES_OFFICER,
+            RoleType.SALES_EXECUTIVE
+        ));
+        log.info("Exiting getAllSalespersons() with {} salespersons found", salespersons.size());
+        return salespersons;
     }
 }

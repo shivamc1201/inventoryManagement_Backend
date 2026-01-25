@@ -4,6 +4,7 @@ import com.nector.userservice.interceptors.hrMaster.model.ApprovalRequest;
 import com.nector.userservice.interceptors.hrMaster.model.HrMasterLoginRequest;
 import com.nector.userservice.interceptors.hrMaster.model.HrMasterLoginResponse;
 import com.nector.userservice.interceptors.hrMaster.service.HrMasterService;
+import com.nector.userservice.model.User;
 import com.nector.userservice.model.UserApproval;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -39,12 +40,11 @@ public class HrMasterController {
         return ResponseEntity.ok(result);
     }
     
-//    @PostMapping("/login")
-//    @Operation(summary = "HR master login", description = "Authenticates HR master with credentials")
-//    @ApiResponse(responseCode = "200", description = "Login successful")
-//    @ApiResponse(responseCode = "401", description = "Invalid credentials")
-//    public ResponseEntity<HrMasterLoginResponse> login(@RequestBody HrMasterLoginRequest request) {
-//        HrMasterLoginResponse response = hrMasterService.login(request);
-//        return ResponseEntity.ok(response);
-//    }
+    @GetMapping("/salespersons")
+    @Operation(summary = "Get all salespersons", description = "Retrieves all users with salesperson role")
+    @ApiResponse(responseCode = "200", description = "Salespersons retrieved successfully")
+    public ResponseEntity<List<User>> getAllSalespersons() {
+        List<User> salespersons = hrMasterService.getAllSalespersons();
+        return ResponseEntity.ok(salespersons);
+    }
 }

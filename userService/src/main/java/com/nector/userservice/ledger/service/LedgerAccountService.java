@@ -49,6 +49,7 @@ public class LedgerAccountService {
         LedgerAccount account = new LedgerAccount(
                 request.getCompanyId(),
                 request.getDistributorId(),
+                request.getSalespersonId(),
                 request.getAccountName(),
                 createdBy
         );

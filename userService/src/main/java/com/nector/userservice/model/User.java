@@ -1,5 +1,6 @@
 package com.nector.userservice.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.nector.userservice.common.RoleType;
 import com.nector.userservice.common.UserStatus;
 import jakarta.persistence.*;
@@ -87,6 +88,7 @@ public class User {
     private RoleType roleType;
     
     // Many-to-many relationship with roles for RBAC
+    @JsonIgnore
     @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
         name = "user_roles",

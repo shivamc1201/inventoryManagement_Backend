@@ -30,6 +30,9 @@ public class LedgerAccount {
     @Column(name = "distributor_id", nullable = false)
     private Long distributorId;
 
+    @Column(name = "salesperson_id")
+    private Long salespersonId;
+
     @Column(name = "account_number", nullable = false, unique = true, length = 50)
     private String accountNumber;
 
@@ -73,6 +76,15 @@ public class LedgerAccount {
     public LedgerAccount(Long companyId, Long distributorId, String accountName, String createdBy) {
         this.companyId = companyId;
         this.distributorId = distributorId;
+        this.accountName = accountName;
+        this.createdBy = createdBy;
+        this.accountNumber = generateAccountNumber(companyId, distributorId);
+    }
+
+    public LedgerAccount(Long companyId, Long distributorId, Long salespersonId, String accountName, String createdBy) {
+        this.companyId = companyId;
+        this.distributorId = distributorId;
+        this.salespersonId = salespersonId;
         this.accountName = accountName;
         this.createdBy = createdBy;
         this.accountNumber = generateAccountNumber(companyId, distributorId);

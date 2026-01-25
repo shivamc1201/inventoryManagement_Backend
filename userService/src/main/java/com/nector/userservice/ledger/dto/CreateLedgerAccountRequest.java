@@ -17,6 +17,9 @@ public class CreateLedgerAccountRequest {
     @NotNull(message = "Distributor ID is required")
     private Long distributorId;
 
+    @NotNull(message = "SalesPerson ID is required")
+    private Long salespersonId;
+
     @NotBlank(message = "Account name is required")
     @Size(max = 255, message = "Account name cannot exceed 255 characters")
     private String accountName;

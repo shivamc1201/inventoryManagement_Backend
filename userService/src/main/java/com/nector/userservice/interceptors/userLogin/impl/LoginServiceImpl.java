@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -58,11 +59,16 @@ public class LoginServiceImpl implements LoginService {
             log.warn("Exiting authenticateUser() - Invalid password for username: {}", request.getUsername());
             throw new RuntimeException("Invalid password");
         }
-        
+
         // Get user with roles and permissions
-        user = userRepository.findByUsernameWithRolesAndPermissions(request.getUsername())
-            .orElse(user);
-        
+        Optional<User> userWithRoles = userRepository.findByUsernameWithRolesAndPermissions(request.getUsername());
+        if (userWithRoles.isPresent()) {
+            user = userWithRoles.get();
+            log.info("User loaded with {} roles", user.getRoles().size());
+        } else {
+            log.warn("User {} found but has no roles assigned", request.getUsername());
+        }
+
         String token = jwtService.generateToken(request.getUsername());
         
         /* FUTURE SESSION MANAGEMENT CODE - UNCOMMENT WHEN NEEDED
@@ -79,17 +85,26 @@ public class LoginServiceImpl implements LoginService {
         user.setLoggedIn(true);
         user.setLastLoginTime(LocalDateTime.now());
         userRepository.save(user);
-        
+
         Set<Features> features;
-        if (user.getRoleType() == com.nector.userservice.common.RoleType.SUPER_ADMIN) {
+        boolean isSuperAdmin = user.getRoles().stream()
+                .anyMatch(role -> "SUPER_ADMIN".equals(role.getName()));
+
+        if (isSuperAdmin) {
             features = Set.of(Features.values());
+            log.info("SUPER_ADMIN role detected - assigned all {} features", features.size());
         } else {
             features = user.getRoles().stream()
-                .flatMap(role -> role.getPermissions().stream())
-                .map(permission -> permission.getFeature())
-                .collect(Collectors.toSet());
+                    .flatMap(role -> {
+                        log.info("Role: {} has {} permissions", role.getName(), role.getPermissions().size());
+                        return role.getPermissions().stream();
+                    })
+                    .map(permission -> permission.getFeature())
+                    .collect(Collectors.toSet());
+            log.info("Total unique features extracted: {}", features.size());
         }
-        
+
+
         List<Object> featureDetails = features.stream()
             .map(feature -> Map.of(
                 "name", feature.name(),

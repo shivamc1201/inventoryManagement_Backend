@@ -13,9 +13,11 @@ import com.nector.userservice.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -132,17 +134,39 @@ public class UserPermissionController {
     }
 
 
-    @PutMapping("/user_edit/{userId}")
+    @DeleteMapping("/user_suspend/{userId}")
     @Operation(summary = "Remove user", description = "Rejects a specific user")
     @ApiResponse(responseCode = "200", description = "User removed successfully")
-    public ResponseEntity<?> removalOfUser(
-            @PathVariable Long userId,
-            @Valid @RequestBody UserUpdateRequest request)  {
-        User updatedUser = userService.updateUser(userId, request);
-
-        return ResponseEntity.ok(
-                Map.of("message", "User rejected successfully", "username", updatedUser.getUsername() )
-        );
+    public ResponseEntity<?> removalOfUser(@PathVariable Long userId) {
+        try {
+            User updatedUser = userService.suspendUser(userId);
+            return ResponseEntity.ok(
+                    Map.of("message", "User rejected successfully", "username", updatedUser.getUsername())
+            );
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "User not found"));
+        }
     }
+
+    @DeleteMapping("/user_delete/{userId}")
+    @Operation(summary = "Delete user", description = "Permanently deletes a user from the database")
+    @ApiResponse(responseCode = "200", description = "User deleted successfully")
+    @ApiResponse(responseCode = "404", description = "User not found")
+    public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
+        try {
+            userService.deleteUser(userId);
+            return ResponseEntity.ok(
+                    Map.of("message", "User deleted successfully")
+            );
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "User not found"));
+        } catch (DataIntegrityViolationException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", "Cannot delete user - user has related data"));
+        }
+    }
+
 
 }

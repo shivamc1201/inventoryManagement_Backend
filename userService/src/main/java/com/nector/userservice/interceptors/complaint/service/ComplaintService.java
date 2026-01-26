@@ -1,8 +1,8 @@
-package com.nector.userservice.service;
+package com.nector.userservice.interceptors.complaint.service;
 
-import com.nector.userservice.dto.complaint.ComplaintCreateRequest;
-import com.nector.userservice.dto.complaint.ComplaintResponse;
-import com.nector.userservice.dto.complaint.ComplaintStatusUpdateRequest;
+import com.nector.userservice.interceptors.complaint.model.ComplaintCreateRequest;
+import com.nector.userservice.interceptors.complaint.model.ComplaintResponse;
+import com.nector.userservice.interceptors.complaint.model.ComplaintStatusUpdateRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

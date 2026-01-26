@@ -14,6 +14,7 @@ public enum Features {
     INVENTORY("Inventory", "/inventory"), // Parent for all Inventory sub-features
     REPORTS("Reports", "/reports"),
     USER_RIGHTS("User Rights", "/user-rights"),
+    COMPLAINT("Complaint", "/complaint"),
 
     // --- Inventory Sub-Items ---
     // Masters

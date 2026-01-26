@@ -1,10 +1,11 @@
-package com.nector.userservice.service;
+package com.nector.userservice.interceptors.products.impl;
 
+import com.nector.userservice.exception.MachinePartNotFoundException;
 import com.nector.userservice.interceptors.products.model.MachinePartRequest;
 import com.nector.userservice.interceptors.products.model.MachinePartResponse;
-import com.nector.userservice.exception.MachinePartNotFoundException;
-import com.nector.userservice.model.MachinePart;
 import com.nector.userservice.repository.MachinePartRepository;
+import com.nector.userservice.interceptors.products.service.MachinePartService;
+import com.nector.userservice.model.MachinePart;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -17,10 +18,11 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class MachinePartService {
+public class MachinePartServiceImpl implements MachinePartService {
     
     private final MachinePartRepository machinePartRepository;
     
+    @Override
     @Transactional
     public MachinePartResponse createMachinePart(MachinePartRequest request) {
         log.info("Creating machine part with part number: {}", request.getPartNumber());
@@ -45,6 +47,7 @@ public class MachinePartService {
         return mapToResponse(savedPart);
     }
     
+    @Override
     @Transactional
     public MachinePartResponse updateMachinePart(Long id, MachinePartRequest request) {
         log.info("Updating machine part with ID: {}", id);
@@ -66,6 +69,7 @@ public class MachinePartService {
         return mapToResponse(updatedPart);
     }
     
+    @Override
     @Transactional
     public void deleteMachinePart(Long id) {
         log.info("Soft deleting machine part with ID: {}", id);
@@ -79,6 +83,7 @@ public class MachinePartService {
         log.info("Machine part soft deleted successfully with ID: {}", id);
     }
     
+    @Override
     @Transactional(readOnly = true)
     public MachinePartResponse getMachinePartById(Long id) {
         log.info("Fetching machine part with ID: {}", id);
@@ -89,6 +94,7 @@ public class MachinePartService {
         return mapToResponse(part);
     }
     
+    @Override
     @Transactional(readOnly = true)
     public List<MachinePartResponse> getAllMachineParts() {
         log.info("Fetching all machine parts");
@@ -98,6 +104,7 @@ public class MachinePartService {
             .collect(Collectors.toList());
     }
     
+    @Override
     @Transactional(readOnly = true)
     public List<MachinePartResponse> getMachinePartsByCategory(MachinePart.Category category) {
         log.info("Fetching machine parts by category: {}", category);
@@ -108,6 +115,7 @@ public class MachinePartService {
             .collect(Collectors.toList());
     }
     
+    @Override
     @Transactional(readOnly = true)
     public List<MachinePartResponse> getMachinePartsByCondition(MachinePart.Condition condition) {
         log.info("Fetching machine parts by condition: {}", condition);
@@ -118,6 +126,7 @@ public class MachinePartService {
             .collect(Collectors.toList());
     }
     
+    @Override
     @Transactional
     public MachinePartResponse updateQuantity(Long id, Integer quantity) {
         log.info("Updating quantity for machine part ID: {} to quantity: {}", id, quantity);
@@ -132,6 +141,7 @@ public class MachinePartService {
         return mapToResponse(updatedPart);
     }
     
+    @Override
     @Transactional
     public MachinePartResponse updateCondition(Long id, MachinePart.Condition condition) {
         log.info("Updating condition for machine part ID: {} to condition: {}", id, condition);

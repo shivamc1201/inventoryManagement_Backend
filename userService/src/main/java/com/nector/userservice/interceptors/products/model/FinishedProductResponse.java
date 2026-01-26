@@ -1,4 +1,4 @@
-package com.nector.userservice.dto.finishedproduct;
+package com.nector.userservice.interceptors.products.model;
 
 import lombok.Data;
 

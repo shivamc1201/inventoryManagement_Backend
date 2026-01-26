@@ -1,11 +1,12 @@
-package com.nector.userservice.service;
+package com.nector.userservice.interceptors.products.impl;
 
-import com.nector.userservice.interceptors.products.model.RawProductRequest;
-import com.nector.userservice.interceptors.products.model.RawProductResponse;
 import com.nector.userservice.exception.InsufficientStockException;
 import com.nector.userservice.exception.RawProductNotFoundException;
-import com.nector.userservice.model.RawProduct;
+import com.nector.userservice.interceptors.products.model.RawProductRequest;
+import com.nector.userservice.interceptors.products.model.RawProductResponse;
 import com.nector.userservice.repository.RawProductRepository;
+import com.nector.userservice.interceptors.products.service.RawProductService;
+import com.nector.userservice.model.RawProduct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -18,10 +19,11 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class RawProductService {
+public class RawProductServiceImpl implements RawProductService {
     
     private final RawProductRepository rawProductRepository;
     
+    @Override
     @Transactional
     public RawProductResponse createRawProduct(RawProductRequest request) {
         log.info("Creating raw product with material code: {}", request.getMaterialCode());
@@ -43,6 +45,7 @@ public class RawProductService {
         return mapToResponse(savedProduct);
     }
     
+    @Override
     @Transactional
     public RawProductResponse updateRawProduct(Long id, RawProductRequest request) {
         log.info("Updating raw product with ID: {}", id);
@@ -61,6 +64,7 @@ public class RawProductService {
         return mapToResponse(updatedProduct);
     }
     
+    @Override
     @Transactional
     public void deleteRawProduct(Long id) {
         log.info("Soft deleting raw product with ID: {}", id);
@@ -74,6 +78,7 @@ public class RawProductService {
         log.info("Raw product soft deleted successfully with ID: {}", id);
     }
     
+    @Override
     @Transactional(readOnly = true)
     public RawProductResponse getRawProductById(Long id) {
         log.info("Fetching raw product with ID: {}", id);
@@ -84,6 +89,7 @@ public class RawProductService {
         return mapToResponse(product);
     }
     
+    @Override
     @Transactional(readOnly = true)
     public List<RawProductResponse> getAllRawProducts() {
         log.info("Fetching all raw products");
@@ -93,6 +99,7 @@ public class RawProductService {
             .collect(Collectors.toList());
     }
     
+    @Override
     @Transactional
     public RawProductResponse increaseStock(Long id, Integer quantity) {
         log.info("Increasing stock for raw product ID: {} by quantity: {}", id, quantity);
@@ -107,6 +114,7 @@ public class RawProductService {
         return mapToResponse(updatedProduct);
     }
     
+    @Override
     @Transactional
     public RawProductResponse decreaseStock(Long id, Integer quantity) {
         log.info("Decreasing stock for raw product ID: {} by quantity: {}", id, quantity);
@@ -121,7 +129,6 @@ public class RawProductService {
         product.setQuantity(product.getQuantity() - quantity);
         RawProduct updatedProduct = rawProductRepository.save(product);
         
-        // Check if stock falls below threshold and log alert
         if (updatedProduct.getQuantity() <= updatedProduct.getMinimumThreshold()) {
             log.warn("ALERT: Raw product {} (ID: {}) stock is below minimum threshold. Current: {}, Threshold: {}", 
                 updatedProduct.getMaterialCode(), id, updatedProduct.getQuantity(), updatedProduct.getMinimumThreshold());
@@ -131,6 +138,7 @@ public class RawProductService {
         return mapToResponse(updatedProduct);
     }
     
+    @Override
     @Transactional(readOnly = true)
     public List<RawProductResponse> getLowStockItems() {
         log.info("Fetching low stock raw products");

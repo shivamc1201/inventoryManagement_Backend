@@ -7,4 +7,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface DistributorRepository extends JpaRepository<Distributor, Long> {
     boolean existsByContactEmail(String contactEmail);
+    boolean existsByAadhaarNumber(String aadhaarNumber);
+    boolean existsByPanNumber(String panNumber);
+    boolean existsByGstNumber(String gstNumber);
 }

@@ -79,4 +79,17 @@ public class UserService {
         log.info("Exiting deleteUser() - User deleted successfully for userId: {}", userId);
     }
 
+    public User getUserByUsername(String username) {
+        log.info("Entering getUserByUsername() for username: {}", username);
+        
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> {
+                    log.warn("Exiting getUserByUsername() - User not found: {}", username);
+                    return new EntityNotFoundException("User not found with username: " + username);
+                });
+        
+        log.info("Exiting getUserByUsername() - User found for username: {}", username);
+        return user;
+    }
+
 }

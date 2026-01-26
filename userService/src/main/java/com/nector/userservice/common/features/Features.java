@@ -15,6 +15,12 @@ public enum Features {
     REPORTS("Reports", "/reports"),
     USER_RIGHTS("User Rights", "/user-rights"),
     COMPLAINT("Complaint", "/complaint"),
+    PRODUCTS("Products", "/products"), // Parent for all Product sub-features
+
+    // --- Product Sub-Items ---
+    PRODUCTS_FINISHED_PRODUCTS("Finished Products", "/products/finished-products"),
+    PRODUCTS_RAW_MATERIALS("Raw Materials", "/products/raw-materials"),
+    PRODUCTS_MACHINE_PARTS("Machine Parts", "/products/machine-parts"),
 
     // --- Inventory Sub-Items ---
     // Masters

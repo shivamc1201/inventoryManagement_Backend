@@ -1,4 +1,4 @@
-package com.nector.userservice.dto.machinepart;
+package com.nector.userservice.interceptors.products.model;
 
 import com.nector.userservice.model.MachinePart;
 import lombok.Data;

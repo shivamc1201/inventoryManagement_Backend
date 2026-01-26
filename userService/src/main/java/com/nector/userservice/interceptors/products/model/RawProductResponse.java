@@ -1,4 +1,4 @@
-package com.nector.userservice.dto.rawproduct;
+package com.nector.userservice.interceptors.products.model;
 
 import com.nector.userservice.model.RawProduct;
 import lombok.Data;

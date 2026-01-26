@@ -1,12 +1,13 @@
-package com.nector.userservice.service;
+package com.nector.userservice.interceptors.complaint.impl;
 
-import com.nector.userservice.dto.complaint.ComplaintCreateRequest;
-import com.nector.userservice.dto.complaint.ComplaintResponse;
-import com.nector.userservice.dto.complaint.ComplaintStatusUpdateRequest;
 import com.nector.userservice.exception.ResourceNotFoundException;
+import com.nector.userservice.interceptors.complaint.model.ComplaintCreateRequest;
+import com.nector.userservice.interceptors.complaint.model.ComplaintResponse;
+import com.nector.userservice.interceptors.complaint.model.ComplaintStatusUpdateRequest;
+import com.nector.userservice.interceptors.complaint.repository.ComplaintRepository;
+import com.nector.userservice.interceptors.complaint.service.ComplaintService;
 import com.nector.userservice.model.ComplaintEntity;
 import com.nector.userservice.model.ComplaintStatus;
-import com.nector.userservice.repository.ComplaintRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

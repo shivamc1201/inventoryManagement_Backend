@@ -1,4 +1,4 @@
-package com.nector.userservice.repository;
+package com.nector.userservice.interceptors.complaint.repository;
 
 import com.nector.userservice.model.ComplaintEntity;
 import org.springframework.data.jpa.repository.JpaRepository;

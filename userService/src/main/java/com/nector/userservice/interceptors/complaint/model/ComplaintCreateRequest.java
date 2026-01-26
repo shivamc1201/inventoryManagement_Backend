@@ -1,4 +1,4 @@
-package com.nector.userservice.dto.complaint;
+package com.nector.userservice.interceptors.complaint.model;
 
 import com.nector.userservice.model.ComplaintCategory;
 import com.nector.userservice.model.ComplaintType;

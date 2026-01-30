@@ -131,7 +131,7 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         product.setQuantity(product.getQuantity() - quantity);
         FinishedProduct updatedProduct = finishedProductRepository.save(product);
         
-        if (updatedProduct.getQuantity() <= updatedProduct.getMinimumThreshold()) {
+        if (updatedProduct.getQuantity() <= (updatedProduct.getMinimumThreshold() != null ? updatedProduct.getMinimumThreshold() : 0)) {
             log.warn("ALERT: Finished product {} (ID: {}) stock is below minimum threshold. Current: {}, Threshold: {}", 
                 updatedProduct.getSku(), id, updatedProduct.getQuantity(), updatedProduct.getMinimumThreshold());
         }
@@ -160,7 +160,10 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         response.setQuantity(product.getQuantity());
         response.setMinimumThreshold(product.getMinimumThreshold());
         response.setActive(product.getActive());
-        response.setLowStock(product.getQuantity() <= product.getMinimumThreshold());
+        
+        Integer threshold = product.getMinimumThreshold() != null ? product.getMinimumThreshold() : 0;
+        response.setLowStock(product.getQuantity() <= threshold);
+        
         response.setCreatedAt(product.getCreatedAt());
         response.setUpdatedAt(product.getUpdatedAt());
         return response;

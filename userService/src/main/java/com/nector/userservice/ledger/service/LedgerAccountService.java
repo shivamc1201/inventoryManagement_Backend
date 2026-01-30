@@ -169,4 +169,17 @@ public class LedgerAccountService {
         LedgerAccount account = getLedgerAccountById(accountId);
         return account.canDebit(amount);
     }
+
+
+    @Transactional(readOnly = true)
+    public List<LedgerAccount> getAllLedgerAccounts() {
+        List<LedgerAccount> accounts = ledgerAccountRepository.findAll();
+        if (accounts.isEmpty()) {
+            throw new IllegalArgumentException("No ledger accounts found");
+        }
+        return accounts;
+    }
+
+
+
 }

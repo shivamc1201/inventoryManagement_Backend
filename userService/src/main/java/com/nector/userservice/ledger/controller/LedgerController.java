@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * REST Controller for Ledger Management
@@ -213,4 +214,20 @@ public class LedgerController {
         }
     }
 
+    @GetMapping("/all-account")
+    @Operation(summary = "Get all ledger accounts", description = "Get all ledger accounts")
+    public ResponseEntity<ApiResponse<List<LedgerAccount>>> getAllLedgerAccounts() {
+        try {
+            List<LedgerAccount> accounts = ledgerAccountService.getAllLedgerAccounts();
+            return ResponseEntity.ok(new ApiResponse<>(true, "Accounts retrieved successfully", accounts));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            log.error("Error retrieving ledger accounts", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, "Failed to retrieve ledger accounts", null));
+        }
+    }
+
 }
+

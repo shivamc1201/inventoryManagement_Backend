@@ -46,15 +46,16 @@ public class MachinePartServiceImpl implements MachinePartService {
         
         return mapToResponse(savedPart);
     }
-    
+
     @Override
     @Transactional
-    public MachinePartResponse updateMachinePart(Long id, MachinePartRequest request) {
+    public MachinePartResponse updateMachinePart(Long id, UpdateMachinePart request) {
         log.info("Updating machine part with ID: {}", id);
-        
+
         MachinePart part = machinePartRepository.findById(id)
-            .orElseThrow(() -> new MachinePartNotFoundException(id));
-        
+                .filter(MachinePart::getActive)
+                .orElseThrow(() -> new MachinePartNotFoundException(id));
+
         part.setName(request.getName());
         part.setCategory(request.getCategory());
         part.setVendor(request.getVendor());
@@ -62,13 +63,13 @@ public class MachinePartServiceImpl implements MachinePartService {
         part.setWarrantyExpiryDate(request.getWarrantyExpiryDate());
         part.setQuantity(request.getQuantity());
         part.setCondition(request.getCondition());
-        
+
         MachinePart updatedPart = machinePartRepository.save(part);
         log.info("Machine part updated successfully with ID: {}", updatedPart.getId());
-        
+
         return mapToResponse(updatedPart);
     }
-    
+
     @Override
     @Transactional
     public void deleteMachinePart(Long id) {
@@ -131,8 +132,9 @@ public class MachinePartServiceImpl implements MachinePartService {
     public MachinePartResponse updateQuantity(Long id, Integer quantity) {
         log.info("Updating quantity for machine part ID: {} to quantity: {}", id, quantity);
         
-        MachinePart part = machinePartRepository.findActiveById(id)
-            .orElseThrow(() -> new MachinePartNotFoundException(id));
+        MachinePart part = machinePartRepository.findById(id)
+                .filter(MachinePart::getActive)
+                .orElseThrow(() -> new MachinePartNotFoundException(id));
         
         part.setQuantity(quantity);
         MachinePart updatedPart = machinePartRepository.save(part);
@@ -146,8 +148,9 @@ public class MachinePartServiceImpl implements MachinePartService {
     public MachinePartResponse updateCondition(Long id, MachinePart.Condition condition) {
         log.info("Updating condition for machine part ID: {} to condition: {}", id, condition);
         
-        MachinePart part = machinePartRepository.findActiveById(id)
-            .orElseThrow(() -> new MachinePartNotFoundException(id));
+        MachinePart part = machinePartRepository.findById(id)
+                .filter(MachinePart::getActive)
+                .orElseThrow(() -> new MachinePartNotFoundException(id));
         
         part.setCondition(condition);
         MachinePart updatedPart = machinePartRepository.save(part);

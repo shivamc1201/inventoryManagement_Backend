@@ -1,6 +1,7 @@
 package com.nector.userservice.interceptors.products;
 
 import com.nector.userservice.dto.inventory.StockUpdateRequest;
+import com.nector.userservice.interceptors.products.impl.UpdateMachinePart;
 import com.nector.userservice.interceptors.products.model.*;
 import com.nector.userservice.interceptors.products.service.FinishedProductService;
 import com.nector.userservice.interceptors.products.service.MachinePartService;
@@ -135,7 +136,7 @@ public class ProductsController {
     
     @PutMapping("/machine-parts/{id}")
     @Operation(summary = "Update machine part", description = "Updates an existing machine part")
-    public ResponseEntity<MachinePartResponse> updateMachinePart(@PathVariable Long id, @Valid @RequestBody MachinePartRequest request) {
+    public ResponseEntity<MachinePartResponse> updateMachinePart(@PathVariable Long id, @Valid @RequestBody UpdateMachinePart request) {
         MachinePartResponse response = machinePartService.updateMachinePart(id, request);
         return ResponseEntity.ok(response);
     }

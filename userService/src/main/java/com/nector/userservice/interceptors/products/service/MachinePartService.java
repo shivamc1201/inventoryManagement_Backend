@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.products.service;
 
+import com.nector.userservice.interceptors.products.impl.UpdateMachinePart;
 import com.nector.userservice.interceptors.products.model.MachinePartRequest;
 import com.nector.userservice.interceptors.products.model.MachinePartResponse;
 import com.nector.userservice.model.MachinePart;
@@ -10,7 +11,7 @@ public interface MachinePartService {
     
     MachinePartResponse createMachinePart(MachinePartRequest request);
     
-    MachinePartResponse updateMachinePart(Long id, MachinePartRequest request);
+    MachinePartResponse updateMachinePart(Long id, UpdateMachinePart request);
     
     void deleteMachinePart(Long id);
     

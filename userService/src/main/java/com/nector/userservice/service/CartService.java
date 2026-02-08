@@ -32,62 +32,62 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final ItemRepository itemRepository;
     private final InventoryService inventoryService;
+    private final ProformaInvoiceService proformaInvoiceService;
     
     @Transactional
-    public CartResponse addItemToCart(Long userId, AddToCartRequest request) {
-        log.info("Adding item {} to cart for user {}", request.getItemId(), userId);
-        
-        Item item = itemRepository.findBySku(request.getItemId())
-            .filter(Item::getActive)
-            .orElseThrow(() -> new ItemNotFoundException(request.getItemId()));
-        
+    public CartResponse addItemsToCart(Long userId, List<AddToCartRequest> requests) {
+        log.info("Adding {} items to cart for user {}", requests.size(), userId);
         Cart cart = getOrCreateActiveCart(userId);
         
-        Optional<CartItem> existingCartItem = cartItemRepository
-            .findByCartIdAndItemId(cart.getId(), item.getId());
-        
-        if (existingCartItem.isPresent()) {
-            CartItem cartItem = existingCartItem.get();
-            int newQuantity = cartItem.getQuantity() + request.getQuantity();
-            
-            // Release old reserved stock and reserve new quantity
-            inventoryService.releaseStock(item.getId(), cartItem.getQuantity());
-            inventoryService.reserveStock(item.getId(), newQuantity);
-            
-            cartItem.setQuantity(newQuantity);
-            cartItemRepository.save(cartItem);
-        } else {
-            inventoryService.reserveStock(item.getId(), request.getQuantity());
-            
-            CartItem cartItem = new CartItem();
-            cartItem.setCart(cart);
-            cartItem.setItem(item);
-            cartItem.setQuantity(request.getQuantity());
-            cartItem.setPriceAtTime(item.getPrice());
-            
-            cartItemRepository.save(cartItem);
-            cart.getCartItems().add(cartItem);
+        for (AddToCartRequest request : requests) {
+            log.info("Processing item {} for user {}", request.getItemId(), userId);
+            try {
+                Item item = itemRepository.findBySku(request.getItemId())
+                        .filter(Item::getActive)
+                        .orElseThrow(() -> new ItemNotFoundException("Item with SKU '" + request.getItemId() + "' not found or inactive"));
+                        
+                Optional<CartItem> existingCartItem =
+                        cartItemRepository.findByCartIdAndItemId(cart.getId(), item.getId());
+                        
+                if (existingCartItem.isPresent()) {
+                    CartItem cartItem = existingCartItem.get();
+                    int newQuantity = cartItem.getQuantity() + request.getQuantity();
+                    inventoryService.releaseStock(item.getId(), cartItem.getQuantity());
+                    inventoryService.reserveStock(item.getId(), newQuantity);
+                    cartItem.setQuantity(newQuantity);
+                    cartItemRepository.save(cartItem);
+                } else {
+                    inventoryService.reserveStock(item.getId(), request.getQuantity());
+                    CartItem cartItem = new CartItem();
+                    cartItem.setCart(cart);
+                    cartItem.setItem(item);
+                    cartItem.setQuantity(request.getQuantity());
+                    cartItem.setPriceAtTime(item.getPrice());
+                    cartItemRepository.save(cartItem);
+                    cart.getCartItems().add(cartItem);
+                }
+            } catch (Exception e) {
+                log.error("Failed to add item {} to cart for user {}: {}", request.getItemId(), userId, e.getMessage());
+                throw e;
+            }
         }
         
         Cart updatedCart = cartRepository.save(cart);
-        log.info("Item added to cart successfully for user {}", userId);
-        
+        log.info("All items added to cart successfully for user {}", userId);
         return mapToResponse(updatedCart);
     }
-    
+
+
 
     @Transactional
     public CartResponse removeItemFromCart(Long cartItemId) {
         log.info("Removing cart item {}", cartItemId);
         
         CartItem cartItem = cartItemRepository.findById(cartItemId)
-            .orElseThrow(() -> new CartItemNotFoundException(cartItemId));
+            .orElseThrow(() -> new CartItemNotFoundException("Cart item with ID " + cartItemId + " not found"));
         
         Cart cart = cartItem.getCart();
-        
-        // Release reserved stock
         inventoryService.releaseStock(cartItem.getItem().getId(), cartItem.getQuantity());
-        
         cart.getCartItems().remove(cartItem);
         cartItemRepository.delete(cartItem);
         
@@ -102,7 +102,7 @@ public class CartService {
         log.info("Fetching cart for user {}", userId);
         
         Cart cart = cartRepository.findActiveCartByUserId(userId)
-            .orElseThrow(() -> new CartNotFoundException(userId));
+            .orElseThrow(() -> new CartNotFoundException("No active cart found for user " + userId));
         
         return mapToResponse(cart);
     }
@@ -135,6 +135,28 @@ public class CartService {
         
         response.setCartItems(cartItemResponses);
         return response;
+    }
+    
+    @Transactional(readOnly = true)
+    public List<CartResponse> getPendingApprovalCarts() {
+        List<Cart> pendingCarts = cartRepository.findByStatus(Cart.CartStatus.ACTIVE);
+        return pendingCarts.stream()
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
+    }
+    
+    @Transactional
+    public CartResponse approveCart(Long cartId) {
+        Cart cart = cartRepository.findById(cartId)
+            .orElseThrow(() -> new CartNotFoundException("Cart with ID " + cartId + " not found"));
+        
+        cart.setStatus(Cart.CartStatus.APPROVED);
+        Cart updatedCart = cartRepository.save(cart);
+        
+        // Generate Proforma Invoice after approval
+        proformaInvoiceService.generateProformaInvoice(cartId);
+        
+        return mapToResponse(updatedCart);
     }
     
     private CartItemResponse mapCartItemToResponse(CartItem cartItem) {

@@ -1,6 +1,9 @@
 package com.nector.userservice.common;
 
 
+import com.nector.userservice.interceptors.distributor.model.Distributor;
+import jakarta.validation.constraints.NotNull;
+
 public enum RoleType {
 
     SUPER_ADMIN("Administration"),
@@ -35,7 +38,10 @@ public enum RoleType {
 
     // --- Plant Department Roles ---
     PLANT_OFFICER("Plant"),
-    PLANT_EXECUTIVE("Plant");
+    PLANT_EXECUTIVE("Plant"),
+
+    //---Distributor Department Roles---
+    Distributor("sales");
 
     // Private field to hold the department name
     private final String department;

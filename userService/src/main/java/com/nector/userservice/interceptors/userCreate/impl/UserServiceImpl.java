@@ -1,6 +1,11 @@
 package com.nector.userservice.interceptors.userCreate.impl;
 
+import com.nector.userservice.common.RoleType;
 import com.nector.userservice.common.UserStatus;
+import com.nector.userservice.interceptors.distributor.model.Distributor;
+import com.nector.userservice.interceptors.distributor.model.DistributorRequestDTO;
+import com.nector.userservice.interceptors.distributor.service.DistributorMapper;
+import com.nector.userservice.interceptors.distributor.service.DistributorService;
 import com.nector.userservice.interceptors.userCreate.model.UserRequest;
 import com.nector.userservice.interceptors.userCreate.model.UserResponse;
 import com.nector.userservice.exception.UsernameAlreadyExistsException;
@@ -9,6 +14,7 @@ import com.nector.userservice.model.User;
 import com.nector.userservice.model.UserApproval;
 import com.nector.userservice.repository.UserRepository;
 import com.nector.userservice.repository.UserApprovalRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,8 +26,11 @@ public class UserServiceImpl implements UserService {
     
     private final UserRepository userRepository;
     private final UserApprovalRepository userApprovalRepository;
+    private final DistributorService distributorService;
+    private final DistributorMapper distributorMapper;
     
     @Override
+    @Transactional
     public UserResponse registerNewUser(UserRequest request) throws UsernameAlreadyExistsException {
         log.info("Entering registerNewUser() for username: {}, email: {}", request.getUsername(), request.getEmail());
         
@@ -33,6 +42,16 @@ public class UserServiceImpl implements UserService {
         if (userRepository.existsByEmail(request.getEmail())) {
             log.warn("Exiting registerNewUser() - Email already exists: {}", request.getEmail());
             throw new UsernameAlreadyExistsException("Email already exists: " + request.getEmail());
+        }
+
+        if (request.getRoleType() == RoleType.Distributor) {
+            DistributorRequestDTO distributorRequest = new DistributorRequestDTO();
+            distributorRequest.setContactEmail(request.getEmail());
+            distributorRequest.setPhoneNumber(request.getContactNo());
+            distributorRequest.setAlternateContact(request.getAlternateContactNo());
+            distributorRequest.setAddress(request.getCompleteAddress());
+            log.info("Creating distributor for user: {}", request.getUsername());
+            distributorService.createDistributor(distributorRequest);
         }
         
         User user = new User();

@@ -20,14 +20,11 @@ public class DataInitializationService implements CommandLineRunner {
     
     @Override
     public void run(String... args) throws Exception {
-        log.info("Entering run() - Starting data initialization");
         initializeDefaultPermissions();
-        log.info("Exiting run() - Data initialization completed");
     }
     
     private void initializeDefaultPermissions() {
-        log.info("Entering initializeDefaultPermissions()");
-        
+
         try {
             assignAllPermissionsToAdmin();
             
@@ -74,17 +71,14 @@ public class DataInitializationService implements CommandLineRunner {
             assignPermissionsToRole(RoleType.PLANT_EXECUTIVE, 
                 Features.DASHBOARD, Features.INVENTORY);
             
-            log.info("Default role-permission mappings initialized successfully");
         } catch (Exception e) {
             log.error("Error initializing default permissions: {}", e.getMessage());
         }
         
-        log.info("Exiting initializeDefaultPermissions()");
     }
     
     private void assignAllPermissionsToAdmin() {
-        log.debug("Entering assignAllPermissionsToAdmin()");
-        
+
         for (Features feature : Features.values()) {
             try {
                 roleManagementService.assignPermissionToRole(RoleType.ADMIN, feature);
@@ -93,12 +87,10 @@ public class DataInitializationService implements CommandLineRunner {
             }
         }
         
-        log.debug("Exiting assignAllPermissionsToAdmin()");
     }
     
     private void assignPermissionsToRole(RoleType roleType, Features... features) {
-        log.debug("Entering assignPermissionsToRole() for role: {} with {} features", roleType, features.length);
-        
+
         for (Features feature : features) {
             try {
                 roleManagementService.assignPermissionToRole(roleType, feature);
@@ -107,6 +99,5 @@ public class DataInitializationService implements CommandLineRunner {
             }
         }
         
-        log.debug("Exiting assignPermissionsToRole() for role: {}", roleType);
     }
 }

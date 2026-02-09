@@ -49,6 +49,7 @@ public class UserServiceImpl implements UserService {
             distributorRequest.setContactEmail(request.getEmail());
             distributorRequest.setPhoneNumber(request.getContactNo());
             distributorRequest.setAlternateContact(request.getAlternateContactNo());
+            distributorRequest.setName(request.getFirstName() + " " + request.getLastName());
             distributorRequest.setAddress(request.getCompleteAddress());
             log.info("Creating distributor for user: {}", request.getUsername());
             distributorService.createDistributor(distributorRequest);

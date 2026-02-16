@@ -57,4 +57,7 @@ public class DistributorRequestDTO {
 
     @NotNull
     private DistributorStatus status;
+
+    @NotNull
+    private boolean creditLimit;
 }

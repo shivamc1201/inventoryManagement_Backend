@@ -5,4 +5,5 @@ import com.nector.userservice.interceptors.userLogin.model.LoginResponse;
 
 public interface LoginService {
     LoginResponse authenticateUser(LoginRequest request);
+    LoginResponse authenticateSecondUser(LoginRequest request);
 }

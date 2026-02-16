@@ -6,16 +6,13 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "proforma_invoices")
+@Table(name = "distributor_ledger")
 @Data
-public class ProformaInvoice {
+public class DistributorLedger {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    @Column(name = "cart_id")
-    private Long cartId;
     
     @Column(name = "distributor_id")
     private Long distributorId;
@@ -23,14 +20,12 @@ public class ProformaInvoice {
     @Column(name = "amount")
     private BigDecimal amount;
     
-    @Enumerated(EnumType.STRING)
-    @Column(name = "payment_status")
-    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
+    @Column(name = "transaction_type")
+    private String transactionType; // CREDIT, DEBIT
+    
+    @Column(name = "description")
+    private String description;
     
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
-    
-    public enum PaymentStatus {
-        PENDING, PAID, REJECTED
-    }
 }

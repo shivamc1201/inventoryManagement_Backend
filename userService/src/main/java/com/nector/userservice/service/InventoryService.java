@@ -155,6 +155,34 @@ public class InventoryService {
         log.info("Stock released successfully for item ID: {}", itemId);
     }
     
+    @Transactional
+    public void updateStock(Long itemId, Integer quantityChange) {
+        log.info("Updating stock for item ID: {} by: {}", itemId, quantityChange);
+        
+        Item item = itemRepository.findById(itemId)
+            .orElseThrow(() -> new ItemNotFoundException(itemId));
+        
+        int newQuantity = item.getQuantity() + quantityChange;
+        if (newQuantity < 0) {
+            throw new InsufficientStockException(item.getSku(), Math.abs(quantityChange), item.getQuantity());
+        }
+        
+        item.setQuantity(newQuantity);
+        itemRepository.save(item);
+        
+        log.info("Stock updated successfully for item ID: {}", itemId);
+    }
+    
+    @Transactional(readOnly = true)
+    public Integer getAvailableStock(Long itemId) {
+        log.info("Getting available stock for item ID: {}", itemId);
+        
+        Item item = itemRepository.findById(itemId)
+            .orElseThrow(() -> new ItemNotFoundException(itemId));
+        
+        return item.getQuantity();
+    }
+    
     private ItemResponse mapToResponse(Item item) {
         ItemResponse response = new ItemResponse();
         response.setId(item.getId());

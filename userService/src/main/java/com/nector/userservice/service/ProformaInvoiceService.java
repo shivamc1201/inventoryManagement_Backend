@@ -5,6 +5,7 @@ import com.nector.userservice.dto.invoice.ProformaInvoice;
 import com.nector.userservice.model.Cart;
 import com.nector.userservice.model.CartItem;
 import com.nector.userservice.repository.CartRepository;
+import com.nector.userservice.repository.ProformaInvoiceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ import java.util.stream.IntStream;
 public class ProformaInvoiceService {
     
     private final CartRepository cartRepository;
+    private final ProformaInvoiceRepository proformaInvoiceRepository;
     private final TemplateEngine templateEngine;
     private final HtmlToPdfService htmlToPdfService;
     
@@ -32,6 +34,20 @@ public class ProformaInvoiceService {
         log.info("Generating proforma invoice for cart ID: {}", cartId);
         Cart cart = cartRepository.findById(cartId)
             .orElseThrow(() -> new RuntimeException("Cart not found"));
+            
+        // Create PI entity in database
+        com.nector.userservice.model.ProformaInvoice piEntity = new com.nector.userservice.model.ProformaInvoice();
+        piEntity.setCartId(cartId);
+        piEntity.setDistributorId(cart.getDistributorId());
+        
+        // Calculate total amount
+        java.math.BigDecimal totalAmount = cart.getCartItems().stream()
+            .map(item -> item.getPriceAtTime().multiply(java.math.BigDecimal.valueOf(item.getQuantity())))
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        
+        piEntity.setAmount(totalAmount);
+        piEntity.setPaymentStatus(com.nector.userservice.model.ProformaInvoice.PaymentStatus.PENDING);
+        proformaInvoiceRepository.save(piEntity);
             
         ProformaInvoice invoice = createInvoiceFromCart(cart);
         String html = generateHtmlFromTemplate(invoice);

@@ -24,10 +24,13 @@ public class CartController {
     private final CartService cartService;
 
     @PostMapping("/{userId}/items")
-    public ResponseEntity<?> addItemToCart(@PathVariable Long userId, @Valid @RequestBody List<AddToCartRequest> requests) {
-        log.info("Adding {} items to cart for user: {}", requests.size(), userId);
+    public ResponseEntity<?> addItemToCart(
+            @PathVariable Long userId, 
+            @RequestParam Long distributorId,
+            @Valid @RequestBody List<AddToCartRequest> requests) {
+        log.info("Adding {} items to cart for user: {} and distributor: {}", requests.size(), userId, distributorId);
         try {
-            CartResponse response = cartService.addItemsToCart(userId, requests);
+            CartResponse response = cartService.addItemsToCart(userId, distributorId, requests);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
             log.error("Error adding items to cart for user {}: {}", userId, e.getMessage());

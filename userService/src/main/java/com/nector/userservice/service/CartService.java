@@ -31,13 +31,16 @@ public class CartService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final ItemRepository itemRepository;
-    private final InventoryService inventoryService;
     private final ProformaInvoiceService proformaInvoiceService;
-    
+
+
+    // TODO the dispatch team wil, check the real  quantity of the orders  while checking GDN
+
+
     @Transactional
-    public CartResponse addItemsToCart(Long userId, List<AddToCartRequest> requests) {
-        log.info("Adding {} items to cart for user {}", requests.size(), userId);
-        Cart cart = getOrCreateActiveCart(userId);
+    public CartResponse addItemsToCart(Long userId, Long distributorId, List<AddToCartRequest> requests) {
+        log.info("Adding {} items to cart for user {} and distributor {}", requests.size(), userId, distributorId);
+        Cart cart = getOrCreateActiveCart(userId, distributorId);
         
         for (AddToCartRequest request : requests) {
             log.info("Processing item {} for user {}", request.getItemId(), userId);
@@ -52,12 +55,9 @@ public class CartService {
                 if (existingCartItem.isPresent()) {
                     CartItem cartItem = existingCartItem.get();
                     int newQuantity = cartItem.getQuantity() + request.getQuantity();
-                    inventoryService.releaseStock(item.getId(), cartItem.getQuantity());
-                    inventoryService.reserveStock(item.getId(), newQuantity);
                     cartItem.setQuantity(newQuantity);
                     cartItemRepository.save(cartItem);
                 } else {
-                    inventoryService.reserveStock(item.getId(), request.getQuantity());
                     CartItem cartItem = new CartItem();
                     cartItem.setCart(cart);
                     cartItem.setItem(item);
@@ -87,7 +87,6 @@ public class CartService {
             .orElseThrow(() -> new CartItemNotFoundException("Cart item with ID " + cartItemId + " not found"));
         
         Cart cart = cartItem.getCart();
-        inventoryService.releaseStock(cartItem.getItem().getId(), cartItem.getQuantity());
         cart.getCartItems().remove(cartItem);
         cartItemRepository.delete(cartItem);
         
@@ -107,15 +106,18 @@ public class CartService {
         return mapToResponse(cart);
     }
     
-    private Cart getOrCreateActiveCart(Long userId) {
+    private Cart getOrCreateActiveCart(Long userId, Long distributorId) {
         Optional<Cart> existingCart = cartRepository.findByUserIdAndStatus(userId, Cart.CartStatus.ACTIVE);
         
         if (existingCart.isPresent()) {
-            return existingCart.get();
+            Cart cart = existingCart.get();
+            cart.setDistributorId(distributorId); // Update distributor if needed
+            return cartRepository.save(cart);
         }
         
         Cart newCart = new Cart();
         newCart.setUserId(userId);
+        newCart.setDistributorId(distributorId);
         newCart.setStatus(Cart.CartStatus.ACTIVE);
         
         return cartRepository.save(newCart);

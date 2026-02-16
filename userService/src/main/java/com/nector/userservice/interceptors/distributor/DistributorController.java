@@ -3,6 +3,8 @@ package com.nector.userservice.interceptors.distributor;
 import com.nector.userservice.dto.ApiResponse;
 import com.nector.userservice.interceptors.distributor.model.DistributorRequestDTO;
 import com.nector.userservice.interceptors.distributor.model.DistributorResponseDTO;
+import com.nector.userservice.interceptors.distributor.model.OrderConfirmationRequest;
+import com.nector.userservice.interceptors.distributor.model.OrderConfirmationResponse;
 import com.nector.userservice.interceptors.distributor.service.DistributorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -95,6 +97,47 @@ public class DistributorController {
             log.error("Error deleting distributor with ID: {}", id, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, "Failed to delete distributor", null));
+        }
+    }
+    
+    @PostMapping("/{distributorId}/confirm-order")
+    @Operation(summary = "Confirm order received", description = "Distributor confirms order receipt and provides feedback")
+    public ResponseEntity<ApiResponse<OrderConfirmationResponse>> confirmOrderReceived(
+            @PathVariable Long distributorId,
+            @Valid @RequestBody OrderConfirmationRequest request) {
+        try {
+            OrderConfirmationResponse response = distributorService.confirmOrderReceived(distributorId, request);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Order confirmation recorded successfully", response));
+        } catch (Exception e) {
+            log.error("Error confirming order for distributor {}: {}", distributorId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
+        }
+    }
+    
+    @GetMapping("/order-confirmation/{orderId}")
+    @Operation(summary = "Get order confirmation", description = "Get order confirmation details by order ID")
+    public ResponseEntity<ApiResponse<OrderConfirmationResponse>> getOrderConfirmation(@PathVariable Long orderId) {
+        try {
+            OrderConfirmationResponse response = distributorService.getOrderConfirmation(orderId);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Order confirmation retrieved successfully", response));
+        } catch (Exception e) {
+            log.error("Error retrieving order confirmation for order {}: {}", orderId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
+        }
+    }
+    
+    @GetMapping("/{distributorId}/confirmations")
+    @Operation(summary = "Get distributor confirmations", description = "Get all order confirmations for a distributor")
+    public ResponseEntity<ApiResponse<List<OrderConfirmationResponse>>> getDistributorConfirmations(@PathVariable Long distributorId) {
+        try {
+            List<OrderConfirmationResponse> response = distributorService.getDistributorConfirmations(distributorId);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Distributor confirmations retrieved successfully", response));
+        } catch (Exception e) {
+            log.error("Error retrieving confirmations for distributor {}: {}", distributorId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, "Failed to retrieve confirmations", null));
         }
     }
 }

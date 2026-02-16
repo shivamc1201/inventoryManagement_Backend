@@ -33,4 +33,15 @@ public class LoginController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+
+    @PostMapping("/login/secondUser")
+    @ApiResponse(responseCode = "200", description = "Second user login successful")
+    public ResponseEntity<?> loginSecondUser(@Valid @RequestBody LoginRequest request) {
+        try {
+            LoginResponse response = loginService.authenticateSecondUser(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 }

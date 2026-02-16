@@ -27,6 +27,9 @@ public class Cart {
     @Column(nullable = false)
     private Long userId;
     
+    @Column
+    private Long distributorId;
+    
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private CartStatus status = CartStatus.ACTIVE;
@@ -42,6 +45,6 @@ public class Cart {
     private LocalDateTime updatedAt;
     
     public enum CartStatus {
-        ACTIVE, CHECKED_OUT, APPROVED
+        ACTIVE, CHECKED_OUT, APPROVED, PAYMENT_APPROVED
     }
 }

@@ -132,4 +132,11 @@ public class LoginServiceImpl implements LoginService {
         log.info("Exiting authenticateUser() - Login successful for username: {}", request.getUsername());
         return response;
     }
+
+    @Override
+    public LoginResponse authenticateSecondUser(LoginRequest request) {
+        log.info("Entering authenticateSecondUser() for username: {}", request.getUsername());
+
+        return null;
+    }
 }

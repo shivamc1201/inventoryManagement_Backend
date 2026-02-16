@@ -1,0 +1,151 @@
+package com.nector.userservice.service;
+
+import com.nector.userservice.dto.payment.PaymentRequest;
+import com.nector.userservice.dto.payment.PaymentResponse;
+import com.nector.userservice.model.ProformaInvoice;
+import com.nector.userservice.model.DistributorLedger;
+import com.nector.userservice.model.Cart;
+import com.nector.userservice.repository.ProformaInvoiceRepository;
+import com.nector.userservice.repository.DistributorLedgerRepository;
+import com.nector.userservice.repository.CartRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.math.BigDecimal;
+
+@Service
+public class PaymentService {
+    
+    @Autowired
+    private ProformaInvoiceRepository proformaInvoiceRepository;
+    
+    @Autowired
+    private DistributorLedgerRepository distributorLedgerRepository;
+    
+    @Autowired
+    private CartRepository cartRepository;
+    
+    public PaymentResponse processPayment(PaymentRequest paymentRequest) {
+        // Process payment and update distributor ledger
+        PaymentResponse response = new PaymentResponse();
+        response.setPaymentId(System.currentTimeMillis()); // Mock ID
+        response.setDistributorId(paymentRequest.getDistributorId());
+        response.setAmount(paymentRequest.getAmount());
+        response.setPaymentMethod(paymentRequest.getPaymentMethod());
+        response.setTransactionReference(paymentRequest.getTransactionReference());
+        response.setStatus("PROCESSED");
+        response.setProcessedAt(LocalDateTime.now());
+        
+        // Update distributor ledger logic would go here
+        updateDistributorLedger(paymentRequest.getDistributorId(), paymentRequest.getAmount());
+        
+        return response;
+    }
+    
+    public com.nector.userservice.dto.payment.OrderApprovalResponse checkAndApproveOrder(Long orderId, Long distributorId, java.math.BigDecimal orderAmount) {
+        java.math.BigDecimal accountBalance = getDistributorBalance(distributorId);
+        
+        com.nector.userservice.dto.payment.OrderApprovalResponse response = new com.nector.userservice.dto.payment.OrderApprovalResponse();
+        response.setOrderId(orderId);
+        response.setDistributorId(distributorId);
+        response.setOrderAmount(orderAmount);
+        response.setAccountBalance(accountBalance);
+        
+        if (accountBalance.compareTo(orderAmount) >= 0) {
+            response.setStatus("APPROVED");
+            response.setMessage("Order approved - sufficient balance");
+            // Deduct amount from distributor balance
+            updateDistributorLedger(distributorId, orderAmount.negate());
+            // Update PI payment status
+            updateProformaInvoiceStatus(orderId, ProformaInvoice.PaymentStatus.PAID);
+        } else {
+            response.setStatus("REJECTED");
+            response.setMessage("Insufficient balance");
+            updateProformaInvoiceStatus(orderId, ProformaInvoice.PaymentStatus.REJECTED);
+        }
+        
+        return response;
+    }
+    
+    public List<ProformaInvoice> getPendingPIPayments() {
+        return proformaInvoiceRepository.findAll().stream()
+            .filter(pi -> pi.getPaymentStatus() == ProformaInvoice.PaymentStatus.PENDING)
+            .toList();
+    }
+    
+    public void updateDistributorBalance(Long distributorId, BigDecimal amount, String transactionType, String description) {
+        DistributorLedger ledger = new DistributorLedger();
+        ledger.setDistributorId(distributorId);
+        ledger.setAmount(amount);
+        ledger.setTransactionType(transactionType);
+        ledger.setDescription(description);
+        distributorLedgerRepository.save(ledger);
+    }
+    
+    public List<DistributorLedger> getPaymentHistory(Long distributorId) {
+        return distributorLedgerRepository.findByDistributorIdOrderByCreatedAtDesc(distributorId);
+    }
+    
+    public com.nector.userservice.dto.payment.OrderApprovalResponse approvePaymentForOrder(Long orderId, Long distributorId) {
+        // Get PI for the order
+        ProformaInvoice pi = proformaInvoiceRepository.findByCartId(orderId)
+            .orElseThrow(() -> new RuntimeException("Proforma Invoice not found for order: " + orderId));
+        
+        // Check if distributor has sufficient balance
+        BigDecimal distributorBalance = getDistributorBalance(distributorId);
+        BigDecimal piAmount = pi.getAmount();
+        
+        com.nector.userservice.dto.payment.OrderApprovalResponse response = new com.nector.userservice.dto.payment.OrderApprovalResponse();
+        response.setOrderId(orderId);
+        response.setDistributorId(distributorId);
+        response.setOrderAmount(piAmount);
+        response.setAccountBalance(distributorBalance);
+        
+        if (distributorBalance.compareTo(piAmount) >= 0) {
+            // Deduct amount from distributor ledger
+            updateDistributorBalance(distributorId, piAmount, "DEBIT", "Payment for Order #" + orderId);
+            
+            // Update PI status to PAID
+            pi.setPaymentStatus(ProformaInvoice.PaymentStatus.PAID);
+            proformaInvoiceRepository.save(pi);
+            
+            // Update Cart status to PAYMENT_APPROVED
+            Cart cart = cartRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+            cart.setStatus(Cart.CartStatus.PAYMENT_APPROVED);
+            cartRepository.save(cart);
+            
+            response.setStatus("PAYMENT_APPROVED");
+            response.setMessage("Payment approved - Order ready for dispatch");
+        } else {
+            response.setStatus("INSUFFICIENT_BALANCE");
+            response.setMessage("Insufficient balance. Required: " + piAmount + ", Available: " + distributorBalance);
+        }
+        
+        return response;
+    }
+    
+    public List<ProformaInvoice> getPendingPaymentApprovals() {
+        return proformaInvoiceRepository.findAll().stream()
+            .filter(pi -> pi.getPaymentStatus() == ProformaInvoice.PaymentStatus.PENDING)
+            .toList();
+    }
+    
+    private void updateProformaInvoiceStatus(Long cartId, ProformaInvoice.PaymentStatus status) {
+        proformaInvoiceRepository.findByCartId(cartId).ifPresent(pi -> {
+            pi.setPaymentStatus(status);
+            proformaInvoiceRepository.save(pi);
+        });
+    }
+    
+    private java.math.BigDecimal getDistributorBalance(Long distributorId) {
+        return distributorLedgerRepository.getDistributorBalance(distributorId);
+    }
+    
+    private void updateDistributorLedger(Long distributorId, java.math.BigDecimal amount) {
+        String transactionType = amount.compareTo(BigDecimal.ZERO) > 0 ? "CREDIT" : "DEBIT";
+        String description = amount.compareTo(BigDecimal.ZERO) > 0 ? "Payment received" : "Order deduction";
+        updateDistributorBalance(distributorId, amount.abs(), transactionType, description);
+    }
+}

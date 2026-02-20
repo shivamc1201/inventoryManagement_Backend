@@ -19,8 +19,8 @@ public class EncryptedCredentialsConfig {
     @Value("${twilio.auth-token.encrypted}")
     private String encryptedTwilioToken;
     
-    @Value("${jwt.secret.encrypted}")
-    private String encryptedJwtSecret;
+    @Value("${jwt.secret}")
+    private String jwtSecret;
     
     @Bean
     public String awsAccessKey() {
@@ -44,6 +44,6 @@ public class EncryptedCredentialsConfig {
     
     @Bean
     public String jwtSecret() {
-        return CredentialEncryption.decrypt(encryptedJwtSecret);
+        return jwtSecret;
     }
 }

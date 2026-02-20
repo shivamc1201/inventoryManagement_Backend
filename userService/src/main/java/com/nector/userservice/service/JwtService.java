@@ -19,7 +19,7 @@ import java.util.function.Function;
 @Slf4j
 public class JwtService {
     
-    @Value("${jwt.secret:mySecretKey}")
+    @Value("${jwt.secret}")
     private String secret;
     
     @Value("${jwt.expiration:86400000}") // 24 hours
@@ -104,7 +104,7 @@ public class JwtService {
     
     private Key getSignKey() {
         log.debug("Entering getSignKey()");
-        byte[] keyBytes = secret.getBytes();
+        byte[] keyBytes = java.util.Base64.getDecoder().decode(secret);
         Key key = Keys.hmacShaKeyFor(keyBytes);
         log.debug("Exiting getSignKey()");
         return key;

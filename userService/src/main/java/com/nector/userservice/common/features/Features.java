@@ -17,7 +17,7 @@ public enum Features {
     COMPLAINT("Complaint", "/complaint"),
     PRODUCTS("Products", "/products"), // Parent for all Product sub-features
     ORDER_DETAILS("OrderDetails", "/order-details"),
-    Logistic("Logistic", "/logistic" ),
+    LOGISTIC("LOGISTIC", "/logistic" ),
 
 
     // --- Product Sub-Items ---

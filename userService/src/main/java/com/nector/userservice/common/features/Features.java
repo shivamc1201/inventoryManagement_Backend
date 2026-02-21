@@ -14,10 +14,11 @@ public enum Features {
     INVENTORY("Inventory", "/inventory"), // Parent for all Inventory sub-features
     SALES("Sales", "/sales"), // Parent for all Sales sub-features
     REPORTS("Reports", "/reports"),
-    USER_RIGHTS("User Rights", "/user-rights"),
     COMPLAINT("Complaint", "/complaint"),
     PRODUCTS("Products", "/products"), // Parent for all Product sub-features
     ORDER_DETAILS("OrderDetails", "/order-details"),
+    Logistic("Logistic", "/logistic" ),
+
 
     // --- Product Sub-Items ---
     PRODUCTS_FINISHED_PRODUCTS("Finished Products", "/products/finished-products"),

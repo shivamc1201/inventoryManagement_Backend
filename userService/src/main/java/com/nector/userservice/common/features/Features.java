@@ -17,6 +17,7 @@ public enum Features {
     USER_RIGHTS("User Rights", "/user-rights"),
     COMPLAINT("Complaint", "/complaint"),
     PRODUCTS("Products", "/products"), // Parent for all Product sub-features
+    ORDER_DETAILS("OrderDetails", "/order-details"),
 
     // --- Product Sub-Items ---
     PRODUCTS_FINISHED_PRODUCTS("Finished Products", "/products/finished-products"),

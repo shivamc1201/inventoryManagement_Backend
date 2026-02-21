@@ -12,6 +12,7 @@ public enum Features {
     HR("HR", "/hr"),
     DISTRIBUTOR("Distributor", "/distributor"),
     INVENTORY("Inventory", "/inventory"), // Parent for all Inventory sub-features
+    SALES("Sales", "/sales"), // Parent for all Sales sub-features
     REPORTS("Reports", "/reports"),
     USER_RIGHTS("User Rights", "/user-rights"),
     COMPLAINT("Complaint", "/complaint"),

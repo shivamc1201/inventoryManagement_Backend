@@ -71,6 +71,9 @@ public class DataInitializationService implements CommandLineRunner {
             assignPermissionsToRole(RoleType.PLANT_EXECUTIVE, 
                 Features.DASHBOARD, Features.INVENTORY);
             
+            // Explicit SALES permission assignment to ensure it's available
+            assignPermissionsToRole(RoleType.ADMIN, Features.SALES);
+            
         } catch (Exception e) {
             log.error("Error initializing default permissions: {}", e.getMessage());
         }

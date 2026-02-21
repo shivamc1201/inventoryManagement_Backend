@@ -87,12 +87,12 @@ public class LoginServiceImpl implements LoginService {
         userRepository.save(user);
 
         Set<Features> features;
-        boolean isSuperAdmin = user.getRoles().stream()
-                .anyMatch(role -> "SUPER_ADMIN".equals(role.getName()));
+        boolean isAdmin = user.getRoles().stream()
+                .anyMatch(role -> "ADMIN".equals(role.getName()));
 
-        if (isSuperAdmin) {
+        if (isAdmin) {
             features = Set.of(Features.values());
-            log.info("SUPER_ADMIN role detected - assigned all {} features", features.size());
+            log.info("ADMIN role detected - assigned all {} features", features.size());
         } else {
             features = user.getRoles().stream()
                     .flatMap(role -> {

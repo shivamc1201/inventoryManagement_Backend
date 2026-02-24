@@ -1,27 +1,31 @@
 package com.nector.userservice.interceptors.distributor.impl;
 
+import com.nector.userservice.common.UserStatus;
+import com.nector.userservice.common.features.Features;
 import com.nector.userservice.exception.ResourceNotFoundException;
-import com.nector.userservice.interceptors.distributor.model.Distributor;
-import com.nector.userservice.interceptors.distributor.model.DistributorRequestDTO;
-import com.nector.userservice.interceptors.distributor.model.DistributorResponseDTO;
-import com.nector.userservice.interceptors.distributor.model.OrderConfirmation;
-import com.nector.userservice.interceptors.distributor.model.OrderConfirmationRequest;
-import com.nector.userservice.interceptors.distributor.model.OrderConfirmationResponse;
-import com.nector.userservice.interceptors.distributor.model.ItemConfirmationEntity;
+import com.nector.userservice.interceptors.distributor.model.*;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.interceptors.distributor.repository.OrderConfirmationRepository;
 import com.nector.userservice.interceptors.distributor.service.DistributorMapper;
 import com.nector.userservice.interceptors.distributor.service.DistributorService;
+import com.nector.userservice.interceptors.userLogin.model.LoginRequest;
+import com.nector.userservice.interceptors.userLogin.model.LoginResponse;
 import com.nector.userservice.ledger.dto.CreateLedgerAccountRequest;
 import com.nector.userservice.ledger.service.LedgerAccountService;
+import com.nector.userservice.model.User;
 import com.nector.userservice.repository.ItemRepository;
+import com.nector.userservice.service.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,6 +39,7 @@ public class DistributorServiceImpl implements DistributorService {
     private final LedgerAccountService ledgerAccountService;
     private final OrderConfirmationRepository orderConfirmationRepository;
     private final ItemRepository itemRepository;
+    private final JwtService jwtService;
     
     @Override
     public DistributorResponseDTO createDistributor(DistributorRequestDTO request) {
@@ -172,7 +177,45 @@ public class DistributorServiceImpl implements DistributorService {
             .map(this::mapToResponse)
             .collect(Collectors.toList());
     }
-    
+
+    @Override
+    public DistributorLoginResponse authenticateUser(LoginRequest request) {
+
+        log.info("Entering authenticateUser() for username: {}", request.getUsername());
+
+        Distributor user = distributorRepository
+                .findByUsername(request.getUsername())
+                .orElseThrow(() -> {
+                    log.warn("Username not available: {}", request.getUsername());
+                    return new RuntimeException("Username not available");
+                });
+
+        if (user.getStatus() != DistributorStatus.ACTIVE) {
+            log.warn("Username inactive: {}", request.getUsername());
+            throw new RuntimeException("Username inactive, Contact ADMIN");
+        }
+
+        if (!user.getPassword().equals(request.getPassword())) {
+            log.warn("Invalid password for username: {}", request.getUsername());
+            throw new RuntimeException("Invalid password");
+        }
+
+        String token = jwtService.generateToken(request.getUsername());
+
+        DistributorLoginResponse response =
+                new DistributorLoginResponse(
+                        token,
+                        "Bearer",
+                        request.getUsername(),
+                        "Login successful for " + request.getUsername(),
+                        user.getId(),
+                        "LOGGED_IN"
+                );
+
+        log.info("Login successful for Distributor: {}", request.getUsername());
+        return response;
+    }
+
     private OrderConfirmationResponse mapToResponse(OrderConfirmation confirmation) {
         OrderConfirmationResponse response = new OrderConfirmationResponse();
         response.setId(confirmation.getId());

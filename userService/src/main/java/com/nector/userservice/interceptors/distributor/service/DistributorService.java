@@ -1,9 +1,9 @@
 package com.nector.userservice.interceptors.distributor.service;
 
-import com.nector.userservice.interceptors.distributor.model.DistributorRequestDTO;
-import com.nector.userservice.interceptors.distributor.model.DistributorResponseDTO;
-import com.nector.userservice.interceptors.distributor.model.OrderConfirmationRequest;
-import com.nector.userservice.interceptors.distributor.model.OrderConfirmationResponse;
+import com.nector.userservice.interceptors.distributor.model.*;
+import com.nector.userservice.interceptors.userLogin.model.LoginRequest;
+import jakarta.validation.Valid;
+
 import java.util.List;
 
 public interface DistributorService {
@@ -16,4 +16,6 @@ public interface DistributorService {
     OrderConfirmationResponse confirmOrderReceived(Long distributorId, OrderConfirmationRequest request);
     OrderConfirmationResponse getOrderConfirmation(Long orderId);
     List<OrderConfirmationResponse> getDistributorConfirmations(Long distributorId);
+
+    DistributorLoginResponse authenticateUser(@Valid LoginRequest request);
 }

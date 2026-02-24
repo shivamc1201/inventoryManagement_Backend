@@ -1,6 +1,9 @@
 package com.nector.userservice.interceptors.distributor.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import java.time.LocalDateTime;
 
@@ -52,4 +55,14 @@ public class DistributorResponseDTO {
     
     @Schema(description = "Last update timestamp")
     private LocalDateTime updatedOn;
+
+    @Schema(description = "Unique username", example = "johndoe123")
+    private String username;
+
+    @Schema(description = "User email address", example = "john.doe@example.com")
+    private String email;
+
+    @Schema(description = "User password", example = "SecurePass123!")
+    private String password;
+
 }

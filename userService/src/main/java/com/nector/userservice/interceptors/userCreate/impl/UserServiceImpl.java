@@ -43,17 +43,17 @@ public class UserServiceImpl implements UserService {
             log.warn("Exiting registerNewUser() - Email already exists: {}", request.getEmail());
             throw new UsernameAlreadyExistsException("Email already exists: " + request.getEmail());
         }
-
-        if (request.getRoleType() == RoleType.Distributor) {
-            DistributorRequestDTO distributorRequest = new DistributorRequestDTO();
-            distributorRequest.setContactEmail(request.getEmail());
-            distributorRequest.setPhoneNumber(request.getContactNo());
-            distributorRequest.setAlternateContact(request.getAlternateContactNo());
-            distributorRequest.setName(request.getFirstName() + " " + request.getLastName());
-            distributorRequest.setAddress(request.getCompleteAddress());
-            log.info("Creating distributor for user: {}", request.getUsername());
-            distributorService.createDistributor(distributorRequest);
-        }
+//  For later use if needed
+//        if (request.getRoleType() == RoleType.Distributor) {
+//            DistributorRequestDTO distributorRequest = new DistributorRequestDTO();
+//            distributorRequest.setContactEmail(request.getEmail());
+//            distributorRequest.setPhoneNumber(request.getContactNo());
+//            distributorRequest.setAlternateContact(request.getAlternateContactNo());
+//            distributorRequest.setName(request.getFirstName() + " " + request.getLastName());
+//            distributorRequest.setAddress(request.getCompleteAddress());
+//            log.info("Creating distributor for user: {}", request.getUsername());
+//            distributorService.createDistributor(distributorRequest);
+//        }
         
         User user = new User();
         user.setUsername(request.getUsername());

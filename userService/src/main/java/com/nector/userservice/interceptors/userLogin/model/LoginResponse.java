@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.userLogin.model;
 
+import com.nector.userservice.common.BaseLoginResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -8,7 +9,7 @@ import java.util.Set;
 
 @Data
 @Schema(description = "User login response")
-public class LoginResponse {
+public class LoginResponse implements BaseLoginResponse {
     @Schema(description = "JWT token", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
     private String token;
     

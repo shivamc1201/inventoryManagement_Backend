@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.userLogin;
 
+import com.nector.userservice.common.BaseLoginResponse;
 import com.nector.userservice.interceptors.userLogin.model.LoginRequest;
 import com.nector.userservice.interceptors.userLogin.model.LoginResponse;
 import com.nector.userservice.interceptors.userLogin.service.LoginService;
@@ -27,7 +28,7 @@ public class LoginController {
     @ApiResponse(responseCode = "400", description = "Invalid credentials")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         try {
-            LoginResponse response = loginService.authenticateUser(request);
+            BaseLoginResponse response = loginService.authenticate(request);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

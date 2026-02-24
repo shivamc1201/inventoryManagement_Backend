@@ -140,19 +140,4 @@ public class DistributorController {
                     .body(new ApiResponse<>(false, "Failed to retrieve confirmations", null));
         }
     }
-
-
-
-    @PostMapping("/login")
-    @Operation(summary = "Distributor login", description = "Authenticate distributor with username and password")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Login successful")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid credentials")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
-        try {
-            DistributorLoginResponse response = distributorService.authenticateUser(request);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
-    }
 }

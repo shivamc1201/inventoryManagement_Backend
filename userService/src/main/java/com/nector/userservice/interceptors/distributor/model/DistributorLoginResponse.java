@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.distributor.model;
 
+import com.nector.userservice.common.BaseLoginResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,7 +13,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "Distributor login response")
-public class DistributorLoginResponse {
+public class DistributorLoginResponse  implements BaseLoginResponse {
 
     @Schema(description = "JWT token", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
     private String token;

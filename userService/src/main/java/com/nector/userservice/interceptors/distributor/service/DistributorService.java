@@ -17,5 +17,4 @@ public interface DistributorService {
     OrderConfirmationResponse getOrderConfirmation(Long orderId);
     List<OrderConfirmationResponse> getDistributorConfirmations(Long distributorId);
 
-    DistributorLoginResponse authenticateUser(@Valid LoginRequest request);
 }

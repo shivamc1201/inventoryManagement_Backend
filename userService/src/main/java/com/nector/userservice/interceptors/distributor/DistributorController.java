@@ -1,11 +1,10 @@
 package com.nector.userservice.interceptors.distributor;
 
 import com.nector.userservice.dto.ApiResponse;
-import com.nector.userservice.interceptors.distributor.model.DistributorRequestDTO;
-import com.nector.userservice.interceptors.distributor.model.DistributorResponseDTO;
-import com.nector.userservice.interceptors.distributor.model.OrderConfirmationRequest;
-import com.nector.userservice.interceptors.distributor.model.OrderConfirmationResponse;
+import com.nector.userservice.interceptors.distributor.model.*;
 import com.nector.userservice.interceptors.distributor.service.DistributorService;
+import com.nector.userservice.interceptors.userLogin.model.LoginRequest;
+import com.nector.userservice.interceptors.userLogin.model.LoginResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -16,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/distributors")
@@ -138,6 +138,21 @@ public class DistributorController {
             log.error("Error retrieving confirmations for distributor {}: {}", distributorId, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, "Failed to retrieve confirmations", null));
+        }
+    }
+
+
+
+    @PostMapping("/login")
+    @Operation(summary = "Distributor login", description = "Authenticate distributor with username and password")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Login successful")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid credentials")
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+        try {
+            DistributorLoginResponse response = distributorService.authenticateUser(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 }

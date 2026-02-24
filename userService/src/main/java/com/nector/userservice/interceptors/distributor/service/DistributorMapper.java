@@ -22,6 +22,9 @@ public class DistributorMapper {
         distributor.setPanNumber(dto.getPanNumber());
         distributor.setGstNumber(dto.getGstNumber());
         distributor.setStatus(dto.getStatus());
+        distributor.setUsername(dto.getUsername());
+        distributor.setPassword(dto.getPassword());
+
         return distributor;
     }
     

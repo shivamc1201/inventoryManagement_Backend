@@ -71,4 +71,13 @@ public class DistributorRequestDTO {
     @Schema(description = "User password", example = "SecurePass123!")
     private String password;
 
+    @NotBlank
+    private String accountNumber;
+
+    @NotBlank
+    private String accountName;
+
+    @NotBlank
+    private String ifsc;
+
 }

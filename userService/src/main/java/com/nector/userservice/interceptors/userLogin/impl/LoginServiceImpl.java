@@ -245,15 +245,30 @@ public class LoginServiceImpl implements LoginService {
 
         String token = jwtService.generateToken(request.getUsername());
 
+        // Distributor features
+        List<Object> featureDetails = List.of(
+                Map.of("displayName", "OrderDetails", "name", "ORDER_DETAILS", "path", "/order-details"),
+                Map.of("displayName", "Dashboard", "name", "DASHBOARD", "path", "/dashboard"),
+                Map.of("displayName", "Reports", "name", "REPORTS", "path", "/reports"),
+                Map.of("displayName", "Products", "name", "PRODUCTS", "path", "/products"),
+                Map.of("displayName", "Complaint", "name", "COMPLAINT", "path", "/complaint")
+        );
+
+        Set<String> featureNames = Set.of("ORDER_DETAILS", "PRODUCTS", "DASHBOARD", "REPORTS", "COMPLAINT");
+
         return new DistributorLoginResponse(
                 token,
                 "Bearer",
                 request.getUsername(),
                 "Login successful for Distributor " + request.getUsername(),
                 user.getId(),
+                "distributor",
+                featureDetails,
+                featureNames,
                 "LOGGED_IN"
         );
     }
+
 
 
 

@@ -62,7 +62,16 @@ public class DistributorResponseDTO {
     @Schema(description = "User email address", example = "john.doe@example.com")
     private String email;
 
-    @Schema(description = "User password", example = "SecurePass123!")
+    @Schema(description = "User password", example = "pass")
     private String password;
+
+    @Schema(description = "accountNumber", example = "11111111222")
+    private String accountNumber;
+
+    @Schema(description = "accountName", example = "Sample Name")
+    private String accountName;
+
+    @Schema(description = "IFSC", example = "SBI12345")
+    private String IFSC;
 
 }

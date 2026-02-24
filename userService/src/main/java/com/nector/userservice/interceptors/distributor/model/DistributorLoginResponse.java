@@ -48,6 +48,9 @@ public class DistributorLoginResponse  implements BaseLoginResponse {
             String username,
             String message,
             Long userId,
+            String roleType,
+            List<Object> features,
+            Set<String> featureNames,
             String loginStatus) {
 
         this.token = token;
@@ -56,5 +59,8 @@ public class DistributorLoginResponse  implements BaseLoginResponse {
         this.message = message;
         this.userId = userId;
         this.loginStatus = loginStatus;
+        this.roleType = roleType;
+        this.features = features;
+        this.featureNames = featureNames;
     }
 }

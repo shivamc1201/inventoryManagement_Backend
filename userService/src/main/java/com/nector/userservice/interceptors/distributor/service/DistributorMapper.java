@@ -24,6 +24,10 @@ public class DistributorMapper {
         distributor.setStatus(dto.getStatus());
         distributor.setUsername(dto.getUsername());
         distributor.setPassword(dto.getPassword());
+        distributor.setAccountName(dto.getAccountName());
+        distributor.setAccountNumber(dto.getAccountNumber());
+        distributor.setIfsc(dto.getIfsc());
+
 
         return distributor;
     }
@@ -45,6 +49,12 @@ public class DistributorMapper {
         dto.setStatus(entity.getStatus());
         dto.setCreatedOn(entity.getCreatedOn());
         dto.setUpdatedOn(entity.getUpdatedOn());
+        dto.setPassword(entity.getPassword());
+        dto.setUsername(entity.getUsername());
+        dto.setEmail(entity.getContactEmail());
+        dto.setAccountNumber(entity.getAccountNumber());
+        dto.setAccountName(entity.getAccountName());
+        dto.setIFSC(entity.getIfsc());
         return dto;
     }
     
@@ -61,5 +71,7 @@ public class DistributorMapper {
         entity.setPanNumber(dto.getPanNumber());
         entity.setGstNumber(dto.getGstNumber());
         entity.setStatus(dto.getStatus());
+        entity.setPassword(dto.getPassword());
+        entity.setUsername(dto.getUsername());
     }
 }

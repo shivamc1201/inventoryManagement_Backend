@@ -178,44 +178,6 @@ public class DistributorServiceImpl implements DistributorService {
             .collect(Collectors.toList());
     }
 
-    @Override
-    public DistributorLoginResponse authenticateUser(LoginRequest request) {
-
-        log.info("Entering authenticateUser() for username: {}", request.getUsername());
-
-        Distributor user = distributorRepository
-                .findByUsername(request.getUsername())
-                .orElseThrow(() -> {
-                    log.warn("Username not available: {}", request.getUsername());
-                    return new RuntimeException("Username not available");
-                });
-
-        if (user.getStatus() != DistributorStatus.ACTIVE) {
-            log.warn("Username inactive: {}", request.getUsername());
-            throw new RuntimeException("Username inactive, Contact ADMIN");
-        }
-
-        if (!user.getPassword().equals(request.getPassword())) {
-            log.warn("Invalid password for username: {}", request.getUsername());
-            throw new RuntimeException("Invalid password");
-        }
-
-        String token = jwtService.generateToken(request.getUsername());
-
-        DistributorLoginResponse response =
-                new DistributorLoginResponse(
-                        token,
-                        "Bearer",
-                        request.getUsername(),
-                        "Login successful for " + request.getUsername(),
-                        user.getId(),
-                        "LOGGED_IN"
-                );
-
-        log.info("Login successful for Distributor: {}", request.getUsername());
-        return response;
-    }
-
     private OrderConfirmationResponse mapToResponse(OrderConfirmation confirmation) {
         OrderConfirmationResponse response = new OrderConfirmationResponse();
         response.setId(confirmation.getId());

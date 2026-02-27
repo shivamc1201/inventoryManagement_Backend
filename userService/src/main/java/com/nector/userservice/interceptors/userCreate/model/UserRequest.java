@@ -23,7 +23,7 @@ public class UserRequest {
     
     @NotBlank(message = "Password is required")
     @Size(min = 8, message = "Password must be at least 8 characters")
-    @Schema(description = "User password", example = "SecurePass123!")
+    @Schema(description = "User password", example = "password123")
     private String password;
     
     @NotNull(message = "Status is required")

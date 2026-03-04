@@ -71,4 +71,20 @@ public class CartController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
         }
     }
+    
+    @DeleteMapping("/{cartId}/dismiss")
+    public ResponseEntity<Map<String, String>> dismissCart(@PathVariable Long cartId) {
+        log.info("Dismissing cart: {}", cartId);
+        try {
+            cartService.dismissCart(cartId);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Cart dismissed successfully");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error dismissing cart {}: {}", cartId, e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+    }
 }

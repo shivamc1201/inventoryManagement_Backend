@@ -13,4 +13,6 @@ public class CartResponse {
     private List<CartItemResponse> cartItems;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Long salespersonId;
+    private String salespersonName;
 }

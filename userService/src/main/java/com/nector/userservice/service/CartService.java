@@ -9,10 +9,15 @@ import com.nector.userservice.exception.CartNotFoundException;
 import com.nector.userservice.exception.ItemNotFoundException;
 import com.nector.userservice.model.Cart;
 import com.nector.userservice.model.CartItem;
+import com.nector.userservice.model.FinishedProduct;
 import com.nector.userservice.model.Item;
 import com.nector.userservice.repository.CartItemRepository;
 import com.nector.userservice.repository.CartRepository;
+import com.nector.userservice.repository.FinishedProductRepository;
 import com.nector.userservice.repository.ItemRepository;
+import com.nector.userservice.interceptors.salesMapping.repository.SalesMappingRepository;
+import com.nector.userservice.interceptors.salesMapping.model.SalespersonDistributorMapping;
+import com.nector.userservice.interceptors.salesMapping.model.MappingStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,6 +37,8 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final ItemRepository itemRepository;
     private final ProformaInvoiceService proformaInvoiceService;
+    private final FinishedProductRepository finishedProductRepository;
+    private final SalesMappingRepository salesMappingRepository;
 
 
     // TODO the dispatch team wil, check the real  quantity of the orders  while checking GDN
@@ -45,12 +52,12 @@ public class CartService {
         for (AddToCartRequest request : requests) {
             log.info("Processing item {} for user {}", request.getItemId(), userId);
             try {
-                Item item = itemRepository.findBySku(request.getItemId())
-                        .filter(Item::getActive)
+                FinishedProduct finishedProduct = finishedProductRepository.findBySku(request.getItemId())
+                        .filter(FinishedProduct::getActive)
                         .orElseThrow(() -> new ItemNotFoundException("Item with SKU '" + request.getItemId() + "' not found or inactive"));
                         
                 Optional<CartItem> existingCartItem =
-                        cartItemRepository.findByCartIdAndItemId(cart.getId(), item.getId());
+                        cartItemRepository.findByCartIdAndItemId(cart.getId(), finishedProduct.getId());
                         
                 if (existingCartItem.isPresent()) {
                     CartItem cartItem = existingCartItem.get();
@@ -60,9 +67,9 @@ public class CartService {
                 } else {
                     CartItem cartItem = new CartItem();
                     cartItem.setCart(cart);
-                    cartItem.setItem(item);
+                    cartItem.setItem(finishedProduct);
                     cartItem.setQuantity(request.getQuantity());
-                    cartItem.setPriceAtTime(item.getPrice());
+                    cartItem.setPriceAtTime(finishedProduct.getPrice());
                     cartItemRepository.save(cartItem);
                     cart.getCartItems().add(cartItem);
                 }
@@ -131,6 +138,21 @@ public class CartService {
         response.setCreatedAt(cart.getCreatedAt());
         response.setUpdatedAt(cart.getUpdatedAt());
         
+        // Fetch salesperson information for the distributor
+        if (cart.getDistributorId() != null) {
+            Optional<SalespersonDistributorMapping> mapping = salesMappingRepository
+                .findByDistributorId(cart.getDistributorId())
+                .stream()
+                .filter(m -> m.getStatus() == MappingStatus.ACTIVE)
+                .findFirst();
+            
+            if (mapping.isPresent()) {
+                response.setSalespersonId(mapping.get().getSalespersonId());
+                // You can add salesperson name lookup here if needed
+                response.setSalespersonName("Salesperson-" + mapping.get().getSalespersonId());
+            }
+        }
+        
         List<CartItemResponse> cartItemResponses = cart.getCartItems().stream()
             .map(this::mapCartItemToResponse)
             .collect(Collectors.toList());
@@ -152,6 +174,11 @@ public class CartService {
         Cart cart = cartRepository.findById(cartId)
             .orElseThrow(() -> new CartNotFoundException("Cart with ID " + cartId + " not found"));
         
+        // Check if cart is active before approval
+        if (cart.getStatus() != Cart.CartStatus.ACTIVE) {
+            throw new com.nector.userservice.exception.InvalidCartStatusException("Cannot approve cart with status: " + cart.getStatus());
+        }
+        
         cart.setStatus(Cart.CartStatus.APPROVED);
         Cart updatedCart = cartRepository.save(cart);
         
@@ -159,6 +186,16 @@ public class CartService {
         proformaInvoiceService.generateProformaInvoice(cartId);
         
         return mapToResponse(updatedCart);
+    }
+    
+    @Transactional
+    public void dismissCart(Long cartId) {
+        Cart cart = cartRepository.findById(cartId)
+            .orElseThrow(() -> new CartNotFoundException("Cart with ID " + cartId + " not found"));
+        
+        cart.setStatus(Cart.CartStatus.DISMISSED);
+        cartRepository.save(cart);
+        log.info("Cart {} dismissed successfully", cartId);
     }
     
     private CartItemResponse mapCartItemToResponse(CartItem cartItem) {

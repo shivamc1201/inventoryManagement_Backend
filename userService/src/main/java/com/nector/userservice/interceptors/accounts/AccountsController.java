@@ -37,7 +37,29 @@ public class AccountsController {
     public ResponseEntity<OrderApprovalResponse> approveOrder(
             @PathVariable Long orderId,
             @RequestParam Long distributorId,
-            @RequestParam BigDecimal orderAmount) {
+            @RequestParam BigDecimal orderAmount,
+            @RequestParam Long salespersonId) {
+        
+        // Check if cart is active
+        if (!paymentService.isCartActive(orderId)) {
+            OrderApprovalResponse response = new OrderApprovalResponse();
+            response.setOrderId(orderId);
+            response.setDistributorId(distributorId);
+            response.setStatus("INVALID_CART");
+            response.setMessage("Cart is not active or does not exist");
+            return ResponseEntity.status(400).body(response);
+        }
+        
+        // Check if salesperson is authorized for this distributor
+        if (!paymentService.isSalespersonAuthorizedForDistributor(salespersonId, distributorId)) {
+            OrderApprovalResponse response = new OrderApprovalResponse();
+            response.setOrderId(orderId);
+            response.setDistributorId(distributorId);
+            response.setStatus("UNAUTHORIZED");
+            response.setMessage("Salesperson not authorized to approve orders for this distributor");
+            return ResponseEntity.status(403).body(response);
+        }
+        
         OrderApprovalResponse approval = paymentService.checkAndApproveOrder(orderId, distributorId, orderAmount);
         return ResponseEntity.ok(approval);
     }

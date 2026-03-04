@@ -45,6 +45,6 @@ public class Cart {
     private LocalDateTime updatedAt;
     
     public enum CartStatus {
-        ACTIVE, CHECKED_OUT, APPROVED, PAYMENT_APPROVED
+        ACTIVE, CHECKED_OUT, APPROVED, PAYMENT_APPROVED, DISMISSED
     }
 }

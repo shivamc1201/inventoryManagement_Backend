@@ -14,8 +14,14 @@ public class ProformaInvoice {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
+    @Column(name = "pi_number", nullable = false)
+    private String piNumber;
+    
     @Column(name = "cart_id")
     private Long cartId;
+    
+    @Column(name = "user_id")
+    private Long userId;
     
     @Column(name = "distributor_id")
     private Long distributorId;

@@ -250,7 +250,7 @@ public class LoginServiceImpl implements LoginService {
 
         if (isAdmin) {
             features = Arrays.stream(Features.values())
-                    .filter(feature -> feature != Features.DISTRIBUTOR && feature != Features.SALES)
+                    .filter(feature -> feature != Features.SALES)
                     .collect(Collectors.toSet());
         } else {
             features = user.getRoles().stream()

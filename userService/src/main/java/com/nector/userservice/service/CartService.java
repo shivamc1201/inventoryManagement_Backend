@@ -37,7 +37,6 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final FinishedProductRepository finishedProductRepository;
     private final ProformaInvoiceService proformaInvoiceService;
-    private final FinishedProductRepository finishedProductRepository;
     private final SalesMappingRepository salesMappingRepository;
 
 

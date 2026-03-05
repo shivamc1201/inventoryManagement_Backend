@@ -19,6 +19,7 @@ public enum Features {
     ORDER_DETAILS("OrderDetails", "/order-details"),
     LOGISTIC("LOGISTIC", "/logistic" ),
     USER_RIGHTS("User Rights", "/user-rights"),
+    DISPATCH("Dispatch", "/dispatch"),
 
 
     // --- Product Sub-Items ---

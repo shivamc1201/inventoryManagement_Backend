@@ -9,7 +9,6 @@ public enum RoleType {
     SUPER_ADMIN("Administration"),
 
     ADMIN("Administration"),
-    DISPATCH("Administration"),
 
     // --- Department Managers/Directors ---
     BUSINESS_DEV_MGR("BusinessDevelopment"),
@@ -33,6 +32,7 @@ public enum RoleType {
 
     // --- Logistics Department Roles ---
     LOGISTICS_OFFICER("Logistics"),
+    DISPATCH("Logistics"),
 
     // --- HR Department Roles ---
     HR_EXECUTIVE("HR"),

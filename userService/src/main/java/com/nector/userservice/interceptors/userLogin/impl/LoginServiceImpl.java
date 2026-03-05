@@ -244,9 +244,10 @@ public class LoginServiceImpl implements LoginService {
         Set<Features> features;
         boolean isAdmin = user.getRoleType() == RoleType.ADMIN || 
                           user.getRoleType() == RoleType.SUPER_ADMIN ||
+                          user.getRoleType() == RoleType.DISPATCH ||
                           user.getRoles().stream()
                               .map(Role::getRoleType)
-                              .anyMatch(rt -> rt == RoleType.ADMIN || rt == RoleType.SUPER_ADMIN);
+                              .anyMatch(rt -> rt == RoleType.ADMIN || rt == RoleType.SUPER_ADMIN || rt == RoleType.DISPATCH);
 
         if (isAdmin) {
             features = Arrays.stream(Features.values())
@@ -354,30 +355,17 @@ public class LoginServiceImpl implements LoginService {
     }
 
     private List<Object> getSalesPersonFeatures(RoleType roleType) {
-        List<Object> baseFeatures = new ArrayList<>(List.of(
+        return List.of(
                 Map.of("displayName", "Dashboard", "name", "DASHBOARD", "path", "/dashboard"),
                 Map.of("displayName", "OrderDetails", "name", "ORDER_DETAILS", "path", "/order-details"),
                 Map.of("displayName", "Products", "name", "PRODUCTS", "path", "/products"),
-                Map.of("displayName", "Sales", "name", "SALES", "path", "/sales")
-        ));
-
-        if (roleType == RoleType.NATIONAL_SALES_MGR || roleType == RoleType.STATE_SALES_MGR || roleType == RoleType.ZONAL_SALES_MGR) {
-            baseFeatures.add(Map.of("displayName", "Reports", "name", "REPORTS", "path", "/reports"));
-            baseFeatures.add(Map.of("displayName", "Analytics", "name", "ANALYTICS", "path", "/analytics"));
-        }
-
-        return baseFeatures;
+                Map.of("displayName", "Reports", "name", "REPORTS", "path", "/reports"),
+                Map.of("displayName", "Analytics", "name", "ANALYTICS", "path", "/analytics")
+        );
     }
 
     private Set<String> getSalesPersonFeatureNames(RoleType roleType) {
-        Set<String> baseFeatures = new HashSet<>(Set.of("DASHBOARD", "ORDER_DETAILS", "PRODUCTS"));
-
-        if (roleType == RoleType.NATIONAL_SALES_MGR || roleType == RoleType.STATE_SALES_MGR || roleType == RoleType.ZONAL_SALES_MGR) {
-            baseFeatures.add("REPORTS");
-            baseFeatures.add("ANALYTICS");
-        }
-
-        return baseFeatures;
+        return Set.of("DASHBOARD", "ORDER_DETAILS", "SALES", "REPORTS", "ANALYTICS");
     }
 
 

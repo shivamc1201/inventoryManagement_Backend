@@ -35,7 +35,7 @@ public class CartService {
     
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
-    private final ItemRepository itemRepository;
+    private final FinishedProductRepository finishedProductRepository;
     private final ProformaInvoiceService proformaInvoiceService;
     private final FinishedProductRepository finishedProductRepository;
     private final SalesMappingRepository salesMappingRepository;
@@ -55,7 +55,7 @@ public class CartService {
                 FinishedProduct finishedProduct = finishedProductRepository.findBySku(request.getItemId())
                         .filter(FinishedProduct::getActive)
                         .orElseThrow(() -> new ItemNotFoundException("Item with SKU '" + request.getItemId() + "' not found or inactive"));
-                        
+
                 Optional<CartItem> existingCartItem =
                         cartItemRepository.findByCartIdAndItemId(cart.getId(), finishedProduct.getId());
                         

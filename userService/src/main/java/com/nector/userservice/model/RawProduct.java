@@ -33,6 +33,24 @@ public class RawProduct {
     @Column(nullable = false)
     private Unit unit;
     
+    @Column(length = 50)
+    private String unitType;
+    
+    @Column(length = 50)
+    private String productSize;
+    
+    @Column(length = 100)
+    private String unitName;
+    
+    @Column(unique = true, length = 50)
+    private String unitCode;
+    
+    @Column(length = 500)
+    private String unitDescription;
+    
+    @Column(length = 20)
+    private String unitStatus;
+    
     @Column(nullable = false)
     private Integer quantity = 0;
     

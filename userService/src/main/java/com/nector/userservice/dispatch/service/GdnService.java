@@ -1,7 +1,6 @@
 package com.nector.userservice.dispatch.service;
 
 import com.nector.userservice.dispatch.dto.GdnItemResponse;
-import com.nector.userservice.dispatch.dto.GdnRequest;
 import com.nector.userservice.dispatch.dto.GdnResponse;
 import com.nector.userservice.dispatch.dto.GdnGenerationRequest;
 import com.nector.userservice.dispatch.dto.InventoryVerificationResponse;

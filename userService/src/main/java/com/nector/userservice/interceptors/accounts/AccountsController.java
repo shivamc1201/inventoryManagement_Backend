@@ -3,6 +3,7 @@ package com.nector.userservice.interceptors.accounts;
 import com.nector.userservice.dto.payment.PaymentRequest;
 import com.nector.userservice.dto.payment.PaymentResponse;
 import com.nector.userservice.dto.payment.OrderApprovalResponse;
+import com.nector.userservice.enums.TransactionType;
 import com.nector.userservice.model.ProformaInvoice;
 import com.nector.userservice.model.DistributorLedger;
 import com.nector.userservice.service.PaymentService;
@@ -41,12 +42,12 @@ public class AccountsController {
             @RequestParam Long salespersonId) {
         
         // Check if cart is active
-        if (!paymentService.isCartActive(orderId)) {
+        if (!paymentService.isCartApproved(orderId)) {
             OrderApprovalResponse response = new OrderApprovalResponse();
             response.setOrderId(orderId);
             response.setDistributorId(distributorId);
             response.setStatus("INVALID_CART");
-            response.setMessage("Cart is not active or does not exist");
+            response.setMessage("Cart is not approved or does not exist");
             return ResponseEntity.status(400).body(response);
         }
         
@@ -78,9 +79,9 @@ public class AccountsController {
     public ResponseEntity<String> updateBalance(
             @RequestParam Long distributorId,
             @RequestParam BigDecimal amount,
-            @RequestParam String transactionType,
+            @RequestParam TransactionType transactionType,
             @RequestParam String description) {
-        paymentService.updateDistributorBalance(distributorId, amount, transactionType, description);
+        paymentService.updateDistributorBalance(distributorId, amount, transactionType.name(), description);
         return ResponseEntity.ok("Balance updated successfully");
     }
     

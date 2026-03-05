@@ -79,9 +79,9 @@ public class PaymentService {
         ).isPresent();
     }
     
-    public boolean isCartActive(Long cartId) {
+    public boolean isCartApproved(Long cartId) {
         return cartRepository.findById(cartId)
-            .map(cart -> cart.getStatus() == Cart.CartStatus.ACTIVE)
+            .map(cart -> cart.getStatus() == Cart.CartStatus.APPROVED)
             .orElse(false);
     }
     

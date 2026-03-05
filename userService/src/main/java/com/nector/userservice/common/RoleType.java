@@ -9,6 +9,7 @@ public enum RoleType {
     SUPER_ADMIN("Administration"),
 
     ADMIN("Administration"),
+    DISPATCH("Administration"),
 
     // --- Department Managers/Directors ---
     BUSINESS_DEV_MGR("BusinessDevelopment"),

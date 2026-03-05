@@ -303,10 +303,11 @@ public class LoginServiceImpl implements LoginService {
                 Map.of("displayName", "Dashboard", "name", "DASHBOARD", "path", "/dashboard"),
                 Map.of("displayName", "Reports", "name", "REPORTS", "path", "/reports"),
                 Map.of("displayName", "Products", "name", "PRODUCTS", "path", "/products"),
-                Map.of("displayName", "Complaint", "name", "COMPLAINT", "path", "/complaint")
+                Map.of("displayName", "Complaint", "name", "COMPLAINT", "path", "/complaint"),
+                Map.of("displayName", "PlaceOrder", "name", "PLACE_ORDER", "path", "/placeOrder")
         );
 
-        Set<String> featureNames = Set.of("ORDER_DETAILS", "PRODUCTS", "DASHBOARD", "REPORTS", "COMPLAINT");
+        Set<String> featureNames = Set.of("ORDER_DETAILS", "PRODUCTS", "DASHBOARD", "REPORTS", "COMPLAINT","PLACE_ORDER");
 
         return new DistributorLoginResponse(
                 token,
@@ -356,7 +357,8 @@ public class LoginServiceImpl implements LoginService {
         List<Object> baseFeatures = new ArrayList<>(List.of(
                 Map.of("displayName", "Dashboard", "name", "DASHBOARD", "path", "/dashboard"),
                 Map.of("displayName", "OrderDetails", "name", "ORDER_DETAILS", "path", "/order-details"),
-                Map.of("displayName", "Products", "name", "PRODUCTS", "path", "/products")
+                Map.of("displayName", "Products", "name", "PRODUCTS", "path", "/products"),
+                Map.of("displayName", "Sales", "name", "SALES", "path", "/sales")
         ));
 
         if (roleType == RoleType.NATIONAL_SALES_MGR || roleType == RoleType.STATE_SALES_MGR || roleType == RoleType.ZONAL_SALES_MGR) {

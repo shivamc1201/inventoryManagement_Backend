@@ -9,10 +9,10 @@ import com.nector.userservice.exception.CartNotFoundException;
 import com.nector.userservice.exception.ItemNotFoundException;
 import com.nector.userservice.model.Cart;
 import com.nector.userservice.model.CartItem;
-import com.nector.userservice.model.Item;
+import com.nector.userservice.model.FinishedProduct;
 import com.nector.userservice.repository.CartItemRepository;
 import com.nector.userservice.repository.CartRepository;
-import com.nector.userservice.repository.ItemRepository;
+import com.nector.userservice.repository.FinishedProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,7 +30,7 @@ public class CartService {
     
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
-    private final ItemRepository itemRepository;
+    private final FinishedProductRepository finishedProductRepository;
     private final ProformaInvoiceService proformaInvoiceService;
 
 
@@ -45,10 +45,9 @@ public class CartService {
         for (AddToCartRequest request : requests) {
             log.info("Processing item {} for user {}", request.getItemId(), userId);
             try {
-                Item item = itemRepository.findBySku(request.getItemId())
-                        .filter(Item::getActive)
+                FinishedProduct item = finishedProductRepository.findBySku(request.getItemId())
                         .orElseThrow(() -> new ItemNotFoundException("Item with SKU '" + request.getItemId() + "' not found or inactive"));
-                        
+
                 Optional<CartItem> existingCartItem =
                         cartItemRepository.findByCartIdAndItemId(cart.getId(), item.getId());
                         

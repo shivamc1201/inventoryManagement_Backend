@@ -22,4 +22,8 @@ public interface FinishedProductRepository extends JpaRepository<FinishedProduct
     List<FinishedProduct> findLowStockItems();
     
     boolean existsBySku(String sku);
+    
+    boolean existsByUnitCode(String unitCode);
+    
+    Optional<FinishedProduct> findByUnitCode(String unitCode);
 }

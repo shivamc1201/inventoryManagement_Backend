@@ -22,4 +22,8 @@ public interface RawProductRepository extends JpaRepository<RawProduct, Long> {
     List<RawProduct> findLowStockItems();
     
     boolean existsByMaterialCode(String materialCode);
+    
+    boolean existsByUnitCode(String unitCode);
+    
+    Optional<RawProduct> findByUnitCode(String unitCode);
 }

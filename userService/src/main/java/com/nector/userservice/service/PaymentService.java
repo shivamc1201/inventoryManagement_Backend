@@ -8,6 +8,8 @@ import com.nector.userservice.model.Cart;
 import com.nector.userservice.repository.ProformaInvoiceRepository;
 import com.nector.userservice.repository.DistributorLedgerRepository;
 import com.nector.userservice.repository.CartRepository;
+import com.nector.userservice.interceptors.salesMapping.repository.SalesMappingRepository;
+import com.nector.userservice.interceptors.salesMapping.model.MappingStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -25,6 +27,9 @@ public class PaymentService {
     
     @Autowired
     private CartRepository cartRepository;
+    
+    @Autowired
+    private SalesMappingRepository salesMappingRepository;
     
     public PaymentResponse processPayment(PaymentRequest paymentRequest) {
         // Process payment and update distributor ledger
@@ -66,6 +71,18 @@ public class PaymentService {
         }
         
         return response;
+    }
+    
+    public boolean isSalespersonAuthorizedForDistributor(Long salespersonId, Long distributorId) {
+        return salesMappingRepository.findBySalespersonIdAndDistributorIdAndStatus(
+            salespersonId, distributorId, MappingStatus.ACTIVE
+        ).isPresent();
+    }
+    
+    public boolean isCartActive(Long cartId) {
+        return cartRepository.findById(cartId)
+            .map(cart -> cart.getStatus() == Cart.CartStatus.ACTIVE)
+            .orElse(false);
     }
     
     public List<ProformaInvoice> getPendingPIPayments() {

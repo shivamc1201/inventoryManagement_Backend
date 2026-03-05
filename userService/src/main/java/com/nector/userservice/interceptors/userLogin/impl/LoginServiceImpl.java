@@ -249,7 +249,9 @@ public class LoginServiceImpl implements LoginService {
                               .anyMatch(rt -> rt == RoleType.ADMIN || rt == RoleType.SUPER_ADMIN);
 
         if (isAdmin) {
-            features = Set.of(Features.values());
+            features = Arrays.stream(Features.values())
+                    .filter(feature -> feature != Features.SALES)
+                    .collect(Collectors.toSet());
         } else {
             features = user.getRoles().stream()
                     .flatMap(role -> role.getPermissions().stream())

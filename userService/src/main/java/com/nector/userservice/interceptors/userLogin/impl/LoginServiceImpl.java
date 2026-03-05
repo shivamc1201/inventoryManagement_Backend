@@ -360,7 +360,8 @@ public class LoginServiceImpl implements LoginService {
                 Map.of("displayName", "OrderDetails", "name", "ORDER_DETAILS", "path", "/order-details"),
                 Map.of("displayName", "Products", "name", "PRODUCTS", "path", "/products"),
                 Map.of("displayName", "Reports", "name", "REPORTS", "path", "/reports"),
-                Map.of("displayName", "Analytics", "name", "ANALYTICS", "path", "/analytics")
+                Map.of("displayName", "Analytics", "name", "ANALYTICS", "path", "/analytics"),
+                Map.of("displayName", "Sales", "name", "SALES", "path", "/sales")
         );
     }
 

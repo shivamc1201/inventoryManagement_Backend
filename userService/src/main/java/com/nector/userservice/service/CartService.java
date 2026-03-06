@@ -85,6 +85,7 @@ public class CartService {
             }
         }
         
+        cart.setStatus(Cart.CartStatus.ACTIVE);
         Cart updatedCart = cartRepository.save(cart);
         log.info("All items added to cart successfully for distributor {}", distributorId);
         return mapToResponse(updatedCart);
@@ -215,6 +216,85 @@ public class CartService {
         cart.setStatus(Cart.CartStatus.DISMISSED);
         cartRepository.save(cart);
         log.info("Cart {} dismissed successfully", cartId);
+    }
+    
+    @Transactional
+    public CartResponse placeOrder(Long distributorId, List<AddToCartRequest> requests) {
+        log.info("Placing order with {} items for distributor {}", requests.size(), distributorId);
+        Cart cart = getOrCreateActiveCart(distributorId);
+        
+        for (AddToCartRequest request : requests) {
+            log.info("Processing item {} for distributor {}", request.getItemId(), distributorId);
+            try {
+                FinishedProduct finishedProduct = finishedProductRepository.findBySku(request.getItemId())
+                        .filter(FinishedProduct::getActive)
+                        .orElseThrow(() -> new ItemNotFoundException("Item with SKU '" + request.getItemId() + "' not found or inactive"));
+                
+                if (!finishedProductRepository.existsById(finishedProduct.getId())) {
+                    throw new ItemNotFoundException("Item with ID " + finishedProduct.getId() + " does not exist");
+                }
+
+                Optional<CartItem> existingCartItem =
+                        cartItemRepository.findByCartIdAndItemId(cart.getId(), finishedProduct.getId());
+                        
+                if (existingCartItem.isPresent()) {
+                    CartItem cartItem = existingCartItem.get();
+                    int newQuantity = cartItem.getQuantity() + request.getQuantity();
+                    cartItem.setQuantity(newQuantity);
+                    cartItemRepository.save(cartItem);
+                } else {
+                    CartItem cartItem = new CartItem();
+                    cartItem.setCart(cart);
+                    cartItem.setItem(finishedProduct);
+                    cartItem.setQuantity(request.getQuantity());
+                    cartItem.setPriceAtTime(finishedProduct.getPrice());
+                    cartItemRepository.save(cartItem);
+                    cart.getCartItems().add(cartItem);
+                }
+            } catch (Exception e) {
+                log.error("Failed to add item {} to cart for distributor {}: {}", request.getItemId(), distributorId, e.getMessage());
+                throw e;
+            }
+        }
+        
+        cart.setStatus(Cart.CartStatus.ACTIVE);
+        Cart updatedCart = cartRepository.save(cart);
+        log.info("Order placed successfully for distributor {}", distributorId);
+        return mapToResponse(updatedCart);
+    }
+    
+    @Transactional
+    public CartResponse editCart(Long cartId, List<AddToCartRequest> requests) {
+        log.info("Editing cart {} with {} items", cartId, requests.size());
+        
+        Cart cart = cartRepository.findById(cartId)
+            .orElseThrow(() -> new CartNotFoundException("Cart with ID " + cartId + " not found"));
+        
+        for (AddToCartRequest request : requests) {
+            FinishedProduct finishedProduct = finishedProductRepository.findBySku(request.getItemId())
+                    .filter(FinishedProduct::getActive)
+                    .orElseThrow(() -> new ItemNotFoundException("Item with SKU '" + request.getItemId() + "' not found or inactive"));
+            
+            Optional<CartItem> existingCartItem = cartItemRepository.findByCartIdAndItemId(cart.getId(), finishedProduct.getId());
+            
+            if (existingCartItem.isPresent()) {
+                CartItem cartItem = existingCartItem.get();
+                cartItem.setQuantity(request.getQuantity());
+                cartItemRepository.save(cartItem);
+            } else {
+                CartItem cartItem = new CartItem();
+                cartItem.setCart(cart);
+                cartItem.setItem(finishedProduct);
+                cartItem.setQuantity(request.getQuantity());
+                cartItem.setPriceAtTime(finishedProduct.getPrice());
+                cartItemRepository.save(cartItem);
+                cart.getCartItems().add(cartItem);
+            }
+        }
+        
+        Cart updatedCart = cartRepository.save(cart);
+        log.info("Cart edited successfully");
+        return mapToResponse(updatedCart);
     }
     
     private CartItemResponse mapCartItemToResponse(CartItem cartItem) {

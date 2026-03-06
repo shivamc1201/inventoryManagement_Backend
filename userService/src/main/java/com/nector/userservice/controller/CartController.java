@@ -86,4 +86,37 @@ public class CartController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
     }
+
+    @PostMapping("/placeOrder")
+    public ResponseEntity<?> placeOrder(
+            @RequestParam Long distributorId,
+            @Valid @RequestBody List<AddToCartRequest> requests) {
+        log.info("Placing order with {} items for distributor: {}", requests.size(), distributorId);
+        try {
+            CartResponse response = cartService.placeOrder(distributorId, requests);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (Exception e) {
+            log.error("Error placing order for distributor {}: {}", distributorId, e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+    }
+
+    @PutMapping("/{cartId}/edit")
+    public ResponseEntity<?> editCart(
+            @PathVariable Long cartId,
+            @Valid @RequestBody List<AddToCartRequest> requests) {
+        log.info("Editing cart {} with {} items", cartId, requests.size());
+        try {
+            CartResponse response = cartService.editCart(cartId, requests);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error editing cart {}: {}", cartId, e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+    }
+
 }

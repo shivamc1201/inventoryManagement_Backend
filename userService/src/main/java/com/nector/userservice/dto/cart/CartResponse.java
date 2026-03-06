@@ -8,7 +8,6 @@ import java.util.List;
 @Data
 public class CartResponse {
     private Long id;
-    private Long userId;
     private String status;
     private List<CartItemResponse> cartItems;
     private LocalDateTime createdAt;

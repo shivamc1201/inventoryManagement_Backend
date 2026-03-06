@@ -23,17 +23,16 @@ public class CartController {
     
     private final CartService cartService;
 
-    @PostMapping("/{userId}/items")
+    @PostMapping("/items")
     public ResponseEntity<?> addItemToCart(
-            @PathVariable Long userId, 
             @RequestParam Long distributorId,
             @Valid @RequestBody List<AddToCartRequest> requests) {
-        log.info("Adding {} items to cart for user: {} and distributor: {}", requests.size(), userId, distributorId);
+        log.info("Adding {} items to cart for distributor: {}", requests.size(), distributorId);
         try {
-            CartResponse response = cartService.addItemsToCart(userId, distributorId, requests);
+            CartResponse response = cartService.addItemsToCart(distributorId, requests);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
-            log.error("Error adding items to cart for user {}: {}", userId, e.getMessage());
+            log.error("Error adding items to cart for distributor {}: {}", distributorId, e.getMessage());
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
@@ -58,14 +57,14 @@ public class CartController {
         }
     }
     
-    @GetMapping("/{userId}")
-    public ResponseEntity<?> getCartByUserId(@PathVariable Long userId) {
-        log.info("Fetching cart for user: {}", userId);
+    @GetMapping
+    public ResponseEntity<?> getCart(@RequestParam Long distributorId) {
+        log.info("Fetching cart for distributor: {}", distributorId);
         try {
-            CartResponse response = cartService.getCartByUserId(userId);
+            CartResponse response = cartService.getCartByDistributorId(distributorId);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("Error fetching cart for user {}: {}", userId, e.getMessage());
+            log.error("Error fetching cart for distributor {}: {}", distributorId, e.getMessage());
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);

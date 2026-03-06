@@ -44,12 +44,12 @@ public class CartService {
 
 
     @Transactional
-    public CartResponse addItemsToCart(Long userId, Long distributorId, List<AddToCartRequest> requests) {
-        log.info("Adding {} items to cart for user {} and distributor {}", requests.size(), userId, distributorId);
-        Cart cart = getOrCreateActiveCart(userId, distributorId);
+    public CartResponse addItemsToCart(Long distributorId, List<AddToCartRequest> requests) {
+        log.info("Adding {} items to cart for distributor {}", requests.size(), distributorId);
+        Cart cart = getOrCreateActiveCart(distributorId);
         
         for (AddToCartRequest request : requests) {
-            log.info("Processing item {} for user {}", request.getItemId(), userId);
+            log.info("Processing item {} for distributor {}", request.getItemId(), distributorId);
             try {
                 FinishedProduct finishedProduct = finishedProductRepository.findBySku(request.getItemId())
                         .filter(FinishedProduct::getActive)
@@ -73,13 +73,13 @@ public class CartService {
                     cart.getCartItems().add(cartItem);
                 }
             } catch (Exception e) {
-                log.error("Failed to add item {} to cart for user {}: {}", request.getItemId(), userId, e.getMessage());
+                log.error("Failed to add item {} to cart for distributor {}: {}", request.getItemId(), distributorId, e.getMessage());
                 throw e;
             }
         }
         
         Cart updatedCart = cartRepository.save(cart);
-        log.info("All items added to cart successfully for user {}", userId);
+        log.info("All items added to cart successfully for distributor {}", distributorId);
         return mapToResponse(updatedCart);
     }
 
@@ -103,26 +103,23 @@ public class CartService {
     }
     
     @Transactional(readOnly = true)
-    public CartResponse getCartByUserId(Long userId) {
-        log.info("Fetching cart for user {}", userId);
+    public CartResponse getCartByDistributorId(Long distributorId) {
+        log.info("Fetching cart for distributor {}", distributorId);
         
-        Cart cart = cartRepository.findActiveCartByUserId(userId)
-            .orElseThrow(() -> new CartNotFoundException("No active cart found for user " + userId));
+        Cart cart = cartRepository.findActiveCartByDistributorId(distributorId)
+            .orElseThrow(() -> new CartNotFoundException("No active cart found for distributor " + distributorId));
         
         return mapToResponse(cart);
     }
     
-    private Cart getOrCreateActiveCart(Long userId, Long distributorId) {
-        Optional<Cart> existingCart = cartRepository.findByUserIdAndStatus(userId, Cart.CartStatus.ACTIVE);
+    private Cart getOrCreateActiveCart(Long distributorId) {
+        Optional<Cart> existingCart = cartRepository.findByDistributorIdAndStatus(distributorId, Cart.CartStatus.ACTIVE);
         
         if (existingCart.isPresent()) {
-            Cart cart = existingCart.get();
-            cart.setDistributorId(distributorId); // Update distributor if needed
-            return cartRepository.save(cart);
+            return existingCart.get();
         }
         
         Cart newCart = new Cart();
-        newCart.setUserId(userId);
         newCart.setDistributorId(distributorId);
         newCart.setStatus(Cart.CartStatus.ACTIVE);
         
@@ -132,7 +129,6 @@ public class CartService {
     private CartResponse mapToResponse(Cart cart) {
         CartResponse response = new CartResponse();
         response.setId(cart.getId());
-        response.setUserId(cart.getUserId());
         response.setStatus(cart.getStatus().name());
         response.setCreatedAt(cart.getCreatedAt());
         response.setUpdatedAt(cart.getUpdatedAt());

@@ -13,7 +13,8 @@ import java.util.List;
 
 @Entity
 @Table(name = "carts", indexes = {
-    @Index(name = "idx_cart_user_status", columnList = "userId, status")
+    @Index(name = "idx_cart_distributor_status", columnList = "distributorId, status")
+
 })
 @Data
 @NoArgsConstructor
@@ -23,9 +24,6 @@ public class Cart {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    @Column(nullable = false)
-    private Long userId;
     
     @Column
     private Long distributorId;

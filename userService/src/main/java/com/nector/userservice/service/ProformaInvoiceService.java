@@ -39,7 +39,6 @@ public class ProformaInvoiceService {
         com.nector.userservice.model.ProformaInvoice piEntity = new com.nector.userservice.model.ProformaInvoice();
         piEntity.setPiNumber("PI-" + cartId + "-" + java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd")));
         piEntity.setCartId(cartId);
-        piEntity.setUserId(cart.getUserId());
         piEntity.setDistributorId(cart.getDistributorId());
         
         // Calculate total amount

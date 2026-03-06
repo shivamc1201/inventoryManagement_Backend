@@ -38,7 +38,6 @@ public class AccountsController {
     public ResponseEntity<OrderApprovalResponse> approveOrder(
             @PathVariable Long orderId,
             @RequestParam Long distributorId,
-            @RequestParam BigDecimal orderAmount,
             @RequestParam Long salespersonId) {
         
         // Check if cart is active
@@ -61,7 +60,7 @@ public class AccountsController {
             return ResponseEntity.status(403).body(response);
         }
         
-        OrderApprovalResponse approval = paymentService.checkAndApproveOrder(orderId, distributorId, orderAmount);
+        OrderApprovalResponse approval = paymentService.checkAndApproveOrder(orderId, distributorId);
         return ResponseEntity.ok(approval);
     }
     

@@ -10,6 +10,8 @@ import com.nector.userservice.repository.DistributorLedgerRepository;
 import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.interceptors.salesMapping.repository.SalesMappingRepository;
 import com.nector.userservice.interceptors.salesMapping.model.MappingStatus;
+import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
+import com.nector.userservice.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -31,6 +33,12 @@ public class PaymentService {
     @Autowired
     private SalesMappingRepository salesMappingRepository;
     
+    @Autowired
+    private DistributorRepository distributorRepository;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
     public PaymentResponse processPayment(PaymentRequest paymentRequest) {
         // Process payment and update distributor ledger
         PaymentResponse response = new PaymentResponse();
@@ -48,22 +56,33 @@ public class PaymentService {
         return response;
     }
     
-    public com.nector.userservice.dto.payment.OrderApprovalResponse checkAndApproveOrder(Long orderId, Long distributorId, java.math.BigDecimal orderAmount) {
-        java.math.BigDecimal accountBalance = getDistributorBalance(distributorId);
+    public com.nector.userservice.dto.payment.OrderApprovalResponse checkAndApproveOrder(Long orderId, Long distributorId) {
+        // Get cart and calculate total amount
+        Cart cart = cartRepository.findById(orderId)
+            .orElseThrow(() -> new RuntimeException("Cart not found: " + orderId));
+        
+        java.math.BigDecimal orderAmount = cart.getCartItems().stream()
+            .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        java.math.BigDecimal ledgerBalance = getDistributorBalance(distributorId);
         
         com.nector.userservice.dto.payment.OrderApprovalResponse response = new com.nector.userservice.dto.payment.OrderApprovalResponse();
         response.setOrderId(orderId);
         response.setDistributorId(distributorId);
         response.setOrderAmount(orderAmount);
-        response.setAccountBalance(accountBalance);
+        response.setLedgerBalance(ledgerBalance);
         
-        if (accountBalance.compareTo(orderAmount) >= 0) {
+        if (ledgerBalance.compareTo(orderAmount) >= 0) {
             response.setStatus("APPROVED");
             response.setMessage("Order approved - sufficient balance");
             // Deduct amount from distributor balance
             updateDistributorLedger(distributorId, orderAmount.negate());
             // Update PI payment status
             updateProformaInvoiceStatus(orderId, ProformaInvoice.PaymentStatus.PAID);
+            // Update Cart status to PAYMENT_APPROVED
+            cart.setStatus(Cart.CartStatus.PAYMENT_APPROVED);
+            cartRepository.save(cart);
         } else {
             response.setStatus("REJECTED");
             response.setMessage("Insufficient balance");
@@ -74,9 +93,10 @@ public class PaymentService {
     }
     
     public boolean isSalespersonAuthorizedForDistributor(Long salespersonId, Long distributorId) {
-        return salesMappingRepository.findBySalespersonIdAndDistributorIdAndStatus(
-            salespersonId, distributorId, MappingStatus.ACTIVE
-        ).isPresent();
+        return distributorRepository.findById(distributorId)
+            .flatMap(distributor -> userRepository.findById(salespersonId)
+                .filter(user -> user.getRoleType().name().equals(distributor.getAssignedPerson())))
+            .isPresent();
     }
     
     public boolean isCartApproved(Long cartId) {
@@ -110,16 +130,16 @@ public class PaymentService {
             .orElseThrow(() -> new RuntimeException("Proforma Invoice not found for order: " + orderId));
         
         // Check if distributor has sufficient balance
-        BigDecimal distributorBalance = getDistributorBalance(distributorId);
+        BigDecimal ledgerBalance = getDistributorBalance(distributorId);
         BigDecimal piAmount = pi.getAmount();
         
         com.nector.userservice.dto.payment.OrderApprovalResponse response = new com.nector.userservice.dto.payment.OrderApprovalResponse();
         response.setOrderId(orderId);
         response.setDistributorId(distributorId);
         response.setOrderAmount(piAmount);
-        response.setAccountBalance(distributorBalance);
+        response.setLedgerBalance(ledgerBalance);
         
-        if (distributorBalance.compareTo(piAmount) >= 0) {
+        if (ledgerBalance.compareTo(piAmount) >= 0) {
             // Deduct amount from distributor ledger
             updateDistributorBalance(distributorId, piAmount, "DEBIT", "Payment for Order #" + orderId);
             
@@ -137,7 +157,7 @@ public class PaymentService {
             response.setMessage("Payment approved - Order ready for dispatch");
         } else {
             response.setStatus("INSUFFICIENT_BALANCE");
-            response.setMessage("Insufficient balance. Required: " + piAmount + ", Available: " + distributorBalance);
+            response.setMessage("Insufficient balance. Required: " + piAmount + ", Available: " + ledgerBalance);
         }
         
         return response;

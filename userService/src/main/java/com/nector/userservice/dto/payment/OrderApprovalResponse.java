@@ -8,7 +8,7 @@ public class OrderApprovalResponse {
     private Long orderId;
     private Long distributorId;
     private BigDecimal orderAmount;
-    private BigDecimal accountBalance;
+    private BigDecimal ledgerBalance;
     private String status;
     private String message;
 }

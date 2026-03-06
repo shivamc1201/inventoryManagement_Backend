@@ -14,4 +14,7 @@ public class CartResponse {
     private LocalDateTime updatedAt;
     private Long salespersonId;
     private String salespersonName;
+    private Long distributorId;
+    private String distributorName;
+    private java.math.BigDecimal totalCartAmount;
 }

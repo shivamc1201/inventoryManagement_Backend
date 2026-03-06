@@ -7,6 +7,7 @@ import com.nector.userservice.dto.cart.CartResponse;
 import com.nector.userservice.exception.CartItemNotFoundException;
 import com.nector.userservice.exception.CartNotFoundException;
 import com.nector.userservice.exception.ItemNotFoundException;
+import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.model.Cart;
 import com.nector.userservice.model.CartItem;
 import com.nector.userservice.model.FinishedProduct;
@@ -38,6 +39,7 @@ public class CartService {
     private final FinishedProductRepository finishedProductRepository;
     private final ProformaInvoiceService proformaInvoiceService;
     private final SalesMappingRepository salesMappingRepository;
+    private final DistributorRepository distributorRepository;
 
 
     // TODO the dispatch team wil, check the real  quantity of the orders  while checking GDN
@@ -54,6 +56,11 @@ public class CartService {
                 FinishedProduct finishedProduct = finishedProductRepository.findBySku(request.getItemId())
                         .filter(FinishedProduct::getActive)
                         .orElseThrow(() -> new ItemNotFoundException("Item with SKU '" + request.getItemId() + "' not found or inactive"));
+                
+                // Verify the finished product exists in database
+                if (!finishedProductRepository.existsById(finishedProduct.getId())) {
+                    throw new ItemNotFoundException("Item with ID " + finishedProduct.getId() + " does not exist");
+                }
 
                 Optional<CartItem> existingCartItem =
                         cartItemRepository.findByCartIdAndItemId(cart.getId(), finishedProduct.getId());
@@ -112,6 +119,16 @@ public class CartService {
         return mapToResponse(cart);
     }
     
+    @Transactional(readOnly = true)
+    public CartResponse getCartById(Long cartId) {
+        log.info("Fetching cart by ID {}", cartId);
+        
+        Cart cart = cartRepository.findById(cartId)
+            .orElseThrow(() -> new CartNotFoundException("Cart with ID " + cartId + " not found"));
+        
+        return mapToResponse(cart);
+    }
+    
     private Cart getOrCreateActiveCart(Long distributorId) {
         Optional<Cart> existingCart = cartRepository.findByDistributorIdAndStatus(distributorId, Cart.CartStatus.ACTIVE);
         
@@ -132,7 +149,7 @@ public class CartService {
         response.setStatus(cart.getStatus().name());
         response.setCreatedAt(cart.getCreatedAt());
         response.setUpdatedAt(cart.getUpdatedAt());
-        
+
         // Fetch salesperson information for the distributor
         if (cart.getDistributorId() != null) {
             Optional<SalespersonDistributorMapping> mapping = salesMappingRepository
@@ -153,6 +170,13 @@ public class CartService {
             .collect(Collectors.toList());
         
         response.setCartItems(cartItemResponses);
+        
+        // Calculate total cart amount
+        BigDecimal totalAmount = cartItemResponses.stream()
+            .map(CartItemResponse::getTotalPrice)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        response.setTotalCartAmount(totalAmount);
+        
         return response;
     }
     

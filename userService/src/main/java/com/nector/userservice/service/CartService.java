@@ -17,6 +17,8 @@ import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.repository.FinishedProductRepository;
 import com.nector.userservice.repository.ItemRepository;
 import com.nector.userservice.interceptors.salesMapping.repository.SalesMappingRepository;
+import com.nector.userservice.dto.invoice.ProformaInvoice;
+import com.nector.userservice.service.HtmlToPdfService;
 import com.nector.userservice.interceptors.salesMapping.model.SalespersonDistributorMapping;
 import com.nector.userservice.interceptors.salesMapping.model.MappingStatus;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +45,8 @@ public class CartService {
 
 
     // TODO the dispatch team wil, check the real  quantity of the orders  while checking GDN
+
+    private final HtmlToPdfService htmlToPdfService;
 
 
     @Transactional
@@ -119,6 +123,14 @@ public class CartService {
         
         return mapToResponse(cart);
     }
+
+    @Transactional(readOnly = true)
+    public List<CartResponse> getDismissedCarts(Long distributorId) {
+        List<Cart> pendingCarts = cartRepository.findByStatus(Cart.CartStatus.DISMISSED);
+        return pendingCarts.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
     
     @Transactional(readOnly = true)
     public CartResponse getCartById(Long cartId) {
@@ -151,8 +163,15 @@ public class CartService {
         response.setCreatedAt(cart.getCreatedAt());
         response.setUpdatedAt(cart.getUpdatedAt());
 
-        // Fetch salesperson information for the distributor
+        // Fetch distributor and salesperson information
         if (cart.getDistributorId() != null) {
+            response.setDistributorId(cart.getDistributorId());
+            
+            distributorRepository.findById(cart.getDistributorId()).ifPresent(distributor -> {
+                response.setDistributorName(distributor.getName());
+                response.setAddress(distributor.getAddress());
+            });
+            
             Optional<SalespersonDistributorMapping> mapping = salesMappingRepository
                 .findByDistributorId(cart.getDistributorId())
                 .stream()
@@ -161,7 +180,6 @@ public class CartService {
             
             if (mapping.isPresent()) {
                 response.setSalespersonId(mapping.get().getSalespersonId());
-                // You can add salesperson name lookup here if needed
                 response.setSalespersonName("Salesperson-" + mapping.get().getSalespersonId());
             }
         }
@@ -307,5 +325,99 @@ public class CartService {
         response.setPriceAtTime(cartItem.getPriceAtTime());
         response.setTotalPrice(cartItem.getPriceAtTime().multiply(BigDecimal.valueOf(cartItem.getQuantity())));
         return response;
+    }
+
+
+
+    public byte[] downloadProformaInvoice(Long cartId) {
+        log.info("Downloading proforma invoice for cart ID: {}", cartId);
+        Cart cart = cartRepository.findById(cartId)
+                .orElseThrow(() -> new RuntimeException("Cart not found"));
+
+        ProformaInvoice invoice = createInvoiceFromCart(cart);
+        String html = generateSimpleHtmlInvoice(invoice);
+        byte[] pdfBytes = htmlToPdfService.convertHtmlToPdf(html);
+
+        log.info("Proforma invoice PDF generated successfully for cart: {}", cartId);
+        return pdfBytes;
+    }
+
+    private ProformaInvoice createInvoiceFromCart(Cart cart) {
+        ProformaInvoice invoice = new ProformaInvoice();
+
+        invoice.setPiNumber("PI-" + cart.getId() + "-" + java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd")));
+        invoice.setPiDate(java.time.LocalDate.now());
+        invoice.setModeOfPayment("Bank Transfer");
+        invoice.setCompanyName("Your Company Name");
+        invoice.setCompanyAddress("Your Company Address");
+        invoice.setGstin("Your GSTIN");
+        invoice.setContactNumber("+91-XXXXXXXXXX");
+        invoice.setEmail("sales@yourcompany.com");
+
+        List<com.nector.userservice.dto.invoice.InvoiceItem> items = java.util.stream.IntStream.range(0, cart.getCartItems().size())
+                .mapToObj(i -> {
+                    CartItem cartItem = cart.getCartItems().get(i);
+                    com.nector.userservice.dto.invoice.InvoiceItem item = new com.nector.userservice.dto.invoice.InvoiceItem();
+                    item.setSrNo(i + 1);
+                    item.setDescription(cartItem.getItem().getName());
+                    item.setHsnCode("1234");
+                    item.setQuantity(cartItem.getQuantity());
+                    item.setRatePerUnit(cartItem.getPriceAtTime().doubleValue());
+                    item.setUnit("Pcs");
+                    item.setAmount(cartItem.getPriceAtTime().doubleValue() * cartItem.getQuantity());
+                    return item;
+                })
+                .toList();
+
+        invoice.setItems(items);
+
+        double subtotal = items.stream().mapToDouble(com.nector.userservice.dto.invoice.InvoiceItem::getAmount).sum();
+        double cgst = subtotal * 0.09;
+        double sgst = subtotal * 0.09;
+        double grandTotal = subtotal + cgst + sgst;
+
+        invoice.setSubtotal(subtotal);
+        invoice.setCgst(cgst);
+        invoice.setSgst(sgst);
+        invoice.setIgst(0.0);
+        invoice.setGrandTotal(grandTotal);
+        invoice.setAmountInWords(String.format("%.0f Rupees Only", grandTotal));
+
+        return invoice;
+    }
+
+    private String generateSimpleHtmlInvoice(ProformaInvoice invoice) {
+        StringBuilder html = new StringBuilder();
+        html.append("<html><head><title>Proforma Invoice</title>");
+        html.append("<style>body{font-family:Arial;margin:20px;}");
+        html.append(".header{text-align:center;margin-bottom:30px;}");
+        html.append("table{width:100%;border-collapse:collapse;}");
+        html.append("th,td{border:1px solid #ddd;padding:8px;text-align:left;}");
+        html.append("th{background-color:#f2f2f2;}</style></head><body>");
+
+        html.append("<div class='header'><h2>PROFORMA INVOICE</h2>");
+        html.append("<p>PI Number: ").append(invoice.getPiNumber()).append("</p>");
+        html.append("<p>Date: ").append(invoice.getPiDate()).append("</p></div>");
+
+        html.append("<table><tr><th>Sr No</th><th>Description</th><th>Quantity</th>");
+        html.append("<th>Rate</th><th>Amount</th></tr>");
+
+        for (com.nector.userservice.dto.invoice.InvoiceItem item : invoice.getItems()) {
+            html.append("<tr><td>").append(item.getSrNo()).append("</td>");
+            html.append("<td>").append(item.getDescription()).append("</td>");
+            html.append("<td>").append(item.getQuantity()).append("</td>");
+            html.append("<td>").append(item.getRatePerUnit()).append("</td>");
+            html.append("<td>").append(item.getAmount()).append("</td></tr>");
+        }
+
+        html.append("</table>");
+        html.append("<p>Subtotal: ").append(invoice.getSubtotal()).append("</p>");
+        html.append("<p>CGST (9%): ").append(invoice.getCgst()).append("</p>");
+        html.append("<p>SGST (9%): ").append(invoice.getSgst()).append("</p>");
+        html.append("<p><strong>Grand Total: ").append(invoice.getGrandTotal()).append("</strong></p>");
+        html.append("<p>Amount in words: ").append(invoice.getAmountInWords()).append("</p>");
+
+        html.append("</body></html>");
+        return html.toString();
     }
 }

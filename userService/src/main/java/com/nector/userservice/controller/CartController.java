@@ -87,6 +87,20 @@ public class CartController {
         }
     }
 
+    @GetMapping("/dismissed")
+    public ResponseEntity<?> getDismissedCart(@RequestParam Long distributorId) {
+        log.info("Fetching cart for distributor: {}", distributorId);
+        try {
+            List<CartResponse> response = cartService.getDismissedCarts(distributorId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error fetching cart for distributor {}: {}", distributorId, e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        }
+    }
+
     @PostMapping("/placeOrder")
     public ResponseEntity<?> placeOrder(
             @RequestParam Long distributorId,
@@ -116,6 +130,22 @@ public class CartController {
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+    }
+
+    @GetMapping("/{cartId}/download-proforma-invoice")
+    public ResponseEntity<byte[]> downloadProformaInvoice(@PathVariable Long cartId) {
+        log.info("Downloading proforma invoice for cart: {}", cartId);
+        try {
+            byte[] pdfBytes = cartService.downloadProformaInvoice(cartId);
+            
+            return ResponseEntity.ok()
+                    .header("Content-Type", "application/pdf")
+                    .header("Content-Disposition", "attachment; filename=proforma-invoice-" + cartId + ".pdf")
+                    .body(pdfBytes);
+        } catch (Exception e) {
+            log.error("Error downloading proforma invoice for cart {}: {}", cartId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

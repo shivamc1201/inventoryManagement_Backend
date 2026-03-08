@@ -5,6 +5,8 @@ import com.nector.userservice.interceptors.distributor.model.*;
 import com.nector.userservice.interceptors.distributor.service.DistributorService;
 import com.nector.userservice.interceptors.userLogin.model.LoginRequest;
 import com.nector.userservice.interceptors.userLogin.model.LoginResponse;
+import com.nector.userservice.model.DistributorLedger;
+import com.nector.userservice.repository.DistributorLedgerRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/distributors")
@@ -25,6 +28,7 @@ import java.util.Map;
 public class DistributorController {
 
     private final DistributorService distributorService;
+    private final DistributorLedgerRepository distributorLedgerRepository;
 
     @PostMapping("/create-distributor")
     @Operation(summary = "Create distributor", description = "Create a new distributor")
@@ -138,6 +142,19 @@ public class DistributorController {
             log.error("Error retrieving confirmations for distributor {}: {}", distributorId, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, "Failed to retrieve confirmations", null));
+        }
+    }
+    
+    @GetMapping("/{distributorId}/balance")
+    @Operation(summary = "Get distributor current balance", description = "Get current balance from distributor_ledger table")
+    public ResponseEntity<ApiResponse<BigDecimal>> getDistributorCurrentBalance(@PathVariable Long distributorId) {
+        try {
+            BigDecimal balance = distributorLedgerRepository.getDistributorBalance(distributorId);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Distributor balance retrieved successfully", balance));
+        } catch (Exception e) {
+            log.error("Error retrieving balance for distributor {}: {}", distributorId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, "Failed to retrieve distributor balance", null));
         }
     }
 }

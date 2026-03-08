@@ -1,6 +1,7 @@
 package com.nector.userservice.dispatch.controller;
 
 import com.nector.userservice.dispatch.dto.GdnGenerationRequest;
+import com.nector.userservice.dispatch.dto.SimpleGdnRequest;
 import com.nector.userservice.dispatch.dto.GdnRequest;
 import com.nector.userservice.dispatch.dto.GdnResponse;
 import com.nector.userservice.dispatch.dto.InventoryVerificationResponse;
@@ -26,14 +27,15 @@ import java.util.Map;
 public class DispatchController {
     
     private final GdnService gdnService;
-    
+
     @PostMapping("/gdn/generate/{orderId}")
     @Operation(summary = "Generate GDN", description = "Generate Goods Delivery Note for approved order with inventory verification")
     @ApiResponse(responseCode = "201", description = "GDN generated successfully")
-    public ResponseEntity<?> generateGdn(@PathVariable Long orderId, @Valid @RequestBody GdnGenerationRequest request) {
+    public ResponseEntity<?> generateGdn(@PathVariable Long orderId, @Valid @RequestBody(required = false) SimpleGdnRequest request) {
         log.info("Generating GDN for order: {}", orderId);
         try {
-            GdnResponse response = gdnService.generateGdn(orderId, request);
+
+            GdnResponse response = gdnService.generateSimpleGdn(orderId, request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
             log.error("Error generating GDN for order {}: {}", orderId, e.getMessage());

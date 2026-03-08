@@ -36,4 +36,12 @@ public class OrderController {
         return ResponseEntity.ok(approvedCart);
     }
 
+    @GetMapping("/active-carts")
+    @Operation(summary = "Get active carts", description = "Retrieves all carts with ACTIVE status")
+    @ApiResponse(responseCode = "200", description = "Active carts retrieved successfully")
+    public ResponseEntity<List<CartResponse>> getActiveCarts() {
+        List<CartResponse> activeCarts = cartService.getPendingApprovalCarts();
+        return ResponseEntity.ok(activeCarts);
+    }
+
 }

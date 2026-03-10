@@ -51,6 +51,18 @@ public class DistributorServiceImpl implements DistributorService {
             throw new IllegalArgumentException(
                     "Distributor with email already exists: " + request.getContactEmail());
         }
+        if (distributorRepository.existsByAadhaarNumber(request.getAadhaarNumber())) {
+            throw new IllegalArgumentException(
+                    "Distributor with AadhaarNumber already exists: " + request.getAadhaarNumber());
+        }
+        if (distributorRepository.existsByPanNumber(request.getPanNumber())) {
+            throw new IllegalArgumentException(
+                    "Distributor with PanNumber already exists: " + request.getPanNumber());
+        }
+        if (distributorRepository.existsByGstNumber(request.getGstNumber())) {
+            throw new IllegalArgumentException(
+                    "Distributor with GstNumber already exists: " + request.getGstNumber());
+        }
 
         Distributor distributor = distributorMapper.toEntity(request);
         Distributor savedDistributor = distributorRepository.save(distributor);

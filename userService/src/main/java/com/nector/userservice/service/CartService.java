@@ -405,4 +405,13 @@ public class CartService {
         html.append("</body></html>");
         return html.toString();
     }
+
+    @Transactional(readOnly = true)
+    public List<CartResponse> getApprovedCart() {
+        log.info("Fetching all carts with APPROVED status");
+        List<Cart> approvedCarts = cartRepository.findByStatus(Cart.CartStatus.APPROVED);
+        return approvedCarts.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
 }

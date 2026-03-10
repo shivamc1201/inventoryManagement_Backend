@@ -3,6 +3,7 @@ package com.nector.userservice.controller;
 import com.nector.userservice.dto.cart.AddToCartRequest;
 import com.nector.userservice.dto.cart.CartResponse;
 
+import com.nector.userservice.dto.cart.PlaceOrderRequest;
 import com.nector.userservice.service.CartService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -104,10 +105,10 @@ public class CartController {
     @PostMapping("/placeOrder")
     public ResponseEntity<?> placeOrder(
             @RequestParam Long distributorId,
-            @Valid @RequestBody List<AddToCartRequest> requests) {
-        log.info("Placing order with {} items for distributor: {}", requests.size(), distributorId);
+            @Valid @RequestBody PlaceOrderRequest request) {
+        log.info("Placing order for cart {} with address for distributor: {}", request.getCartId(), distributorId);
         try {
-            CartResponse response = cartService.placeOrder(distributorId, requests);
+            CartResponse response = cartService.placeOrder(distributorId, request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
             log.error("Error placing order for distributor {}: {}", distributorId, e.getMessage());

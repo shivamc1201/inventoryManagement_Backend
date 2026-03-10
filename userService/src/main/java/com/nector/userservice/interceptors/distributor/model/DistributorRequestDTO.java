@@ -16,6 +16,9 @@ public class DistributorRequestDTO {
     @Size(max = 100)
     private String assignedPerson;
 
+
+    private Long salespersonId;
+
     @NotBlank
     private String distributorType;
 

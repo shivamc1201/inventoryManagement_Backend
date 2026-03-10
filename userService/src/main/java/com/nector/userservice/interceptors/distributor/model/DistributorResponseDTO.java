@@ -19,6 +19,9 @@ public class DistributorResponseDTO {
     
     @Schema(description = "Assigned person", example = "John Manager")
     private String assignedPerson;
+
+    @Schema(description = "Assigned person ID", example = "1")
+    private Long salespersonId;
     
     @Schema(description = "Distributor type", example = "RETAIL")
     private String distributorType;

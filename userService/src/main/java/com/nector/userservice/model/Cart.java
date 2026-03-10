@@ -27,6 +27,9 @@ public class Cart {
     
     @Column
     private Long distributorId;
+
+    @Column
+    private String address;
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

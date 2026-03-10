@@ -4,8 +4,10 @@ import com.nector.userservice.dto.cart.AddToCartRequest;
 import com.nector.userservice.dto.cart.CartItemResponse;
 import com.nector.userservice.dto.cart.CartResponse;
 
+import com.nector.userservice.dto.cart.PlaceOrderRequest;
 import com.nector.userservice.exception.CartItemNotFoundException;
 import com.nector.userservice.exception.CartNotFoundException;
+import com.nector.userservice.exception.InvalidCartStatusException;
 import com.nector.userservice.exception.ItemNotFoundException;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.model.Cart;
@@ -235,52 +237,35 @@ public class CartService {
         cartRepository.save(cart);
         log.info("Cart {} dismissed successfully", cartId);
     }
-    
-    @Transactional
-    public CartResponse placeOrder(Long distributorId, List<AddToCartRequest> requests) {
-        log.info("Placing order with {} items for distributor {}", requests.size(), distributorId);
-        Cart cart = getOrCreateActiveCart(distributorId);
-        
-        for (AddToCartRequest request : requests) {
-            log.info("Processing item {} for distributor {}", request.getItemId(), distributorId);
-            try {
-                FinishedProduct finishedProduct = finishedProductRepository.findBySku(request.getItemId())
-                        .filter(FinishedProduct::getActive)
-                        .orElseThrow(() -> new ItemNotFoundException("Item with SKU '" + request.getItemId() + "' not found or inactive"));
-                
-                if (!finishedProductRepository.existsById(finishedProduct.getId())) {
-                    throw new ItemNotFoundException("Item with ID " + finishedProduct.getId() + " does not exist");
-                }
 
-                Optional<CartItem> existingCartItem =
-                        cartItemRepository.findByCartIdAndItemId(cart.getId(), finishedProduct.getId());
-                        
-                if (existingCartItem.isPresent()) {
-                    CartItem cartItem = existingCartItem.get();
-                    int newQuantity = cartItem.getQuantity() + request.getQuantity();
-                    cartItem.setQuantity(newQuantity);
-                    cartItemRepository.save(cartItem);
-                } else {
-                    CartItem cartItem = new CartItem();
-                    cartItem.setCart(cart);
-                    cartItem.setItem(finishedProduct);
-                    cartItem.setQuantity(request.getQuantity());
-                    cartItem.setPriceAtTime(finishedProduct.getPrice());
-                    cartItemRepository.save(cartItem);
-                    cart.getCartItems().add(cartItem);
-                }
-            } catch (Exception e) {
-                log.error("Failed to add item {} to cart for distributor {}: {}", request.getItemId(), distributorId, e.getMessage());
-                throw e;
-            }
+    @Transactional
+    public CartResponse placeOrder(Long distributorId, PlaceOrderRequest request) {
+        log.info("Placing order for cart {} for distributor {}", request.getCartId(), distributorId);
+
+        Cart cart = cartRepository.findById(request.getCartId())
+                .orElseThrow(() -> new CartNotFoundException("Cart with ID " + request.getCartId() + " not found"));
+
+        // Verify cart belongs to the distributor
+        if (!cart.getDistributorId().equals(distributorId)) {
+            throw new CartNotFoundException("Cart does not belong to distributor " + distributorId);
         }
-        
-        cart.setStatus(Cart.CartStatus.ACTIVE);
+
+        // Check if cart is active before placing order
+        if (cart.getStatus() != Cart.CartStatus.ACTIVE) {
+            throw new InvalidCartStatusException("Cannot place order for cart with status: " + cart.getStatus());
+        }
+
+        // Save the address and update status
+        cart.setAddress(request.getAddress());
+        cart.setStatus(Cart.CartStatus.PLACED);
         Cart updatedCart = cartRepository.save(cart);
-        log.info("Order placed successfully for distributor {}", distributorId);
+
+        log.info("Order placed successfully for cart {} for distributor {}", request.getCartId(), distributorId);
         return mapToResponse(updatedCart);
     }
-    
+
+
+
     @Transactional
     public CartResponse editCart(Long cartId, List<AddToCartRequest> requests) {
         log.info("Editing cart {} with {} items", cartId, requests.size());

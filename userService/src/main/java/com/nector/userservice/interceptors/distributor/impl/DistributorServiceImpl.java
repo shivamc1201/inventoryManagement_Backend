@@ -19,13 +19,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.nector.userservice.common.RoleType;
+import com.nector.userservice.model.User;
+import com.nector.userservice.repository.UserRepository;
+
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,18 +41,20 @@ public class DistributorServiceImpl implements DistributorService {
     private final OrderConfirmationRepository orderConfirmationRepository;
     private final ItemRepository itemRepository;
     private final JwtService jwtService;
+    private final UserRepository userRepository;
     
     @Override
     public DistributorResponseDTO createDistributor(DistributorRequestDTO request) {
         log.info("Creating distributor with email: {}", request.getContactEmail());
-        
+
         if (distributorRepository.existsByContactEmail(request.getContactEmail())) {
-            throw new IllegalArgumentException("Distributor with email already exists: " + request.getContactEmail());
+            throw new IllegalArgumentException(
+                    "Distributor with email already exists: " + request.getContactEmail());
         }
-        
+
         Distributor distributor = distributorMapper.toEntity(request);
         Distributor savedDistributor = distributorRepository.save(distributor);
-        
+
         // Auto-create ledger account for the distributor
         try {
             CreateLedgerAccountRequest ledgerRequest = new CreateLedgerAccountRequest();
@@ -59,17 +62,17 @@ public class DistributorServiceImpl implements DistributorService {
             ledgerRequest.setDistributorId(savedDistributor.getId());
             ledgerRequest.setAccountName(savedDistributor.getName() + " - Ledger Account");
             ledgerRequest.setCreditLimit(BigDecimal.ZERO);
-            
+
             ledgerAccountService.createLedgerAccount(ledgerRequest, "system");
             log.info("Ledger account created for distributor: {}", savedDistributor.getId());
         } catch (Exception e) {
             log.warn("Failed to create ledger account for distributor: {}", savedDistributor.getId(), e);
         }
-        
+
         log.info("Distributor created successfully with ID: {}", savedDistributor.getId());
         return distributorMapper.toResponseDTO(savedDistributor);
     }
-    
+
     @Override
     @Transactional(readOnly = true)
     public DistributorResponseDTO getDistributorById(Long id) {

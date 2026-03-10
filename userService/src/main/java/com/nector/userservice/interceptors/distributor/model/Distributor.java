@@ -23,6 +23,9 @@ public class Distributor {
     
     @Column(nullable = false, length = 100)
     private String assignedPerson;
+
+    @Column(name = "salesperson_id")
+    private Long salespersonId;
     
     @Column(nullable = false)
     private String distributorType;

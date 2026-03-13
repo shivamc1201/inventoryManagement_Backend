@@ -244,6 +244,14 @@ public class CartService {
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
+
+    @Transactional(readOnly = true)
+    public List<CartResponse> getActiveCarts() {
+        List<Cart> pendingCarts = cartRepository.findByStatus(Cart.CartStatus.ACTIVE);
+        return pendingCarts.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
     
     @Transactional
     public CartResponse approveCart(Long cartId) {

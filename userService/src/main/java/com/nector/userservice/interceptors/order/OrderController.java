@@ -36,7 +36,7 @@ public class OrderController {
         return ResponseEntity.ok(approvedCart);
     }
 
-    @GetMapping("/placed-carts")
+    @GetMapping("/all-placed-carts")
     @Operation(summary = "Get placed carts", description = "Retrieves all carts with PLACED status")
     @ApiResponse(responseCode = "200", description = "Placed carts retrieved successfully")
     public ResponseEntity<List<CartResponse>> getPlacedCarts() {
@@ -52,7 +52,7 @@ public class OrderController {
         return ResponseEntity.ok(activeCarts);
     }
 
-    @GetMapping("/placed-carts-DI")
+    @GetMapping("/placed-carts")
     @Operation(summary = "Get placed carts", description = "Retrieves all carts with placed status")
     @ApiResponse(responseCode = "200", description = "Placed carts retrieved successfully")
     public ResponseEntity<List<CartResponse>> getplacedCarts() {

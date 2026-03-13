@@ -130,6 +130,19 @@ public class CartService {
     }
 
     @Transactional(readOnly = true)
+    public CartResponse getActiveCartByDistributorId(Long distributorId) {
+        log.info("Fetching Active cart for distributor {}", distributorId);
+
+        List<Cart> placedCarts = cartRepository.findByStatus(Cart.CartStatus.ACTIVE);
+        Cart cart = placedCarts.stream()
+                .filter(c -> c.getDistributorId().equals(distributorId))
+                .findFirst()
+                .orElseThrow(() -> new CartNotFoundException("No Active cart found for distributor " + distributorId));
+
+        return mapToResponse(cart);
+    }
+
+    @Transactional(readOnly = true)
     public List<CartResponse> getDismissedCarts(Long distributorId) {
         List<Cart> pendingCarts = cartRepository.findByStatus(Cart.CartStatus.DISMISSED);
         return pendingCarts.stream()

@@ -52,4 +52,12 @@ public class OrderController {
         return ResponseEntity.ok(activeCarts);
     }
 
+    @GetMapping("/placed-carts-DI")
+    @Operation(summary = "Get placed carts", description = "Retrieves all carts with placed status")
+    @ApiResponse(responseCode = "200", description = "Placed carts retrieved successfully")
+    public ResponseEntity<List<CartResponse>> getplacedCarts() {
+        List<CartResponse> placedCarts = cartService.getPlacedCarts();
+        return ResponseEntity.ok(placedCarts);
+    }
+
 }

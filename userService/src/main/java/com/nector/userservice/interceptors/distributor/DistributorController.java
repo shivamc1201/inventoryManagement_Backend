@@ -2,11 +2,14 @@ package com.nector.userservice.interceptors.distributor;
 
 import com.nector.userservice.dto.ApiResponse;
 import com.nector.userservice.dto.cart.CartResponse;
+import com.nector.userservice.exception.CartNotFoundException;
 import com.nector.userservice.interceptors.distributor.model.*;
 import com.nector.userservice.interceptors.distributor.service.DistributorService;
 import com.nector.userservice.interceptors.userLogin.model.LoginRequest;
 import com.nector.userservice.interceptors.userLogin.model.LoginResponse;
+import com.nector.userservice.model.Cart;
 import com.nector.userservice.model.DistributorLedger;
+import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.repository.DistributorLedgerRepository;
 import com.nector.userservice.service.CartService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -33,6 +37,7 @@ public class DistributorController {
     private final DistributorService distributorService;
     private final DistributorLedgerRepository distributorLedgerRepository;
     private final CartService cartService;
+    private final CartRepository cartRepository;
 
     @PostMapping("/create-distributor")
     @Operation(summary = "Create distributor", description = "Create a new distributor")
@@ -176,4 +181,21 @@ public class DistributorController {
         }
 
     }
+
+    @GetMapping("/api/distributorsActiveCart")
+    public ResponseEntity<?> getDistributorActiveCart(@RequestParam Long distributorId) {
+        log.info("Fetching cart for distributor: {}", distributorId);
+        try {
+            CartResponse response = cartService.getActiveCartByDistributorId(distributorId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error fetching cart for distributor {}: {}", distributorId, e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        }
+
+    }
+
+
 }

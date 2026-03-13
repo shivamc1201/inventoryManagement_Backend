@@ -1,12 +1,14 @@
 package com.nector.userservice.interceptors.distributor;
 
 import com.nector.userservice.dto.ApiResponse;
+import com.nector.userservice.dto.cart.CartResponse;
 import com.nector.userservice.interceptors.distributor.model.*;
 import com.nector.userservice.interceptors.distributor.service.DistributorService;
 import com.nector.userservice.interceptors.userLogin.model.LoginRequest;
 import com.nector.userservice.interceptors.userLogin.model.LoginResponse;
 import com.nector.userservice.model.DistributorLedger;
 import com.nector.userservice.repository.DistributorLedgerRepository;
+import com.nector.userservice.service.CartService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -16,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.math.BigDecimal;
@@ -29,6 +32,7 @@ public class DistributorController {
 
     private final DistributorService distributorService;
     private final DistributorLedgerRepository distributorLedgerRepository;
+    private final CartService cartService;
 
     @PostMapping("/create-distributor")
     @Operation(summary = "Create distributor", description = "Create a new distributor")
@@ -103,7 +107,7 @@ public class DistributorController {
                     .body(new ApiResponse<>(false, "Failed to delete distributor", null));
         }
     }
-    
+
     @PostMapping("/{distributorId}/confirm-order")
     @Operation(summary = "Confirm order received", description = "Distributor confirms order receipt and provides feedback")
     public ResponseEntity<ApiResponse<OrderConfirmationResponse>> confirmOrderReceived(
@@ -118,7 +122,7 @@ public class DistributorController {
                     .body(new ApiResponse<>(false, e.getMessage(), null));
         }
     }
-    
+
     @GetMapping("/order-confirmation/{orderId}")
     @Operation(summary = "Get order confirmation", description = "Get order confirmation details by order ID")
     public ResponseEntity<ApiResponse<OrderConfirmationResponse>> getOrderConfirmation(@PathVariable Long orderId) {
@@ -131,7 +135,7 @@ public class DistributorController {
                     .body(new ApiResponse<>(false, e.getMessage(), null));
         }
     }
-    
+
     @GetMapping("/{distributorId}/confirmations")
     @Operation(summary = "Get distributor confirmations", description = "Get all order confirmations for a distributor")
     public ResponseEntity<ApiResponse<List<OrderConfirmationResponse>>> getDistributorConfirmations(@PathVariable Long distributorId) {
@@ -144,7 +148,7 @@ public class DistributorController {
                     .body(new ApiResponse<>(false, "Failed to retrieve confirmations", null));
         }
     }
-    
+
     @GetMapping("/{distributorId}/balance")
     @Operation(summary = "Get distributor current balance", description = "Get current balance from distributor_ledger table")
     public ResponseEntity<ApiResponse<BigDecimal>> getDistributorCurrentBalance(@PathVariable Long distributorId) {
@@ -156,5 +160,20 @@ public class DistributorController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, "Failed to retrieve distributor balance", null));
         }
+    }
+
+    @GetMapping("/api/distributorsPlacedCart")
+    public ResponseEntity<?> getDistributorActiveCart(@RequestParam Long distributorId) {
+        log.info("Fetching cart for distributor: {}", distributorId);
+        try {
+            CartResponse response = cartService.getCartByDistributorId(distributorId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error fetching cart for distributor {}: {}", distributorId, e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        }
+
     }
 }

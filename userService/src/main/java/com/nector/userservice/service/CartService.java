@@ -238,7 +238,7 @@ public class CartService {
     }
 
     @Transactional(readOnly = true)
-    public List<CartResponse> getAPlacedCarts() {
+    public List<CartResponse> getPlacedCarts() {
         List<Cart> pendingCarts = cartRepository.findByStatus(Cart.CartStatus.PLACED);
         return pendingCarts.stream()
                 .map(this::mapToResponse)

@@ -59,7 +59,7 @@ public class CartController {
     }
     
     @GetMapping
-    public ResponseEntity<?> getCart(@RequestParam Long distributorId) {
+    public ResponseEntity<?> getPlacedCart(@RequestParam Long distributorId) {
         log.info("Fetching cart for distributor: {}", distributorId);
         try {
             CartResponse response = cartService.getCartByDistributorId(distributorId);
@@ -147,6 +147,19 @@ public class CartController {
         } catch (Exception e) {
             log.error("Error downloading proforma invoice for cart {}: {}", cartId, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    @GetMapping("/approved")
+    public ResponseEntity<?> getApprovedCart() {
+        log.info("Fetching all ApprovedCar");
+        try {
+            List<CartResponse> response = cartService.getApprovedCart();
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error fetching cart with approved status {}", e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
         }
     }
 

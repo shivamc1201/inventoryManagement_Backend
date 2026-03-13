@@ -163,10 +163,10 @@ public class DistributorController {
     }
 
     @GetMapping("/api/distributorsPlacedCart")
-    public ResponseEntity<?> getDistributorActiveCart(@RequestParam Long distributorId) {
+    public ResponseEntity<?> getDistributorPlacedCart(@RequestParam Long distributorId) {
         log.info("Fetching cart for distributor: {}", distributorId);
         try {
-            CartResponse response = cartService.getCartByDistributorId(distributorId);
+            CartResponse response = cartService.getPlacedCartByDistributorId(distributorId);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error fetching cart for distributor {}: {}", distributorId, e.getMessage());

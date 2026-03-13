@@ -115,14 +115,43 @@ public class CartService {
         
         return mapToResponse(updatedCart);
     }
-    
+
     @Transactional(readOnly = true)
     public CartResponse getCartByDistributorId(Long distributorId) {
         log.info("Fetching cart for distributor {}", distributorId);
-        
-        Cart cart = cartRepository.findActiveCartByDistributorId(distributorId)
-            .orElseThrow(() -> new CartNotFoundException("No active cart found for distributor " + distributorId));
-        
+
+        List<Cart> placedCarts = cartRepository.findByStatus(Cart.CartStatus.PLACED);
+        Cart cart = placedCarts.stream()
+                .filter(c -> c.getDistributorId().equals(distributorId))
+                .findFirst()
+                .orElseThrow(() -> new CartNotFoundException("No placed cart found for distributor " + distributorId));
+
+        return mapToResponse(cart);
+    }
+
+    @Transactional(readOnly = true)
+    public CartResponse getActiveCartByDistributorId(Long distributorId) {
+        log.info("Fetching Active cart for distributor {}", distributorId);
+
+        List<Cart> placedCarts = cartRepository.findByStatus(Cart.CartStatus.ACTIVE);
+        Cart cart = placedCarts.stream()
+                .filter(c -> c.getDistributorId().equals(distributorId))
+                .findFirst()
+                .orElseThrow(() -> new CartNotFoundException("No Active cart found for distributor " + distributorId));
+
+        return mapToResponse(cart);
+    }
+
+    @Transactional(readOnly = true)
+    public CartResponse getPlacedCartByDistributorId(Long distributorId) {
+        log.info("Fetching Active cart for distributor {}", distributorId);
+
+        List<Cart> placedCarts = cartRepository.findByStatus(Cart.CartStatus.PLACED);
+        Cart cart = placedCarts.stream()
+                .filter(c -> c.getDistributorId().equals(distributorId))
+                .findFirst()
+                .orElseThrow(() -> new CartNotFoundException("No placed cart found for distributor " + distributorId));
+
         return mapToResponse(cart);
     }
 
@@ -171,7 +200,6 @@ public class CartService {
             
             distributorRepository.findById(cart.getDistributorId()).ifPresent(distributor -> {
                 response.setDistributorName(distributor.getName());
-                response.setAddress(distributor.getAddress());
             });
             
             Optional<SalespersonDistributorMapping> mapping = salesMappingRepository
@@ -404,5 +432,14 @@ public class CartService {
 
         html.append("</body></html>");
         return html.toString();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CartResponse> getApprovedCart() {
+        log.info("Fetching all carts with APPROVED status");
+        List<Cart> approvedCarts = cartRepository.findByStatus(Cart.CartStatus.APPROVED);
+        return approvedCarts.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 }

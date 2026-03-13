@@ -174,7 +174,6 @@ public class CartService {
             
             distributorRepository.findById(cart.getDistributorId()).ifPresent(distributor -> {
                 response.setDistributorName(distributor.getName());
-                response.setAddress(distributor.getAddress());
             });
             
             Optional<SalespersonDistributorMapping> mapping = salesMappingRepository

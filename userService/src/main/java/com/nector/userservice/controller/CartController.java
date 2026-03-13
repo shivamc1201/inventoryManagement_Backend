@@ -59,7 +59,7 @@ public class CartController {
     }
     
     @GetMapping
-    public ResponseEntity<?> getCart(@RequestParam Long distributorId) {
+    public ResponseEntity<?> getPlacedCart(@RequestParam Long distributorId) {
         log.info("Fetching cart for distributor: {}", distributorId);
         try {
             CartResponse response = cartService.getCartByDistributorId(distributorId);

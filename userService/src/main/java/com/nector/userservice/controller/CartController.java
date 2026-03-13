@@ -71,6 +71,20 @@ public class CartController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
         }
     }
+
+    @GetMapping("/getActiveCart")
+    public ResponseEntity<?> getActiveCart(@RequestParam Long distributorId) {
+        log.info("Fetching cart for distributor: {}", distributorId);
+        try {
+            CartResponse response = cartService.getActiveCartByDistributorId(distributorId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error fetching cart for distributor {}: {}", distributorId, e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        }
+    }
     
     @DeleteMapping("/{cartId}/dismiss")
     public ResponseEntity<Map<String, String>> dismissCart(@PathVariable Long cartId) {

@@ -259,7 +259,7 @@ public class CartService {
             .orElseThrow(() -> new CartNotFoundException("Cart with ID " + cartId + " not found"));
         
         // Check if cart is active before approval
-        if (cart.getStatus() != Cart.CartStatus.ACTIVE) {
+        if (cart.getStatus() != Cart.CartStatus.PLACED) {
             throw new com.nector.userservice.exception.InvalidCartStatusException("Cannot approve cart with status: " + cart.getStatus());
         }
         

@@ -707,4 +707,46 @@ public class GdnService {
             throw new RuntimeException("GDN not found", e);
         }
     }
+
+    /**
+     * Get all GDNs
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getAllGdns() {
+        log.info("=== GET ALL GDNS ===");
+        log.info("Request timestamp: {}", java.time.LocalDateTime.now());
+
+        try {
+            List<Gdn> gdns = gdnRepository.findAll();
+
+            List<Map<String, Object>> response = gdns.stream()
+                    .map(gdn -> {
+                        Map<String, Object> gdnMap = new HashMap<>();
+                        gdnMap.put("id", gdn.getId());
+                        gdnMap.put("gdnNumber", gdn.getGdnNumber());
+                        gdnMap.put("orderId", gdn.getOrderId());
+                        gdnMap.put("gdnDate", gdn.getGdnDate());
+                        gdnMap.put("dispatchFromAddress", gdn.getDispatchFromAddress());
+                        gdnMap.put("shippingAddress", gdn.getShippingAddress());
+                        gdnMap.put("deliveryMethod", gdn.getDeliveryMethod());
+                        gdnMap.put("vehicleNo", gdn.getVehicleNo());
+                        gdnMap.put("transportName", gdn.getTransportName());
+                        gdnMap.put("driverName", gdn.getDriverName());
+                        gdnMap.put("driverMobile", gdn.getDriverMobile());
+                        gdnMap.put("totalWeight", gdn.getTotalWeight());
+                        gdnMap.put("totalPackages", gdn.getTotalPackages());
+                        gdnMap.put("pdfUrl", gdn.getPdfUrl());
+                        gdnMap.put("hasPdf", gdn.getPdfUrl() != null && !gdn.getPdfUrl().isEmpty());
+                        return gdnMap;
+                    })
+                    .toList();
+
+            log.info("Retrieved {} GDNs successfully", response.size());
+            return response;
+
+        } catch (Exception e) {
+            log.error("Failed to retrieve all GDNs: {}", e.getMessage());
+            throw new RuntimeException("Failed to retrieve GDNs", e);
+        }
+    }
 }

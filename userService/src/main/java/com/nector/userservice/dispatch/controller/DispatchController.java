@@ -5,7 +5,11 @@ import com.nector.userservice.dispatch.dto.SimpleGdnRequest;
 import com.nector.userservice.dispatch.dto.GdnRequest;
 import com.nector.userservice.dispatch.dto.GdnResponse;
 import com.nector.userservice.dispatch.dto.InventoryVerificationResponse;
+import com.nector.userservice.dispatch.entity.Gdn;
+import com.nector.userservice.dispatch.repository.GdnRepository;
 import com.nector.userservice.dispatch.service.GdnService;
+import com.nector.userservice.model.Cart;
+import com.nector.userservice.repository.CartRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -28,6 +32,8 @@ import java.util.Map;
 public class DispatchController {
     
     private final GdnService gdnService;
+    private final GdnRepository gdnRepository;
+    private final CartRepository cartRepository;
 
     @PostMapping("/gdn/generate/{orderId}")
     @Operation(summary = "Generate GDN", description = "Generate Goods Delivery Note for approved order with inventory verification")
@@ -133,15 +139,39 @@ public class DispatchController {
     @GetMapping("/gdn/{orderId}/url")
     @Operation(summary = "Get GDN PDF URL", description = "Returns direct Cloudinary URL for PDF")
     @ApiResponse(responseCode = "200", description = "PDF URL retrieved successfully")
-    @ApiResponse(responseCode = "404", description = "GDN or PDF URL not found")
+    @ApiResponse(responseCode = "404", description = "GDN not found for order ID")
+    @ApiResponse(responseCode = "200", description = "No GDN exists for this order")
     public ResponseEntity<?> getGdnUrl(@PathVariable Long orderId) {
         try {
             Map<String, Object> response = gdnService.getGdnUrl(orderId);
             return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("GDN not found for order ID")) {
+                // Return 200 with proper response when no GDN exists
+                Map<String, Object> response = Map.of(
+                        "orderId", orderId,
+                        "gdnNumber", null,
+                        "pdfUrl", null,
+                        "hasPdf", false,
+                        "message", "No GDN exists for this order ID"
+                );
+                return ResponseEntity.ok(response);
+            } else {
+                // Handle other errors (PDF not available, etc.)
+                log.error("Failed to retrieve PDF URL for order ID: {} - {}", orderId, e.getMessage());
+                Map<String, Object> response = Map.of(
+                        "orderId", orderId,
+                        "gdnNumber", null,
+                        "pdfUrl", null,
+                        "hasPdf", false,
+                        "message", e.getMessage()
+                );
+                return ResponseEntity.ok(response);
+            }
         } catch (Exception e) {
-            log.error("Failed to retrieve PDF URL for order ID: {} - {}", orderId, e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "GDN not found", "message", e.getMessage()));
+            log.error("Unexpected error for order ID: {} - {}", orderId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Internal server error", "message", e.getMessage()));
         }
     }
 
@@ -157,6 +187,24 @@ public class DispatchController {
             log.error("Failed to retrieve all GDNs: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to retrieve GDNs", "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/gdn/{orderId}/regenerate-pdf")
+    public ResponseEntity<?> regenerateGdnPdf(@PathVariable Long orderId) {
+        try {
+            Gdn gdn = gdnRepository.findByOrderId(orderId)
+                    .orElseThrow(() -> new RuntimeException("GDN not found for order: " + orderId));
+
+            Cart cart = cartRepository.findById(orderId)
+                    .orElseThrow(() -> new RuntimeException("Cart not found for order: " + orderId));
+
+            gdnService.generateGdnPdf(gdn, cart);
+
+            return ResponseEntity.ok(Map.of("message", "PDF regenerated successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 }

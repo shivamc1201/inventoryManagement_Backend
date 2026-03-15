@@ -1,6 +1,7 @@
 package com.nector.userservice.dispatch.service;
 
 import com.nector.userservice.cloudinary.CloudinaryStorageService;
+import com.nector.userservice.cloudinary.PdfGenerationResult;
 import com.nector.userservice.dispatch.dto.GdnItemResponse;
 import com.nector.userservice.dispatch.dto.GdnResponse;
 import com.nector.userservice.dispatch.dto.GdnGenerationRequest;
@@ -538,11 +539,13 @@ public class GdnService {
 
 
     // Update generateGdnPdf method
-    private void generateGdnPdf(Gdn gdn, Cart cart) {
+    public PdfGenerationResult generateGdnPdf(Gdn gdn, Cart cart) {
         log.info("=== GDN PDF GENERATION STARTED ===");
         log.info("GDN details - Number: {}, Order ID: {}, Timestamp: {}",
                 gdn.getGdnNumber(), gdn.getOrderId(), java.time.LocalDateTime.now());
 
+        String cloudinaryUrl = null;
+        byte[] pdfBytes = null;
         try {
             // Step 1: Generate GDN data for template
             log.info("Step 1/4: Generating GDN data for template");
@@ -559,13 +562,13 @@ public class GdnService {
 
             // Step 3: Convert to PDF
             log.info("Step 3/4: Converting HTML to PDF bytes");
-            byte[] pdfBytes = htmlToPdfService.convertHtmlToPdf(html);
+            pdfBytes = htmlToPdfService.convertHtmlToPdf(html);
             log.info("PDF generated successfully - Size: {} bytes ({} KB)",
                     pdfBytes.length, pdfBytes.length / 1024.0);
 
             // Step 4: Upload to Cloudinary
             log.info("Step 4/4: Uploading PDF to Cloudinary");
-            String cloudinaryUrl = uploadGdnPdfToCloudinary(pdfBytes, gdn.getGdnNumber());
+            cloudinaryUrl = uploadGdnPdfToCloudinary(pdfBytes, gdn.getGdnNumber());
 
             // Update GDN entity with Cloudinary URL
             gdn.setPdfUrl(cloudinaryUrl);
@@ -581,8 +584,9 @@ public class GdnService {
             log.error("Failure details - GDN Number: {}, Error: {}, Timestamp: {}",
                     gdn.getGdnNumber(), e.getMessage(), java.time.LocalDateTime.now());
             log.error("Stack trace:", e);
-            // Don't throw exception - GDN is already saved, PDF generation is optional
+            return PdfGenerationResult.failure("PDF generation failed: " + e.getMessage());
         }
+        return PdfGenerationResult.success(cloudinaryUrl, pdfBytes.length);
     }
 
     private String uploadGdnPdfToCloudinary(byte[] pdfBytes, String gdnNumber) {

@@ -23,4 +23,6 @@ public class GdnResponse {
     private Integer totalPackages;
     private String pdfUrl;
     private List<GdnItemResponse> gdnItems;
+    private String pdfGenerationStatus; // "SUCCESS", "FAILED", "NOT_GENERATED"
+    private String pdfGenerationMessage;
 }

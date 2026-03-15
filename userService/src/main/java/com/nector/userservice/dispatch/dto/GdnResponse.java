@@ -21,5 +21,6 @@ public class GdnResponse {
     private String driverMobile;
     private BigDecimal totalWeight;
     private Integer totalPackages;
+    private String pdfUrl;
     private List<GdnItemResponse> gdnItems;
 }

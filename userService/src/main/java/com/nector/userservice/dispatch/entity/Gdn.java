@@ -27,6 +27,8 @@ public class Gdn {
     
     @Column(nullable = false)
     private Long orderId;
+
+    private String pdfUrl;
     
     @CreationTimestamp
     @Column(updatable = false)

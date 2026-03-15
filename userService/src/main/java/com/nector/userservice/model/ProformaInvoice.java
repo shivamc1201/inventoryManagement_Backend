@@ -36,6 +36,9 @@ public class ProformaInvoice {
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
     
+    @Column(name = "pdf_url")
+    private String pdfUrl;
+    
     public enum PaymentStatus {
         PENDING, PAID, REJECTED
     }

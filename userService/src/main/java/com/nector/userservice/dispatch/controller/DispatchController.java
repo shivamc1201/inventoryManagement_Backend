@@ -17,6 +17,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -141,6 +142,21 @@ public class DispatchController {
             log.error("Failed to retrieve PDF URL for order ID: {} - {}", orderId, e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "GDN not found", "message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/gdn/all")
+    @Operation(summary = "Get All GDNs", description = "Retrieves all generated Goods Delivery Notes")
+    @ApiResponse(responseCode = "200", description = "All GDNs retrieved successfully")
+    public ResponseEntity<?> getAllGdns() {
+        try {
+            List<Map<String, Object>> gdns = gdnService.getAllGdns();
+            log.info("Retrieved {} GDNs", gdns.size());
+            return ResponseEntity.ok(gdns);
+        } catch (Exception e) {
+            log.error("Failed to retrieve all GDNs: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to retrieve GDNs", "message", e.getMessage()));
         }
     }
 }

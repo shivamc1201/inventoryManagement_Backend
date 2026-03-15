@@ -21,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
@@ -399,7 +400,41 @@ public class ProformaInvoiceService {
         }
     }
 
+    /**
+     * Get all Proforma Invoices
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getAllProformaInvoices() {
+        log.info("=== GET ALL PROFORMA INVOICES ===");
+        log.info("Request timestamp: {}", java.time.LocalDateTime.now());
 
+        try {
+            List<com.nector.userservice.model.ProformaInvoice> invoices = proformaInvoiceRepository.findAll();
+
+            List<Map<String, Object>> response = invoices.stream()
+                    .map(pi -> {
+                        Map<String, Object> piMap = new HashMap<>();
+                        piMap.put("id", pi.getId());
+                        piMap.put("piNumber", pi.getPiNumber());
+                        piMap.put("cartId", pi.getCartId());
+                        piMap.put("distributorId", pi.getDistributorId());
+                        piMap.put("amount", pi.getAmount());
+                        piMap.put("paymentStatus", pi.getPaymentStatus() != null ? pi.getPaymentStatus().toString() : "PENDING");
+                        piMap.put("createdAt", pi.getCreatedAt());
+                        piMap.put("pdfUrl", pi.getPdfUrl());
+                        piMap.put("hasPdf", pi.getPdfUrl() != null && !pi.getPdfUrl().isEmpty());
+                        return piMap;
+                    })
+                    .toList();
+
+            log.info("Retrieved {} Proforma Invoices successfully", response.size());
+            return response;
+
+        } catch (Exception e) {
+            log.error("Failed to retrieve all Proforma Invoices: {}", e.getMessage());
+            throw new RuntimeException("Failed to retrieve Proforma Invoices", e);
+        }
+    }
 
 
 }

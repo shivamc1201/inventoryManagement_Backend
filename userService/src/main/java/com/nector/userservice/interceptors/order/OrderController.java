@@ -182,4 +182,19 @@ public class OrderController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+
+    @GetMapping("/proforma-invoice/all")
+    @Operation(summary = "Get All Proforma Invoices", description = "Retrieves all generated Proforma Invoices")
+    @ApiResponse(responseCode = "200", description = "All Proforma Invoices retrieved successfully")
+    public ResponseEntity<?> getAllProformaInvoices() {
+        try {
+            List<Map<String, Object>> invoices = proformaInvoiceService.getAllProformaInvoices();
+            log.info("Retrieved {} Proforma Invoices", invoices.size());
+            return ResponseEntity.ok(invoices);
+        } catch (Exception e) {
+            log.error("Failed to retrieve all Proforma Invoices: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to retrieve Proforma Invoices", "message", e.getMessage()));
+        }
+    }
 }

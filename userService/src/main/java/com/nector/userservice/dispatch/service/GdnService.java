@@ -1,5 +1,6 @@
 package com.nector.userservice.dispatch.service;
 
+import com.nector.userservice.cloudinary.CloudinaryStorageService;
 import com.nector.userservice.dispatch.dto.GdnItemResponse;
 import com.nector.userservice.dispatch.dto.GdnResponse;
 import com.nector.userservice.dispatch.dto.GdnGenerationRequest;
@@ -22,6 +23,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -45,6 +48,7 @@ public class GdnService {
     private final InventoryService inventoryService;
     private final HtmlToPdfService htmlToPdfService;
     private final TemplateEngine templateEngine;
+    private final CloudinaryStorageService cloudinaryStorageService;
     
     @Transactional
     public GdnResponse generateGdn(Long orderId, GdnGenerationRequest request) {
@@ -399,6 +403,7 @@ public class GdnService {
         response.setDriverMobile(gdn.getDriverMobile());
         response.setTotalWeight(gdn.getTotalWeight());
         response.setTotalPackages(gdn.getTotalPackages());
+        response.setPdfUrl(gdn.getPdfUrl());
         
         List<GdnItemResponse> itemResponses = gdn.getGdnItems().stream()
             .map(this::mapItemToResponse)
@@ -467,31 +472,7 @@ public class GdnService {
         inventoryVerificationRepository.save(verification);
     }
     
-    private void generateGdnPdf(Gdn gdn, Cart cart) {
-        log.info("Generating GDN PDF for GDN number: {}", gdn.getGdnNumber());
-        
-        try {
-            // Create GDN data for template
-            Map<String, Object> gdnData = createGdnDataForTemplate(gdn, cart);
-            
-            // Generate HTML from template
-            Context context = new Context();
-            context.setVariables(gdnData);
-            String html = templateEngine.process("gdn", context);
-            
-            // Convert to PDF
-            byte[] pdfBytes = htmlToPdfService.convertHtmlToPdf(html);
-            
-            // Save PDF to file
-            saveGdnPdfToFile(pdfBytes, gdn.getGdnNumber());
-            
-            log.info("GDN PDF generated successfully: {}", gdn.getGdnNumber());
-        } catch (Exception e) {
-            log.error("Failed to generate GDN PDF: {}", e.getMessage());
-            // Don't throw exception - GDN is already saved, PDF generation is optional
-        }
-    }
-    
+
     private Map<String, Object> createGdnDataForTemplate(Gdn gdn, Cart cart) {
         Map<String, Object> data = new HashMap<>();
         
@@ -551,6 +532,179 @@ public class GdnService {
         } catch (IOException e) {
             log.error("Failed to save GDN PDF: {}", e.getMessage());
             throw new RuntimeException("Failed to save GDN PDF", e);
+        }
+    }
+
+
+
+    // Update generateGdnPdf method
+    private void generateGdnPdf(Gdn gdn, Cart cart) {
+        log.info("=== GDN PDF GENERATION STARTED ===");
+        log.info("GDN details - Number: {}, Order ID: {}, Timestamp: {}",
+                gdn.getGdnNumber(), gdn.getOrderId(), java.time.LocalDateTime.now());
+
+        try {
+            // Step 1: Generate GDN data for template
+            log.info("Step 1/4: Generating GDN data for template");
+            Map<String, Object> gdnData = createGdnDataForTemplate(gdn, cart);
+            log.info("GDN data created - Number: {}, Items: {}",
+                    gdn.getGdnNumber(), gdn.getGdnItems().size());
+
+            // Step 2: Generate HTML from template
+            log.info("Step 2/4: Converting GDN to HTML template");
+            Context context = new Context();
+            context.setVariables(gdnData);
+            String html = templateEngine.process("gdn", context);
+            log.info("HTML generated successfully - Length: {} characters", html.length());
+
+            // Step 3: Convert to PDF
+            log.info("Step 3/4: Converting HTML to PDF bytes");
+            byte[] pdfBytes = htmlToPdfService.convertHtmlToPdf(html);
+            log.info("PDF generated successfully - Size: {} bytes ({} KB)",
+                    pdfBytes.length, pdfBytes.length / 1024.0);
+
+            // Step 4: Upload to Cloudinary
+            log.info("Step 4/4: Uploading PDF to Cloudinary");
+            String cloudinaryUrl = uploadGdnPdfToCloudinary(pdfBytes, gdn.getGdnNumber());
+
+            // Update GDN entity with Cloudinary URL
+            gdn.setPdfUrl(cloudinaryUrl);
+            gdnRepository.save(gdn);
+
+            log.info("=== GDN PDF GENERATION COMPLETED ===");
+            log.info("Success - GDN Number: {}, Cloudinary URL: {}, PDF Size: {} KB",
+                    gdn.getGdnNumber(), cloudinaryUrl, pdfBytes.length / 1024.0);
+            log.info("Entity updated - ID: {}, PDF URL stored: {}", gdn.getId(), gdn.getPdfUrl());
+
+        } catch (Exception e) {
+            log.error("=== GDN PDF GENERATION FAILED ===");
+            log.error("Failure details - GDN Number: {}, Error: {}, Timestamp: {}",
+                    gdn.getGdnNumber(), e.getMessage(), java.time.LocalDateTime.now());
+            log.error("Stack trace:", e);
+            // Don't throw exception - GDN is already saved, PDF generation is optional
+        }
+    }
+
+    private String uploadGdnPdfToCloudinary(byte[] pdfBytes, String gdnNumber) {
+        File tempFile = null;
+        try {
+            // Create temporary file
+            tempFile = createTempGdnPdfFile(pdfBytes, gdnNumber);
+
+            // Upload to Cloudinary
+            String cloudinaryUrl = cloudinaryStorageService.uploadPdf(tempFile);
+
+            log.info("GDN PDF uploaded to Cloudinary: {} -> {}", gdnNumber, cloudinaryUrl);
+            return cloudinaryUrl;
+
+        } catch (Exception e) {
+            log.error("Failed to upload GDN PDF to Cloudinary: {} - {}", gdnNumber, e.getMessage());
+            throw new RuntimeException("GDN PDF upload to Cloudinary failed", e);
+        } finally {
+            // Always cleanup temporary file
+            cleanupTempGdnFile(tempFile);
+        }
+    }
+
+    private File createTempGdnPdfFile(byte[] pdfBytes, String gdnNumber) throws IOException {
+        // Create temp directory if not exists
+        Path tempDir = Path.of("temp");
+        if (!Files.exists(tempDir)) {
+            Files.createDirectories(tempDir);
+        }
+
+        // Create temp file
+        String tempFileName = gdnNumber.replace("/", "-") + "_" + System.currentTimeMillis() + ".pdf";
+        File tempFile = tempDir.resolve(tempFileName).toFile();
+
+        try (FileOutputStream fos = new FileOutputStream(tempFile)) {
+            fos.write(pdfBytes);
+        }
+
+        log.debug("Created temporary GDN PDF file: {}", tempFile.getAbsolutePath());
+        return tempFile;
+    }
+
+    private void cleanupTempGdnFile(File tempFile) {
+        if (tempFile != null && tempFile.exists()) {
+            try {
+                Files.deleteIfExists(tempFile.toPath());
+                log.debug("Cleaned up temporary GDN file: {}", tempFile.getAbsolutePath());
+            } catch (IOException e) {
+                log.warn("Failed to cleanup temporary GDN file: {} - {}",
+                        tempFile.getAbsolutePath(), e.getMessage());
+            }
+        }
+    }
+
+
+    /**
+     * Download GDN PDF from Cloudinary
+     */
+    public byte[] downloadGdnPdf(Long orderId) {
+        log.info("=== DOWNLOAD GDN PDF ===");
+        log.info("Download request - Order ID: {}, Timestamp: {}", orderId, java.time.LocalDateTime.now());
+
+        try {
+            Gdn gdn = gdnRepository.findByOrderId(orderId)
+                    .orElseThrow(() -> new RuntimeException("GDN not found for order ID: " + orderId));
+
+            log.info("GDN found - ID: {}, GDN Number: {}", gdn.getId(), gdn.getGdnNumber());
+
+            // Check if PDF URL exists
+            if (gdn.getPdfUrl() == null || gdn.getPdfUrl().isEmpty()) {
+                log.error("PDF URL not available for GDN ID: {}", gdn.getId());
+                throw new RuntimeException("PDF not available for GDN: " + gdn.getGdnNumber());
+            }
+
+            log.info("PDF URL found: {}", gdn.getPdfUrl());
+
+            // Download using Cloudinary's URL download method
+            byte[] pdfBytes = cloudinaryStorageService.downloadPdfByUrl(gdn.getPdfUrl());
+
+            log.info("PDF downloaded successfully - Size: {} bytes ({} KB)",
+                    pdfBytes.length, pdfBytes.length / 1024.0);
+
+            return pdfBytes;
+
+        } catch (Exception e) {
+            log.error("Failed to download PDF from Cloudinary for order ID: {} - {}", orderId, e.getMessage());
+            throw new RuntimeException("Failed to download PDF", e);
+        }
+    }
+
+    /**
+     * Get GDN PDF URL only
+     */
+    public Map<String, Object> getGdnUrl(Long orderId) {
+        log.info("=== GET GDN PDF URL ===");
+        log.info("URL request - Order ID: {}, Timestamp: {}", orderId, java.time.LocalDateTime.now());
+
+        try {
+            Gdn gdn = gdnRepository.findByOrderId(orderId)
+                    .orElseThrow(() -> new RuntimeException("GDN not found for order ID: " + orderId));
+
+            if (gdn.getPdfUrl() == null || gdn.getPdfUrl().isEmpty()) {
+                log.error("PDF URL not available for GDN ID: {}", gdn.getId());
+                throw new RuntimeException("PDF URL not available for GDN: " + gdn.getGdnNumber());
+            }
+
+            log.info("PDF URL retrieved successfully - Order ID: {}, GDN Number: {}, URL: {}",
+                    orderId, gdn.getGdnNumber(), gdn.getPdfUrl());
+
+            Map<String, Object> response = Map.of(
+                    "orderId", orderId,
+                    "gdnNumber", gdn.getGdnNumber(),
+                    "pdfUrl", gdn.getPdfUrl(),
+                    "totalPackages", gdn.getTotalPackages(),
+                    "totalWeight", gdn.getTotalWeight()
+            );
+
+            return response;
+
+        } catch (Exception e) {
+            log.error("Failed to retrieve PDF URL for order ID: {} - {}", orderId, e.getMessage());
+            throw new RuntimeException("GDN not found", e);
         }
     }
 }

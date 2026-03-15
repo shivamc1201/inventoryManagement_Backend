@@ -7,13 +7,13 @@ import com.nector.userservice.dispatch.dto.GdnResponse;
 import com.nector.userservice.dispatch.dto.InventoryVerificationResponse;
 import com.nector.userservice.dispatch.service.GdnService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -74,6 +74,73 @@ public class DispatchController {
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        }
+    }
+
+    @GetMapping("/gdn/{orderId}/download")
+    @Operation(summary = "Download GDN PDF")
+    @ApiResponse(
+            responseCode = "200",
+            description = "PDF downloaded",
+            content = @Content(mediaType = "application/pdf")
+    )
+    public ResponseEntity<byte[]> downloadGdn(
+            @PathVariable Long orderId) {
+
+        try {
+
+            byte[] pdfBytes =
+                    gdnService
+                            .downloadGdnPdf(orderId);
+
+            GdnResponse gdnDetails =
+                    gdnService
+                            .getGdnByOrderId(orderId);
+
+            String gdnNumber =
+                    gdnDetails.getGdnNumber();
+
+            HttpHeaders headers =
+                    new HttpHeaders();
+
+            headers.setContentType(
+                    MediaType.APPLICATION_PDF);
+
+            headers.setContentDisposition(
+                    ContentDisposition
+                            .attachment()
+                            .filename(gdnNumber.replace("/", "-")+".pdf")
+                            .build()
+            );
+
+            headers.setContentLength(pdfBytes.length);
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(pdfBytes);
+
+        } catch(Exception e){
+
+            log.error("Download failed",e);
+
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .build();
+        }
+    }
+
+    @GetMapping("/gdn/{orderId}/url")
+    @Operation(summary = "Get GDN PDF URL", description = "Returns direct Cloudinary URL for PDF")
+    @ApiResponse(responseCode = "200", description = "PDF URL retrieved successfully")
+    @ApiResponse(responseCode = "404", description = "GDN or PDF URL not found")
+    public ResponseEntity<?> getGdnUrl(@PathVariable Long orderId) {
+        try {
+            Map<String, Object> response = gdnService.getGdnUrl(orderId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Failed to retrieve PDF URL for order ID: {} - {}", orderId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "GDN not found", "message", e.getMessage()));
         }
     }
 }

@@ -197,5 +197,19 @@ public class DistributorController {
 
     }
 
+    @GetMapping("/{distributorId}/orders")
+    @Operation(summary = "Get all orders for distributor", description = "Retrieve all orders (carts) for a specific distributor")
+    public ResponseEntity<ApiResponse<List<CartResponse>>> getAllOrdersForDistributor(@PathVariable Long distributorId) {
+        log.info("Fetching all orders for distributor: {}", distributorId);
+        try {
+            List<CartResponse> orders = distributorService.getAllOrdersForDistributor(distributorId);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Orders retrieved successfully", orders));
+        } catch (Exception e) {
+            log.error("Error retrieving orders for distributor {}: {}", distributorId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, "Failed to retrieve orders", null));
+        }
+    }
+
 
 }

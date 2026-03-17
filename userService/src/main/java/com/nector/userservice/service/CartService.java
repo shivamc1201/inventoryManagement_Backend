@@ -14,10 +14,7 @@ import com.nector.userservice.model.Cart;
 import com.nector.userservice.model.CartItem;
 import com.nector.userservice.model.FinishedProduct;
 import com.nector.userservice.model.Item;
-import com.nector.userservice.repository.CartItemRepository;
-import com.nector.userservice.repository.CartRepository;
-import com.nector.userservice.repository.FinishedProductRepository;
-import com.nector.userservice.repository.ItemRepository;
+import com.nector.userservice.repository.*;
 import com.nector.userservice.interceptors.salesMapping.repository.SalesMappingRepository;
 import com.nector.userservice.dto.invoice.ProformaInvoice;
 import com.nector.userservice.service.HtmlToPdfService;
@@ -44,6 +41,7 @@ public class CartService {
     private final ProformaInvoiceService proformaInvoiceService;
     private final SalesMappingRepository salesMappingRepository;
     private final DistributorRepository distributorRepository;
+    private final UserRepository userRepository;
 
 
     // TODO the dispatch team wil, check the real  quantity of the orders  while checking GDN
@@ -186,7 +184,7 @@ public class CartService {
         
         return cartRepository.save(newCart);
     }
-    
+
     public CartResponse mapToResponse(Cart cart) {
         CartResponse response = new CartResponse();
         response.setId(cart.getId());
@@ -197,38 +195,39 @@ public class CartService {
         // Fetch distributor and salesperson information
         if (cart.getDistributorId() != null) {
             response.setDistributorId(cart.getDistributorId());
-            
+
             distributorRepository.findById(cart.getDistributorId()).ifPresent(distributor -> {
                 response.setDistributorName(distributor.getName());
+
+                // Set salesperson information from distributor's salespersonId
+                if (distributor.getSalespersonId() != null) {
+                    response.setSalespersonId(distributor.getSalespersonId());
+
+                    // Fetch salesperson name from User table
+                    userRepository.findById(distributor.getSalespersonId()).ifPresent(salesperson -> {
+                        String salespersonName = salesperson.getFirstName() + " " + salesperson.getLastName();
+                        response.setSalespersonName(salespersonName);
+                    });
+                }
             });
-            
-            Optional<SalespersonDistributorMapping> mapping = salesMappingRepository
-                .findByDistributorId(cart.getDistributorId())
-                .stream()
-                .filter(m -> m.getStatus() == MappingStatus.ACTIVE)
-                .findFirst();
-            
-            if (mapping.isPresent()) {
-                response.setSalespersonId(mapping.get().getSalespersonId());
-                response.setSalespersonName("Salesperson-" + mapping.get().getSalespersonId());
-            }
         }
-        
+
         List<CartItemResponse> cartItemResponses = cart.getCartItems().stream()
-            .map(this::mapCartItemToResponse)
-            .collect(Collectors.toList());
-        
+                .map(this::mapCartItemToResponse)
+                .collect(Collectors.toList());
+
         response.setCartItems(cartItemResponses);
-        
+
         // Calculate total cart amount
         BigDecimal totalAmount = cartItemResponses.stream()
-            .map(CartItemResponse::getTotalPrice)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .map(CartItemResponse::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         response.setTotalCartAmount(totalAmount);
-        
+
         return response;
     }
-    
+
+
     @Transactional(readOnly = true)
     public List<CartResponse> getPendingApprovalCarts() {
         List<Cart> pendingCarts = cartRepository.findByStatus(Cart.CartStatus.ACTIVE);

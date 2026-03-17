@@ -4,6 +4,7 @@ import com.nector.userservice.common.BaseLoginResponse;
 import com.nector.userservice.common.RoleType;
 import com.nector.userservice.common.UserStatus;
 import com.nector.userservice.common.features.Features;
+import com.nector.userservice.dto.UserDetailsDTO;
 import com.nector.userservice.interceptors.distributor.model.Distributor;
 import com.nector.userservice.interceptors.distributor.model.DistributorLoginResponse;
 import com.nector.userservice.interceptors.distributor.model.DistributorStatus;
@@ -17,6 +18,7 @@ import com.nector.userservice.model.User;
 import com.nector.userservice.repository.UserRepository;
 // import com.nector.userservice.repository.UserSessionRepository;
 import com.nector.userservice.service.JwtService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -375,5 +377,35 @@ public class LoginServiceImpl implements LoginService {
         log.info("Entering authenticateSecondUser() for username: {}", request.getUsername());
 
         return null;
+    }
+
+    @Override
+    public UserDetailsDTO getUserDetailsByUsername(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
+
+        UserDetailsDTO dto = new UserDetailsDTO();
+        dto.setId(user.getId());
+        dto.setUsername(user.getUsername());
+        dto.setEmail(user.getEmail());
+        dto.setStatus(user.getStatus());
+        dto.setFirstName(user.getFirstName());
+        dto.setLastName(user.getLastName());
+        dto.setCreatedOn(user.getCreatedOn());
+        dto.setContactNo(user.getContactNo());
+        dto.setAlternateContactNo(user.getAlternateContactNo());
+        dto.setBloodGroup(user.getBloodGroup());
+        dto.setCompleteAddress(user.getCompleteAddress());
+        dto.setDateOfBirth(user.getDateOfBirth());
+        dto.setGender(user.getGender());
+        dto.setCity(user.getCity());
+        dto.setCountry(user.getCountry());
+        dto.setZip(user.getZip());
+        dto.setLastLoginTime(user.getLastLoginTime());
+        dto.setLoggedIn(user.isLoggedIn());
+        dto.setPasswordSetDate(user.getPasswordSetDate());
+        dto.setRoleType(user.getRoleType());
+
+        return dto;
     }
 }

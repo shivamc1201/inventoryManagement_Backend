@@ -3,6 +3,7 @@ package com.nector.userservice.repository;
 import com.nector.userservice.model.Cart;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -17,4 +18,8 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
     Optional<Cart> findByDistributorIdAndStatus(Long distributorId, Cart.CartStatus status);
     
     List<Cart> findByStatus(Cart.CartStatus status);
+
+    @Query("SELECT c FROM Cart c WHERE c.status = :status")
+    List<Cart> findCartsByStatus(@Param("status") Cart.CartStatus status);
+
 }

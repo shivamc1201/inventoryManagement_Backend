@@ -1,10 +1,6 @@
 package com.nector.userservice.dispatch.controller;
 
-import com.nector.userservice.dispatch.dto.GdnGenerationRequest;
-import com.nector.userservice.dispatch.dto.SimpleGdnRequest;
-import com.nector.userservice.dispatch.dto.GdnRequest;
-import com.nector.userservice.dispatch.dto.GdnResponse;
-import com.nector.userservice.dispatch.dto.InventoryVerificationResponse;
+import com.nector.userservice.dispatch.dto.*;
 import com.nector.userservice.dispatch.entity.Gdn;
 import com.nector.userservice.dispatch.repository.GdnRepository;
 import com.nector.userservice.dispatch.service.GdnService;
@@ -23,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/dispatch")
@@ -207,4 +204,44 @@ public class DispatchController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
+    @GetMapping("/carts/payment-approved")
+    @Operation(summary = "Get All Payment Approved Carts", description = "Retrieve all carts with PAYMENT_APPROVED status (excluding GDN_GENERATED)")
+    @ApiResponse(responseCode = "200", description = "Payment approved carts retrieved successfully")
+    public ResponseEntity<?> getPaymentApprovedCarts() {
+        log.info("Fetching all carts with PAYMENT_APPROVED status");
+        try {
+            List<Cart> carts = cartRepository.findByStatus(Cart.CartStatus.PAYMENT_APPROVED);
+            List<CartDto> cartDtos = carts.stream()
+                    .map(gdnService::convertToCartDto)
+                    .collect(Collectors.toList());
+            log.info("Retrieved {} carts with PAYMENT_APPROVED status", cartDtos.size());
+            return ResponseEntity.ok(cartDtos);
+        } catch (Exception e) {
+            log.error("Error fetching payment approved carts: {}", e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    @GetMapping("/carts/gdn-generated")
+    @Operation(summary = "Get All GDN Generated Carts", description = "Retrieve all carts with GDN_GENERATED status")
+    @ApiResponse(responseCode = "200", description = "GDN generated carts retrieved successfully")
+    public ResponseEntity<?> getGdnGeneratedCarts() {
+        log.info("Fetching all carts with GDN_GENERATED status");
+        try {
+            List<Cart> carts = cartRepository.findByStatus(Cart.CartStatus.GDN_GENERATED);
+            List<CartDto> cartDtos = carts.stream()
+                    .map(gdnService::convertToCartDto)
+                    .collect(Collectors.toList());
+            log.info("Retrieved {} carts with GDN_GENERATED status", cartDtos.size());
+            return ResponseEntity.ok(cartDtos);
+        } catch (Exception e) {
+            log.error("Error fetching GDN generated carts: {}", e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
 }

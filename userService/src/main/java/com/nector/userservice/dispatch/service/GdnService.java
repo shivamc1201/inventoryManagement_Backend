@@ -2,11 +2,7 @@ package com.nector.userservice.dispatch.service;
 
 import com.nector.userservice.cloudinary.CloudinaryStorageService;
 import com.nector.userservice.cloudinary.PdfGenerationResult;
-import com.nector.userservice.dispatch.dto.GdnItemResponse;
-import com.nector.userservice.dispatch.dto.GdnResponse;
-import com.nector.userservice.dispatch.dto.GdnGenerationRequest;
-import com.nector.userservice.dispatch.dto.InventoryVerificationResponse;
-import com.nector.userservice.dispatch.dto.SimpleGdnRequest;
+import com.nector.userservice.dispatch.dto.*;
 import com.nector.userservice.dispatch.entity.Gdn;
 import com.nector.userservice.dispatch.entity.GdnItem;
 import com.nector.userservice.dispatch.entity.InventoryVerification;
@@ -257,10 +253,12 @@ public class GdnService {
         }
 
         Gdn savedGdn = gdnRepository.save(gdn);
-        
-        // Generate PDF like proforma invoice
+
+        cart.setStatus(Cart.CartStatus.GDN_GENERATED);
+        cartRepository.save(cart);
+
         generateGdnPdf(savedGdn, cart);
-        
+
         return mapToResponse(savedGdn);
     }
     
@@ -753,4 +751,32 @@ public class GdnService {
             throw new RuntimeException("Failed to retrieve GDNs", e);
         }
     }
+
+    public CartDto convertToCartDto(Cart cart) {
+        CartDto dto = new CartDto();
+        dto.setId(cart.getId());
+        dto.setDistributorId(cart.getDistributorId());
+        dto.setAddress(cart.getAddress());
+        dto.setStatus(cart.getStatus());
+        dto.setCreatedAt(cart.getCreatedAt());
+        dto.setUpdatedAt(cart.getUpdatedAt());
+
+        List<CartItemDto> itemDtos = cart.getCartItems().stream()
+                .map(this::convertToCartItemDto)
+                .collect(Collectors.toList());
+        dto.setCartItems(itemDtos);
+
+        return dto;
+    }
+
+    public CartItemDto convertToCartItemDto(CartItem item) {
+        CartItemDto dto = new CartItemDto();
+        dto.setId(item.getId());
+        dto.setItemId(item.getItem().getId());
+        dto.setItemName(item.getItem().getName());
+        dto.setQuantity(item.getQuantity());
+        dto.setPrice(item.getPriceAtTime());
+        return dto;
+    }
+
 }

@@ -44,8 +44,8 @@ public class Cart {
     
     @UpdateTimestamp
     private LocalDateTime updatedAt;
-    
+
     public enum CartStatus {
-        ACTIVE, CHECKED_OUT, APPROVED, PAYMENT_APPROVED, PLACED, DISMISSED
+        ACTIVE, CHECKED_OUT, APPROVED, PAYMENT_APPROVED, GDN_GENERATED, PLACED, DISMISSED
     }
 }

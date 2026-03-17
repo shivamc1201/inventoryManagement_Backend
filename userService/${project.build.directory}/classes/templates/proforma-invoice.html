@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial; font-size: 12px; }
+        .title { text-align: center; font-weight: bold; font-size: 16px; }
+        table { width: 100%; border-collapse: collapse; }
+        td, th { border: 1px solid #000; padding: 6px; }
+        .right { text-align: right; }
+    </style>
+</head>
+<body>
+
+<div class="title">PROFORMA INVOICE</div>
+
+<table>
+<tr>
+<td>
+<b th:text="${invoice.companyName}"></b><br/>
+<span th:text="${invoice.companyAddress}"></span><br/>
+GSTIN: <span th:text="${invoice.gstin}"></span>
+</td>
+<td>
+PI No: <span th:text="${invoice.piNumber}"></span><br/>
+Date: <span th:text="${invoice.piDate}"></span><br/>
+Mode: <span th:text="${invoice.modeOfPayment}"></span>
+</td>
+</tr>
+</table>
+
+<br/>
+
+<table>
+<tr>
+<th>Sr</th><th>Description</th><th>HSN</th><th>Qty</th>
+<th>Rate</th><th>Unit</th><th>Amount</th>
+</tr>
+
+<tr th:each="item : ${invoice.items}">
+<td th:text="${item.srNo}"></td>
+<td th:text="${item.description}"></td>
+<td th:text="${item.hsnCode}"></td>
+<td class="right" th:text="${item.quantity}"></td>
+<td class="right" th:text="${item.ratePerUnit}"></td>
+<td th:text="${item.unit}"></td>
+<td class="right" th:text="${item.amount}"></td>
+</tr>
+</table>
+
+<br/>
+
+<table>
+<tr><td>Subtotal</td><td class="right" th:text="${invoice.subtotal}"></td></tr>
+<tr><td>CGST</td><td class="right" th:text="${invoice.cgst}"></td></tr>
+<tr><td>SGST</td><td class="right" th:text="${invoice.sgst}"></td></tr>
+<tr><td><b>Grand Total</b></td><td class="right"><b th:text="${invoice.grandTotal}"></b></td></tr>
+</table>
+
+<p><b>Amount in Words:</b> <span th:text="${invoice.amountInWords}"></span></p>
+
+</body>
+</html>

@@ -252,7 +252,20 @@ public class CartService {
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
-    
+    @Transactional(readOnly = true)
+    public List<CartResponse> getDismissedCarts() {
+        List<Cart> pendingCarts = cartRepository.findByStatus(Cart.CartStatus.DISMISSED);
+        return pendingCarts.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+    @Transactional(readOnly = true)
+    public List<CartResponse> getApprovedCarts() {
+        List<Cart> pendingCarts = cartRepository.findByStatus(Cart.CartStatus.APPROVED);
+        return pendingCarts.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
     @Transactional
     public CartResponse approveCart(Long cartId) {
         Cart cart = cartRepository.findById(cartId)

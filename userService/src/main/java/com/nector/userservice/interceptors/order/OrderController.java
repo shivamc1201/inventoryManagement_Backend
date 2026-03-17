@@ -64,6 +64,21 @@ public class OrderController {
         return ResponseEntity.ok(activeCarts);
     }
 
+    @GetMapping("/dismissed-carts")
+    @Operation(summary = "Get dismissed carts", description = "Retrieves all carts with DISMISSED status")
+    @ApiResponse(responseCode = "200", description = "Placed carts retrieved successfully")
+    public ResponseEntity<List<CartResponse>> getDismissedCarts() {
+        List<CartResponse> dismissedCarts = cartService.getDismissedCarts();
+        return ResponseEntity.ok(dismissedCarts);
+    }
+    @GetMapping("/approve-carts")
+    @Operation(summary = "Get approve carts", description = "Retrieves all carts with APPROVE status")
+    @ApiResponse(responseCode = "200", description = "Placed carts retrieved successfully")
+    public ResponseEntity<List<CartResponse>> getApproveCarts() {
+        List<CartResponse> approveCarts = cartService.getApprovedCarts();
+        return ResponseEntity.ok(approveCarts);
+    }
+
     @GetMapping("/placed-carts")
     @Operation(summary = "Get placed carts", description = "Retrieves all carts with placed status")
     @ApiResponse(responseCode = "200", description = "Placed carts retrieved successfully")

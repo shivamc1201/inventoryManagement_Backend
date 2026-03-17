@@ -3,6 +3,7 @@ package com.nector.userservice.service;
 import com.nector.userservice.cloudinary.CloudinaryStorageService;
 import com.nector.userservice.dto.invoice.InvoiceItem;
 import com.nector.userservice.dto.invoice.ProformaInvoice;
+import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.model.Cart;
 import com.nector.userservice.model.CartItem;
 import com.nector.userservice.repository.CartRepository;
@@ -36,6 +37,7 @@ public class ProformaInvoiceService {
     private final TemplateEngine templateEngine;
     private final HtmlToPdfService htmlToPdfService;
     private final CloudinaryStorageService cloudinaryStorageService;
+    private final DistributorRepository distributorRepository;
 
 
     @Transactional
@@ -163,6 +165,11 @@ public class ProformaInvoiceService {
         piEntity.setPiNumber("PI-" + cart.getId() + "-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")));
         piEntity.setCartId(cart.getId());
         piEntity.setDistributorId(cart.getDistributorId());
+
+        if (cart.getDistributorId() != null) {
+            distributorRepository.findById(cart.getDistributorId())
+                    .ifPresent(distributor -> piEntity.setDistributorName(distributor.getName()));
+        }
 
         // Calculate total amount
         java.math.BigDecimal totalAmount = cart.getCartItems().stream()
@@ -387,6 +394,8 @@ public class ProformaInvoiceService {
             Map<String, Object> response = Map.of(
                     "cartId", cartId,
                     "piNumber", pi.getPiNumber(),
+                    "distributorId", pi.getDistributorId(),
+                    "distributorName", pi.getDistributorName(), // Add this line
                     "pdfUrl", pi.getPdfUrl(),
                     "amount", pi.getAmount(),
                     "paymentStatus", pi.getPaymentStatus().toString()
@@ -403,6 +412,7 @@ public class ProformaInvoiceService {
     /**
      * Get all Proforma Invoices
      */
+// In ProformaInvoiceService.java, update the getAllProformaInvoices method:
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getAllProformaInvoices() {
         log.info("=== GET ALL PROFORMA INVOICES ===");
@@ -418,6 +428,7 @@ public class ProformaInvoiceService {
                         piMap.put("piNumber", pi.getPiNumber());
                         piMap.put("cartId", pi.getCartId());
                         piMap.put("distributorId", pi.getDistributorId());
+                        piMap.put("distributorName", pi.getDistributorName()); // Add this line
                         piMap.put("amount", pi.getAmount());
                         piMap.put("paymentStatus", pi.getPaymentStatus() != null ? pi.getPaymentStatus().toString() : "PENDING");
                         piMap.put("createdAt", pi.getCreatedAt());
@@ -435,6 +446,5 @@ public class ProformaInvoiceService {
             throw new RuntimeException("Failed to retrieve Proforma Invoices", e);
         }
     }
-
 
 }

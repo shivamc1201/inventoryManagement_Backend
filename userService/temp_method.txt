@@ -1,0 +1,27 @@
+private CartItemResponse mapCartItemToResponse(CartItem cartItem) {
+        CartItemResponse response = new CartItemResponse();
+        response.setId(cartItem.getId());
+        
+        // Handle missing products gracefully
+        try {
+            if (cartItem.getItem() != null) {
+                response.setItemId(cartItem.getItem().getId());
+                response.setItemName(cartItem.getItem().getName());
+                response.setItemSku(cartItem.getItem().getSku());
+            } else {
+                response.setItemId(null);
+                response.setItemName(null);
+                response.setItemSku(null);
+            }
+        } catch (Exception e) {
+            // Product deleted or inaccessible
+            response.setItemId(null);
+            response.setItemName(null);
+            response.setItemSku(null);
+        }
+        
+        response.setQuantity(cartItem.getQuantity());
+        response.setPriceAtTime(cartItem.getPriceAtTime());
+        response.setTotalPrice(cartItem.getPriceAtTime().multiply(BigDecimal.valueOf(cartItem.getQuantity())));
+        return response;
+    }

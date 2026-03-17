@@ -2,6 +2,8 @@ package com.nector.userservice.interceptors.distributor.impl;
 
 import com.nector.userservice.common.UserStatus;
 import com.nector.userservice.common.features.Features;
+import com.nector.userservice.dto.cart.CartItemResponse;
+import com.nector.userservice.dto.cart.CartResponse;
 import com.nector.userservice.exception.ResourceNotFoundException;
 import com.nector.userservice.interceptors.distributor.model.*;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
@@ -12,7 +14,9 @@ import com.nector.userservice.interceptors.userLogin.model.LoginRequest;
 import com.nector.userservice.interceptors.userLogin.model.LoginResponse;
 import com.nector.userservice.ledger.dto.CreateLedgerAccountRequest;
 import com.nector.userservice.ledger.service.LedgerAccountService;
+import com.nector.userservice.model.Cart;
 import com.nector.userservice.model.User;
+import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.repository.ItemRepository;
 import com.nector.userservice.service.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +46,7 @@ public class DistributorServiceImpl implements DistributorService {
     private final ItemRepository itemRepository;
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final CartRepository cartRepository;
     
     @Override
     public DistributorResponseDTO createDistributor(DistributorRequestDTO request) {
@@ -226,5 +231,63 @@ public class DistributorServiceImpl implements DistributorService {
         }
         
         return response;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CartResponse> getAllOrdersForDistributor(Long distributorId) {
+        log.info("Fetching all orders for distributor: {}", distributorId);
+
+        // Get all carts and filter by distributor ID
+        List<Cart> allCarts = cartRepository.findAll();
+        return allCarts.stream()
+                .filter(cart -> {
+                    try {
+                        return cart.getDistributorId() != null && 
+                               cart.getDistributorId().equals(distributorId);
+                    } catch (Exception e) {
+                        log.warn("Invalid distributorId for cart ID: {}, value: {}", cart.getId(), cart.getDistributorId());
+                        return false;
+                    }
+                })
+                .map(cart -> {
+                    CartResponse response = new CartResponse();
+                    response.setId(cart.getId());
+                    response.setStatus(cart.getStatus().name());
+                    response.setCreatedAt(cart.getCreatedAt());
+                    response.setUpdatedAt(cart.getUpdatedAt());
+                    response.setDistributorId(cart.getDistributorId());
+
+                    // Set distributor name
+                    distributorRepository.findById(cart.getDistributorId()).ifPresent(distributor -> {
+                        response.setDistributorName(distributor.getName());
+                    });
+
+                    // Map cart items
+                    List<CartItemResponse> cartItemResponses = cart.getCartItems().stream()
+                            .map(cartItem -> {
+                                CartItemResponse itemResponse = new CartItemResponse();
+                                itemResponse.setId(cartItem.getId());
+                                itemResponse.setItemId(cartItem.getItem().getId());
+                                itemResponse.setItemName(cartItem.getItem().getName());
+                                itemResponse.setItemSku(cartItem.getItem().getSku());
+                                itemResponse.setQuantity(cartItem.getQuantity());
+                                itemResponse.setPriceAtTime(cartItem.getPriceAtTime());
+                                itemResponse.setTotalPrice(cartItem.getPriceAtTime().multiply(BigDecimal.valueOf(cartItem.getQuantity())));
+                                return itemResponse;
+                            })
+                            .collect(Collectors.toList());
+
+                    response.setCartItems(cartItemResponses);
+
+                    // Calculate total cart amount
+                    BigDecimal totalAmount = cartItemResponses.stream()
+                            .map(CartItemResponse::getTotalPrice)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    response.setTotalCartAmount(totalAmount);
+
+                    return response;
+                })
+                .collect(Collectors.toList());
     }
 }

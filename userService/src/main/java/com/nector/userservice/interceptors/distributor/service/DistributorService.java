@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.distributor.service;
 
+import com.nector.userservice.dto.cart.CartResponse;
 import com.nector.userservice.interceptors.distributor.model.*;
 import com.nector.userservice.interceptors.userLogin.model.LoginRequest;
 import jakarta.validation.Valid;
@@ -16,5 +17,7 @@ public interface DistributorService {
     OrderConfirmationResponse confirmOrderReceived(Long distributorId, OrderConfirmationRequest request);
     OrderConfirmationResponse getOrderConfirmation(Long orderId);
     List<OrderConfirmationResponse> getDistributorConfirmations(Long distributorId);
+
+    List<CartResponse> getAllOrdersForDistributor(Long distributorId);
 
 }

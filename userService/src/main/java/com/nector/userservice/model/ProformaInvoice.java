@@ -38,6 +38,9 @@ public class ProformaInvoice {
     
     @Column(name = "pdf_url")
     private String pdfUrl;
+
+    @Column(name = "distributor_name")
+    private String distributorName;
     
     public enum PaymentStatus {
         PENDING, PAID, REJECTED

@@ -9,10 +9,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/dashboard")
@@ -31,11 +30,12 @@ public class DashboardController {
         DashboardResponse response = dashboardService.getDashboardData(period);
         return ResponseEntity.ok(response);
     }
-    
-    @GetMapping("/userprofile")
+
+    @PostMapping("/userprofile")
     @Operation(summary = "Get user profile", description = "Retrieves user profile data for the logged-in user")
     @ApiResponse(responseCode = "200", description = "User profile retrieved successfully")
-    public ResponseEntity<User> getUserProfile(@RequestParam String username) {
+    public ResponseEntity<User> getUserProfile(@RequestBody Map<String, String> request) {
+        String username = request.get("username");
         User user = userService.getUserByUsername(username);
         return ResponseEntity.ok(user);
     }

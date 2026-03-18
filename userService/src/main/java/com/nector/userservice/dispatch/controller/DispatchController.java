@@ -4,6 +4,7 @@ import com.nector.userservice.dispatch.dto.*;
 import com.nector.userservice.dispatch.entity.Gdn;
 import com.nector.userservice.dispatch.repository.GdnRepository;
 import com.nector.userservice.dispatch.service.GdnService;
+import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.model.Cart;
 import com.nector.userservice.repository.CartRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,6 +32,7 @@ public class DispatchController {
     private final GdnService gdnService;
     private final GdnRepository gdnRepository;
     private final CartRepository cartRepository;
+    private final DistributorRepository distributorRepository;
 
     @PostMapping("/gdn/generate/{orderId}")
     @Operation(summary = "Generate GDN", description = "Generate Goods Delivery Note for approved order with inventory verification")
@@ -212,7 +214,18 @@ public class DispatchController {
         try {
             List<Cart> carts = cartRepository.findByStatus(Cart.CartStatus.PAYMENT_APPROVED);
             List<CartDto> cartDtos = carts.stream()
-                    .map(gdnService::convertToCartDto)
+                    .map(cart -> {
+                        CartDto cartDto = gdnService.convertToCartDto(cart);
+                        // Fetch distributor to get salesperson info
+                        if (cart.getDistributorId() != null) {
+                            distributorRepository.findById(cart.getDistributorId())
+                                    .ifPresent(distributor -> {
+                                        cartDto.setSalespersonId(distributor.getSalespersonId());
+                                        cartDto.setSalespersonName(distributor.getAssignedPerson());
+                                    });
+                        }
+                        return cartDto;
+                    })
                     .collect(Collectors.toList());
             log.info("Retrieved {} carts with PAYMENT_APPROVED status", cartDtos.size());
             return ResponseEntity.ok(cartDtos);

@@ -14,4 +14,6 @@ public class CartDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<CartItemDto> cartItems;
+    private Long salespersonId;
+    private String salespersonName;
 }

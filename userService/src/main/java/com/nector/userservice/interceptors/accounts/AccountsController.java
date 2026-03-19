@@ -4,6 +4,7 @@ import com.nector.userservice.dto.payment.PaymentRequest;
 import com.nector.userservice.dto.payment.PaymentResponse;
 import com.nector.userservice.dto.payment.OrderApprovalResponse;
 import com.nector.userservice.enums.TransactionType;
+import com.nector.userservice.model.PaymentApproval;
 import com.nector.userservice.model.ProformaInvoice;
 import com.nector.userservice.model.DistributorLedger;
 import com.nector.userservice.service.PaymentService;
@@ -72,18 +73,6 @@ public class AccountsController {
         return ResponseEntity.ok(pendingPIs);
     }
     
-    @PostMapping("/update-balance")
-    @Operation(summary = "Update distributor balance", description = "Updates distributor ledger with credit/debit transaction")
-    @ApiResponse(responseCode = "200", description = "Balance updated successfully")
-    public ResponseEntity<String> updateBalance(
-            @RequestParam Long distributorId,
-            @RequestParam BigDecimal amount,
-            @RequestParam TransactionType transactionType,
-            @RequestParam String description) {
-        paymentService.updateDistributorBalance(distributorId, amount, transactionType.name(), description);
-        return ResponseEntity.ok("Balance updated successfully");
-    }
-    
     @PostMapping("/approve-payment/{orderId}")
     @Operation(summary = "Approve payment for order", description = "Approves payment and updates order status to PAYMENT_APPROVED")
     @ApiResponse(responseCode = "200", description = "Payment approved successfully")
@@ -108,5 +97,35 @@ public class AccountsController {
     public ResponseEntity<List<DistributorLedger>> getPaymentHistory(@PathVariable Long distributorId) {
         List<DistributorLedger> history = paymentService.getPaymentHistory(distributorId);
         return ResponseEntity.ok(history);
+    }
+
+    @PostMapping("/update-balance")
+    @Operation(summary = "Add payment for approval", description = "Creates payment entry with PAYMENT_ADDED status")
+    @ApiResponse(responseCode = "200", description = "Payment added for approval successfully")
+    public ResponseEntity<String> updateBalance(
+            @RequestParam Long distributorId,
+            @RequestParam BigDecimal amount,
+            @RequestParam TransactionType transactionType,
+            @RequestParam String description) {
+        paymentService.addPaymentForApproval(distributorId, amount, transactionType.name(), description);
+        return ResponseEntity.ok("Payment added for approval");
+    }
+
+    @PostMapping("/payment-approval/{paymentId}")
+    @Operation(summary = "Approve payment", description = "Approves payment added distributor ")
+    @ApiResponse(responseCode = "200", description = "Payment approved successfully")
+    public ResponseEntity<String> paymentApproval(
+            @PathVariable Long paymentId,
+            @RequestParam Long approvedBy) {
+        paymentService.approvePayment(paymentId, approvedBy);
+        return ResponseEntity.ok("Payment approved and ledger updated");
+    }
+
+    @GetMapping("/pending-payments")
+    @Operation(summary = "Get pending payments", description = "Retrieves all payments with PAYMENT_ADDED status")
+    @ApiResponse(responseCode = "200", description = "Pending payments retrieved successfully")
+    public ResponseEntity<List<PaymentApproval>> getPendingPayments() {
+        List<PaymentApproval> pendingPayments = paymentService.getPendingPayments();
+        return ResponseEntity.ok(pendingPayments);
     }
 }

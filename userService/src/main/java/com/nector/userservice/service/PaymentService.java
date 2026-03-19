@@ -2,16 +2,14 @@ package com.nector.userservice.service;
 
 import com.nector.userservice.dto.payment.PaymentRequest;
 import com.nector.userservice.dto.payment.PaymentResponse;
+import com.nector.userservice.model.PaymentApproval;
 import com.nector.userservice.model.ProformaInvoice;
 import com.nector.userservice.model.DistributorLedger;
 import com.nector.userservice.model.Cart;
-import com.nector.userservice.repository.ProformaInvoiceRepository;
-import com.nector.userservice.repository.DistributorLedgerRepository;
-import com.nector.userservice.repository.CartRepository;
+import com.nector.userservice.repository.*;
 import com.nector.userservice.interceptors.salesMapping.repository.SalesMappingRepository;
 import com.nector.userservice.interceptors.salesMapping.model.MappingStatus;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
-import com.nector.userservice.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -38,6 +36,10 @@ public class PaymentService {
     
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PaymentApprovalRepository paymentApprovalRepository;
+
     
     public PaymentResponse processPayment(PaymentRequest paymentRequest) {
         // Process payment and update distributor ledger
@@ -184,5 +186,38 @@ public class PaymentService {
         String transactionType = amount.compareTo(BigDecimal.ZERO) > 0 ? "CREDIT" : "DEBIT";
         String description = amount.compareTo(BigDecimal.ZERO) > 0 ? "Payment received" : "Order deduction";
         updateDistributorBalance(distributorId, amount.abs(), transactionType, description);
+    }
+
+    public void addPaymentForApproval(Long distributorId, BigDecimal amount, String transactionType, String description) {
+        PaymentApproval payment = new PaymentApproval();
+        payment.setDistributorId(distributorId);
+        payment.setAmount(amount);
+        payment.setTransactionType(transactionType);
+        payment.setDescription(description);
+        payment.setStatus("PAYMENT_ADDED");
+        paymentApprovalRepository.save(payment);
+    }
+
+    public void approvePayment(Long paymentId, Long approvedBy) {
+        PaymentApproval payment = paymentApprovalRepository.findById(paymentId)
+                .orElseThrow(() -> new RuntimeException("Payment not found: " + paymentId));
+
+        if (!"PAYMENT_ADDED".equals(payment.getStatus())) {
+            throw new RuntimeException("Payment already processed");
+        }
+
+        // Update distributor ledger
+        updateDistributorBalance(payment.getDistributorId(), payment.getAmount(),
+                payment.getTransactionType(), payment.getDescription());
+
+        // Update payment status
+        payment.setStatus("LEDGER_UPDATED");
+        payment.setApprovedAt(LocalDateTime.now());
+        payment.setApprovedBy(approvedBy);
+        paymentApprovalRepository.save(payment);
+    }
+
+    public List<PaymentApproval> getPendingPayments() {
+        return paymentApprovalRepository.findByStatusOrderByCreatedAtDesc("PAYMENT_ADDED");
     }
 }

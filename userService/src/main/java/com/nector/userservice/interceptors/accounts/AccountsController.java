@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.accounts;
 
+import com.nector.userservice.dto.payment.PaymentApprovalResponse;
 import com.nector.userservice.dto.payment.PaymentRequest;
 import com.nector.userservice.dto.payment.PaymentResponse;
 import com.nector.userservice.dto.payment.OrderApprovalResponse;
@@ -102,13 +103,19 @@ public class AccountsController {
     @PostMapping("/update-balance")
     @Operation(summary = "Add payment for approval", description = "Creates payment entry with PAYMENT_ADDED status")
     @ApiResponse(responseCode = "200", description = "Payment added for approval successfully")
-    public ResponseEntity<String> updateBalance(
+    public ResponseEntity<PaymentApprovalResponse> updateBalance(
             @RequestParam Long distributorId,
             @RequestParam BigDecimal amount,
             @RequestParam TransactionType transactionType,
             @RequestParam String description) {
-        paymentService.addPaymentForApproval(distributorId, amount, transactionType.name(), description);
-        return ResponseEntity.ok("Payment added for approval");
+        Long paymentId = paymentService.addPaymentForApproval(distributorId, amount, transactionType.name(), description);
+
+        PaymentApprovalResponse response = new PaymentApprovalResponse();
+        response.setPaymentId(paymentId);
+        response.setMessage("Payment added for approval");
+        response.setStatus("PAYMENT_ADDED");
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/payment-approval/{paymentId}")

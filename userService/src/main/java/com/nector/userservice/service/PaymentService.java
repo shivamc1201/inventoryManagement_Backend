@@ -188,14 +188,15 @@ public class PaymentService {
         updateDistributorBalance(distributorId, amount.abs(), transactionType, description);
     }
 
-    public void addPaymentForApproval(Long distributorId, BigDecimal amount, String transactionType, String description) {
+    public Long addPaymentForApproval(Long distributorId, BigDecimal amount, String transactionType, String description) {
         PaymentApproval payment = new PaymentApproval();
         payment.setDistributorId(distributorId);
         payment.setAmount(amount);
         payment.setTransactionType(transactionType);
         payment.setDescription(description);
         payment.setStatus("PAYMENT_ADDED");
-        paymentApprovalRepository.save(payment);
+        PaymentApproval savedPayment = paymentApprovalRepository.save(payment);
+        return savedPayment.getId();
     }
 
     public void approvePayment(Long paymentId, Long approvedBy) {

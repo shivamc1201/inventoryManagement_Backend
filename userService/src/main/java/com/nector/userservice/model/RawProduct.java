@@ -66,7 +66,22 @@ public class RawProduct {
     
     @UpdateTimestamp
     private LocalDateTime updatedAt;
-    
+
+    @Column(length = 50)
+    private String vendorId;
+
+    @Column(length = 255)
+    private String vendorName;
+
+    @Column(length = 255)
+    private String transportName;
+
+    @Column(length = 100)
+    private String driverName;
+
+    @Column(length = 20)
+    private String driverMobile;
+
     public enum Unit {
         KG, LITER, PIECE
     }

@@ -17,4 +17,9 @@ public class RawProductResponse {
     private Boolean lowStock;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String vendorId;
+    private String vendorName;
+    private String transportName;
+    private String driverName;
+    private String driverMobile;
 }

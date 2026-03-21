@@ -38,6 +38,11 @@ public class RawProductServiceImpl implements RawProductService {
         product.setUnit(request.getUnit());
         product.setQuantity(request.getQuantity());
         product.setMinimumThreshold(request.getMinimumThreshold());
+        product.setVendorId(request.getVendorId());
+        product.setVendorName(request.getVendorName());
+        product.setTransportName(request.getTransportName());
+        product.setDriverName(request.getDriverName());
+        product.setDriverMobile(request.getDriverMobile());
         
         RawProduct savedProduct = rawProductRepository.save(product);
         log.info("Raw product created successfully with ID: {}", savedProduct.getId());
@@ -57,6 +62,11 @@ public class RawProductServiceImpl implements RawProductService {
         product.setUnit(request.getUnit());
         product.setQuantity(request.getQuantity());
         product.setMinimumThreshold(request.getMinimumThreshold());
+        product.setVendorId(request.getVendorId());
+        product.setVendorName(request.getVendorName());
+        product.setTransportName(request.getTransportName());
+        product.setDriverName(request.getDriverName());
+        product.setDriverMobile(request.getDriverMobile());
         
         RawProduct updatedProduct = rawProductRepository.save(product);
         log.info("Raw product updated successfully with ID: {}", updatedProduct.getId());
@@ -160,6 +170,11 @@ public class RawProductServiceImpl implements RawProductService {
         response.setLowStock(product.getQuantity() <= product.getMinimumThreshold());
         response.setCreatedAt(product.getCreatedAt());
         response.setUpdatedAt(product.getUpdatedAt());
+        response.setVendorId(product.getVendorId());
+        response.setVendorName(product.getVendorName());
+        response.setTransportName(product.getTransportName());
+        response.setDriverName(product.getDriverName());
+        response.setDriverMobile(product.getDriverMobile());
         return response;
     }
 }

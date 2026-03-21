@@ -224,8 +224,21 @@ public class PaymentService {
         paymentApprovalRepository.save(payment);
     }
 
-    public List<PaymentApproval> getPendingPayments() {
-        return paymentApprovalRepository.findByStatusOrderByCreatedAtDesc("PAYMENT_ADDED");
+    public List<PaymentApproval> getPendingPayments(Long distributorId) {
+        List<PaymentApproval> payments;
+        if (distributorId != null) {
+            payments = paymentApprovalRepository.findByDistributorIdAndStatusOrderByCreatedAtDesc(distributorId, "PAYMENT_ADDED");
+        } else {
+            payments = paymentApprovalRepository.findByStatusOrderByCreatedAtDesc("PAYMENT_ADDED");
+        }
+
+        // Populate distributor names
+        payments.forEach(payment -> {
+            distributorRepository.findById(payment.getDistributorId())
+                    .ifPresent(distributor -> payment.setDistributorName(distributor.getName()));
+        });
+
+        return payments;
     }
 
     public void processJournalVoucher(JournalVoucherRequest request) {

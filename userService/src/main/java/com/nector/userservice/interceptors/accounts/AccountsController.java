@@ -126,10 +126,11 @@ public class AccountsController {
     }
 
     @GetMapping("/pending-payments")
-    @Operation(summary = "Get pending payments", description = "Retrieves all payments with PAYMENT_ADDED status")
+    @Operation(summary = "Get pending payments", description = "Retrieves payments with PAYMENT_ADDED status, optionally filtered by distributor")
     @ApiResponse(responseCode = "200", description = "Pending payments retrieved successfully")
-    public ResponseEntity<List<PaymentApproval>> getPendingPayments() {
-        List<PaymentApproval> pendingPayments = paymentService.getPendingPayments();
+    public ResponseEntity<List<PaymentApproval>> getPendingPayments(
+            @RequestParam(required = false) Long distributorId) {
+        List<PaymentApproval> pendingPayments = paymentService.getPendingPayments(distributorId);
         return ResponseEntity.ok(pendingPayments);
     }
 

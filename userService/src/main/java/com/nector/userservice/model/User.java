@@ -86,6 +86,9 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RoleType roleType;
+
+    @Column(length = 50)
+    private String employeeRollNo;
     
     // Many-to-many relationship with roles for RBAC
     @JsonIgnore

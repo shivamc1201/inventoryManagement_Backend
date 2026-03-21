@@ -25,4 +25,19 @@ public class RawProductRequest {
     @NotNull(message = "Minimum threshold is required")
     @Min(value = 0, message = "Minimum threshold must be non-negative")
     private Integer minimumThreshold;
+
+    @Size(max = 50, message = "Vendor ID must not exceed 50 characters")
+    private String vendorId;
+
+    @Size(max = 255, message = "Vendor name must not exceed 255 characters")
+    private String vendorName;
+
+    @Size(max = 255, message = "Transport name must not exceed 255 characters")
+    private String transportName;
+
+    @Size(max = 100, message = "Driver name must not exceed 100 characters")
+    private String driverName;
+
+    @Pattern(regexp = "^[0-9]{10}$", message = "Driver mobile must be a valid 10-digit number")
+    private String driverMobile;
 }

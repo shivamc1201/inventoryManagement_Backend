@@ -73,7 +73,8 @@ public class UserServiceImpl implements UserService {
         user.setRoleType(request.getRoleType());
         user.setDateOfBirth(request.getDateOfBirth());
         user.setOtp("1234"); // Default OTP since OTP service is disabled
-        
+        user.setEmployeeRollNo(request.getEmployeeRollNo());
+
         User savedUser = userRepository.save(user);
         
         // Create approval request for maker-checker flow
@@ -102,6 +103,7 @@ public class UserServiceImpl implements UserService {
         response.setLastLoginTime(savedUser.getLastLoginTime());
         response.setLoggedIn(savedUser.isLoggedIn());
         response.setPasswordSetDate(savedUser.getPasswordSetDate());
+        response.setEmployeeRollNo(savedUser.getEmployeeRollNo());
         
         log.info("Exiting registerNewUser() - User registered successfully with ID: {}", savedUser.getId());
         return response;

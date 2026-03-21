@@ -100,6 +100,10 @@ public class PaymentService {
                 .filter(user -> user.getRoleType().name().equals(distributor.getAssignedPerson())))
             .isPresent();
     }
+
+    public List<PaymentApproval> getPaymentsByDistributorAndStatus(Long distributorId, String status) {
+        return paymentApprovalRepository.findByDistributorIdAndStatusOrderByCreatedAtDesc(distributorId, status);
+    }
     
     public boolean isCartApproved(Long cartId) {
         return cartRepository.findById(cartId)

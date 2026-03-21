@@ -1,9 +1,6 @@
 package com.nector.userservice.interceptors.accounts;
 
-import com.nector.userservice.dto.payment.PaymentApprovalResponse;
-import com.nector.userservice.dto.payment.PaymentRequest;
-import com.nector.userservice.dto.payment.PaymentResponse;
-import com.nector.userservice.dto.payment.OrderApprovalResponse;
+import com.nector.userservice.dto.payment.*;
 import com.nector.userservice.enums.TransactionType;
 import com.nector.userservice.model.PaymentApproval;
 import com.nector.userservice.model.ProformaInvoice;
@@ -134,5 +131,26 @@ public class AccountsController {
     public ResponseEntity<List<PaymentApproval>> getPendingPayments() {
         List<PaymentApproval> pendingPayments = paymentService.getPendingPayments();
         return ResponseEntity.ok(pendingPayments);
+    }
+
+    @GetMapping("/payments/{distributorId}")
+    @Operation(summary = "Get payments by distributor ID and status", description = "Retrieves payments for a distributor with PAYMENT_ADDED status")
+    @ApiResponse(responseCode = "200", description = "Payments retrieved successfully")
+    public ResponseEntity<List<PaymentStatusResponse>> getPaymentsByDistributorAndStatus(
+            @PathVariable Long distributorId,
+            @RequestParam(defaultValue = "PAYMENT_ADDED") String status) {
+
+        List<PaymentApproval> payments = paymentService.getPaymentsByDistributorAndStatus(distributorId, status);
+
+        List<PaymentStatusResponse> response = payments.stream()
+                .map(payment -> {
+                    PaymentStatusResponse dto = new PaymentStatusResponse();
+                    dto.setPaymentId(payment.getId());
+                    dto.setStatus(payment.getStatus());
+                    return dto;
+                })
+                .toList();
+
+        return ResponseEntity.ok(response);
     }
 }

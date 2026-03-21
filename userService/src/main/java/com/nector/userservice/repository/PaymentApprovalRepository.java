@@ -10,4 +10,5 @@ import java.util.List;
 public interface PaymentApprovalRepository extends JpaRepository<PaymentApproval, Long> {
     List<PaymentApproval> findByStatusOrderByCreatedAtDesc(String status);
     List<PaymentApproval> findByDistributorIdOrderByCreatedAtDesc(Long distributorId);
+    List<PaymentApproval> findByDistributorIdAndStatusOrderByCreatedAtDesc(Long distributorId, String status);
 }

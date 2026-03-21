@@ -82,4 +82,9 @@ public class UserRequest {
     @NotNull(message = "Role type is required")
     @Schema(description = "ACCOUNT_MGR", example = "ACCOUNT_MGR")
     private RoleType roleType;
+
+    @NotBlank(message = "Employee roll number is required")
+    @Size(max = 50, message = "Employee roll number must not exceed 50 characters")
+    @Schema(description = "Employee roll number", example = "EMP001")
+    private String employeeRollNo;
 }

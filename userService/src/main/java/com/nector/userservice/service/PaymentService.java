@@ -1,5 +1,7 @@
 package com.nector.userservice.service;
 
+import com.nector.userservice.dto.payment.JournalVoucherEntry;
+import com.nector.userservice.dto.payment.JournalVoucherRequest;
 import com.nector.userservice.dto.payment.PaymentRequest;
 import com.nector.userservice.dto.payment.PaymentResponse;
 import com.nector.userservice.model.PaymentApproval;
@@ -225,4 +227,35 @@ public class PaymentService {
     public List<PaymentApproval> getPendingPayments() {
         return paymentApprovalRepository.findByStatusOrderByCreatedAtDesc("PAYMENT_ADDED");
     }
+
+    public void processJournalVoucher(JournalVoucherRequest request) {
+        for (JournalVoucherEntry entry : request.getEntries()) {
+            if (entry.getDebit() != null && entry.getDebit().compareTo(BigDecimal.ZERO) > 0) {
+                // For debit entries, we need to find the distributor ID from account number
+                // This assumes account number maps to distributor ID - you may need to adjust this logic
+                Long distributorId = getDistributorIdFromAccountNumber(entry.getAccountNumber());
+                updateDistributorBalance(distributorId, entry.getDebit(), "DEBIT",
+                        entry.getDescription() + " - " + request.getNarration());
+            }
+
+            if (entry.getCredit() != null && entry.getCredit().compareTo(BigDecimal.ZERO) > 0) {
+                // For credit entries
+                Long distributorId = getDistributorIdFromAccountNumber(entry.getAccountNumber());
+                updateDistributorBalance(distributorId, entry.getCredit(), "CREDIT",
+                        entry.getDescription() + " - " + request.getNarration());
+            }
+        }
+    }
+
+    private Long getDistributorIdFromAccountNumber(String accountNumber) {
+        // You'll need to implement this logic based on how account numbers map to distributor IDs
+        // This could be a repository call or a simple parsing if account numbers contain the ID
+        try {
+            return Long.parseLong(accountNumber);
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("Invalid account number: " + accountNumber);
+        }
+    }
+
+
 }

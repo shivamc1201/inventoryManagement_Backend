@@ -7,6 +7,7 @@ import com.nector.userservice.dto.cart.CartResponse;
 import com.nector.userservice.dto.cart.PlaceOrderRequest;
 import com.nector.userservice.exception.CartItemNotFoundException;
 import com.nector.userservice.exception.CartNotFoundException;
+import com.nector.userservice.exception.DistributorNotFoundException;
 import com.nector.userservice.exception.InvalidCartStatusException;
 import com.nector.userservice.exception.ItemNotFoundException;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
@@ -52,6 +53,11 @@ public class CartService {
     @Transactional
     public CartResponse addItemsToCart(Long distributorId, List<AddToCartRequest> requests) {
         log.info("Adding {} items to cart for distributor {}", requests.size(), distributorId);
+
+        if (!distributorRepository.existsById(distributorId)) {
+            throw new DistributorNotFoundException(distributorId);
+        }
+
         Cart cart = getOrCreateActiveCart(distributorId);
         
         for (AddToCartRequest request : requests) {

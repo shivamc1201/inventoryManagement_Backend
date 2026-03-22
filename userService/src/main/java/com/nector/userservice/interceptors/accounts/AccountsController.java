@@ -158,9 +158,19 @@ public class AccountsController {
     @PostMapping("/journal-voucher")
     @Operation(summary = "Process Journal Voucher", description = "Directly updates ledger with journal voucher entries")
     @ApiResponse(responseCode = "200", description = "Journal voucher processed successfully")
-    public ResponseEntity<String> processJournalVoucher(@RequestBody JournalVoucherRequest request) {
-        paymentService.processJournalVoucher(request);
+    public ResponseEntity<String> processJournalVoucher(
+            @RequestParam Long distributorId,
+            @RequestBody JournalVoucherRequest request) {
+        paymentService.processJournalVoucher(distributorId, request);
         return ResponseEntity.ok("Journal voucher processed and ledger updated");
+    }
+
+    @GetMapping("/jv-by-distributor/{distributorId}")
+    @Operation(summary = "Get Journal Vouchers by Distributor ID", description = "Retrieves all journal voucher entries for a specific distributor")
+    @ApiResponse(responseCode = "200", description = "Journal vouchers retrieved successfully")
+    public ResponseEntity<List<DistributorLedger>> getJournalVouchersByDistributor(@PathVariable Long distributorId) {
+        List<DistributorLedger> jvEntries = paymentService.getJournalVouchersByDistributor(distributorId);
+        return ResponseEntity.ok(jvEntries);
     }
 
     @PostMapping("/update-balance-accounts")

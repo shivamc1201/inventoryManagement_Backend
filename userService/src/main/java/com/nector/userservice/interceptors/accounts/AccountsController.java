@@ -194,34 +194,22 @@ public class AccountsController {
     }
 
     @PostMapping("/update-balance-accounts")
-    @Operation(summary = "Add payment by accounts", description = "Creates payment entry with PAYMENT_ADDED status")
-    @ApiResponse(responseCode = "200", description = "Payment added for approval successfully")
+    @Operation(summary = "Add payment by accounts", description = "Directly updates distributor ledger for all transaction types")
+    @ApiResponse(responseCode = "200", description = "Ledger updated successfully")
     public ResponseEntity<PaymentApprovalResponse> updateAccountsBalance(
             @RequestParam Long distributorId,
             @RequestParam BigDecimal amount,
             @RequestParam TransactionType transactionType,
             @RequestParam String description) {
 
-        if (transactionType == TransactionType.JV) {
-            // For JV transactions, update ledger directly
-            paymentService.updateDistributorBalance(distributorId, amount, "JV", description);
+        // Directly update ledger for all transaction types (JV, CREDIT, DEBIT)
+        paymentService.updateDistributorBalance(distributorId, amount, transactionType.name(), description);
 
-            PaymentApprovalResponse response = new PaymentApprovalResponse();
-            response.setPaymentId(null);
-            response.setMessage("Journal voucher processed - ledger updated directly");
-            response.setStatus("LEDGER_UPDATED");
+        PaymentApprovalResponse response = new PaymentApprovalResponse();
+        response.setPaymentId(null);
+        response.setMessage(transactionType.name() + " transaction processed - ledger updated directly");
+        response.setStatus("LEDGER_UPDATED");
 
-            return ResponseEntity.ok(response);
-        } else {
-            // For other transaction types, use existing approval process
-            Long paymentId = paymentService.addPaymentForApproval(distributorId, amount, transactionType.name(), description);
-
-            PaymentApprovalResponse response = new PaymentApprovalResponse();
-            response.setPaymentId(paymentId);
-            response.setMessage("Payment added for approval");
-            response.setStatus("PAYMENT_ADDED");
-
-            return ResponseEntity.ok(response);
-        }
+        return ResponseEntity.ok(response);
     }
 }

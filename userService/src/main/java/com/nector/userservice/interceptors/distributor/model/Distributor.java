@@ -62,7 +62,8 @@ public class Distributor {
     @Column(name = "pan_number", nullable = false, unique = true, length = 10)
     private String panNumber;
     
-    @Column(name = "status", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
     private DistributorStatus status;
     
     @Column(name = "created_on", nullable = false, updatable = false)

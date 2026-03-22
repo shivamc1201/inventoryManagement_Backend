@@ -279,6 +279,10 @@ public class PaymentService {
         }
     }
 
+    public DistributorRepository getDistributorRepository() {
+        return distributorRepository;
+    }
+
     private Long getDistributorIdFromAccountNumber(String accountNumber) {
         // You'll need to implement this logic based on how account numbers map to distributor IDs
         // This could be a repository call or a simple parsing if account numbers contain the ID

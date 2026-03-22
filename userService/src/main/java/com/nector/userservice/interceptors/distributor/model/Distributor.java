@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.distributor.model;
 
+import com.nector.userservice.enums.SalesRole;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -26,6 +27,10 @@ public class Distributor {
 
     @Column(name = "salesperson_id")
     private Long salespersonId;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "salesperson_role_type")
+    private SalesRole salesPersonRoleType;
     
     @Column(nullable = false)
     private String distributorType;

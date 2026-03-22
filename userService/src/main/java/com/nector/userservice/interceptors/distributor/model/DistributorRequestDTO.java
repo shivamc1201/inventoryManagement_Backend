@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.distributor.model;
 
+import com.nector.userservice.enums.SalesRole;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.Data;
@@ -18,6 +19,9 @@ public class DistributorRequestDTO {
 
 
     private Long salespersonId;
+
+    @Schema(description = "Sales person role type", example = "SALES_EXECUTIVE")
+    private SalesRole salesPersonRoleType;
 
     @NotBlank
     private String distributorType;

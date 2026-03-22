@@ -14,6 +14,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.List;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintWriter;
+import java.time.format.DateTimeFormatter;
+import com.lowagie.text.*;
+import com.lowagie.text.pdf.*;
 
 @RestController
 @RequestMapping("/api/accounts")
@@ -211,5 +216,204 @@ public class AccountsController {
         response.setStatus("LEDGER_UPDATED");
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/payment-history/{distributorId}/download")
+    @Operation(summary = "Download payment history as CSV", description = "Downloads payment history for a distributor in CSV format")
+    @ApiResponse(responseCode = "200", description = "Payment history CSV downloaded successfully")
+    public ResponseEntity<byte[]> downloadPaymentHistory(@PathVariable Long distributorId) {
+        List<DistributorLedger> history = paymentService.getPaymentHistory(distributorId);
+        
+        // Get distributor name for the header
+        String distributorName = paymentService.getDistributorRepository()
+                .findById(distributorId)
+                .map(distributor -> distributor.getFirstName() + " " + distributor.getLastName())
+                .orElse("Unknown Distributor");
+        
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        PrintWriter writer = new PrintWriter(outputStream);
+        
+        // Write header
+        writer.println("Nectar Origin Private Limited");
+        writer.println("360 K, Shiv Parwati Nagar, Block Road No-2,");
+        writer.println("Ward No 16, Kahalgaon, Bhagalpur Bihar");
+        writer.println("Bihar - 813203, India");
+        writer.println("CIN: U74999BR2016PTC032690");
+        writer.println("Contact : 06429-450126,9797979522");
+        writer.println("E-Mail : nectarorigin@gmail.com");
+        writer.println("http://www.nectarorigin.com");
+        writer.println();
+        writer.println("LEDGER ACCOUNT: " + distributorName.toUpperCase());
+        writer.println("FROM: Nectar Origin Private Limited");
+        writer.println("PERIOD: 01-04-2025 TO " + java.time.LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")));
+        writer.println();
+        
+        // Write CSV headers
+        writer.println("Date,Particulars,Vch Type,Vch No.,Debit,Credit");
+        
+        // Write data rows
+        BigDecimal totalDebit = BigDecimal.ZERO;
+        BigDecimal totalCredit = BigDecimal.ZERO;
+        
+        for (DistributorLedger entry : history) {
+            String date = entry.getCreatedAt().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+            String particulars = entry.getDescription();
+            String vchType = entry.getTransactionType();
+            String vchNo = entry.getId().toString();
+            String debit = "";
+            String credit = "";
+            
+            if ("DEBIT".equalsIgnoreCase(entry.getTransactionType())) {
+                particulars = "Dr " + particulars;
+                debit = String.format("%,.2f", entry.getAmount());
+                totalDebit = totalDebit.add(entry.getAmount());
+            } else {
+                particulars = "Cr " + particulars;
+                credit = String.format("%,.2f", entry.getAmount());
+                totalCredit = totalCredit.add(entry.getAmount());
+            }
+            
+            writer.println(String.format("%s,%s,%s,%s,%s,%s", 
+                    date, particulars, vchType, vchNo, debit, credit));
+        }
+        
+        // Add total row
+        writer.println(String.format("TOTAL,,,,%s,%s", 
+                String.format("%,.2f", totalDebit), String.format("%,.2f", totalCredit)));
+        
+        writer.flush();
+        byte[] csvBytes = outputStream.toByteArray();
+        writer.close();
+        
+        return ResponseEntity.ok()
+                .header("Content-Type", "text/csv")
+                .header("Content-Disposition", "attachment; filename=\"ledger_" + distributorId + ".csv\"")
+                .body(csvBytes);
+    }
+
+    @GetMapping("/payment-history/{distributorId}/download-pdf")
+    @Operation(summary = "Download payment history as PDF", description = "Downloads payment history for a distributor in PDF format")
+    @ApiResponse(responseCode = "200", description = "Payment history PDF downloaded successfully")
+    public ResponseEntity<byte[]> downloadPaymentHistoryPDF(@PathVariable Long distributorId) throws DocumentException {
+        List<DistributorLedger> history = paymentService.getPaymentHistory(distributorId);
+        
+        // Get distributor name for the header
+        String distributorName = paymentService.getDistributorRepository()
+                .findById(distributorId)
+                .map(distributor -> distributor.getFirstName() + " " + distributor.getLastName())
+                .orElse("Unknown Distributor");
+        
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        Document document = new Document(PageSize.A4);
+        PdfWriter writer = PdfWriter.getInstance(document, outputStream);
+        
+        document.open();
+        
+        // Add company header
+        Font companyFont = new Font(Font.HELVETICA, 10, Font.NORMAL);
+        document.add(new Paragraph("Nectar Origin Private Limited", new Font(Font.HELVETICA, 12, Font.BOLD)));
+        document.add(new Paragraph("360 K, Shiv Parwati Nagar, Block Road No-2,", companyFont));
+        document.add(new Paragraph("Ward No 16, Kahalgaon, Bhagalpur Bihar", companyFont));
+        document.add(new Paragraph("Bihar - 813203, India", companyFont));
+        document.add(new Paragraph("CIN: U74999BR2016PTC032690", companyFont));
+        document.add(new Paragraph("Contact : 06429-450126,9797979522", companyFont));
+        document.add(new Paragraph("E-Mail : nectarorigin@gmail.com", companyFont));
+        document.add(new Paragraph("http://www.nectarorigin.com", companyFont));
+        document.add(new Paragraph(" "));
+        
+        // Add title and header
+        Font titleFont = new Font(Font.HELVETICA, 16, Font.BOLD);
+        Font headerFont = new Font(Font.HELVETICA, 12, Font.NORMAL);
+        Font tableHeaderFont = new Font(Font.HELVETICA, 10, Font.BOLD);
+        Font tableFont = new Font(Font.HELVETICA, 9, Font.NORMAL);
+        
+        Paragraph title = new Paragraph("LEDGER ACCOUNT: " + distributorName.toUpperCase(), titleFont);
+        title.setAlignment(Element.ALIGN_CENTER);
+        document.add(title);
+        
+        Paragraph company = new Paragraph("FROM: Nectar Origin Private Limited", headerFont);
+        company.setAlignment(Element.ALIGN_CENTER);
+        document.add(company);
+        
+        Paragraph period = new Paragraph("PERIOD: 01-04-2025 TO " + java.time.LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")), headerFont);
+        period.setAlignment(Element.ALIGN_CENTER);
+        document.add(period);
+        
+        document.add(Chunk.NEWLINE);
+        
+        // Create table
+        PdfPTable table = new PdfPTable(6);
+        table.setWidthPercentage(100);
+        table.setWidths(new float[]{2f, 4f, 1.5f, 1.5f, 2f, 2f});
+        
+        // Table headers
+        table.addCell(new PdfPCell(new Phrase("Date", tableHeaderFont)));
+        table.addCell(new PdfPCell(new Phrase("Particulars", tableHeaderFont)));
+        table.addCell(new PdfPCell(new Phrase("Vch Type", tableHeaderFont)));
+        table.addCell(new PdfPCell(new Phrase("Vch No.", tableHeaderFont)));
+        table.addCell(new PdfPCell(new Phrase("Debit", tableHeaderFont)));
+        table.addCell(new PdfPCell(new Phrase("Credit", tableHeaderFont)));
+        
+        // Table data
+        BigDecimal totalDebit = BigDecimal.ZERO;
+        BigDecimal totalCredit = BigDecimal.ZERO;
+
+        for (DistributorLedger entry : history) {
+            String date = entry.getCreatedAt().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+            String particulars = entry.getDescription();
+            String vchType = entry.getTransactionType();
+            String vchNo = entry.getId().toString();
+            String debit = "";
+            String credit = "";
+            
+            if ("DEBIT".equalsIgnoreCase(entry.getTransactionType())) {
+                particulars = "Dr " + particulars;
+                debit = String.format("%,.2f", entry.getAmount());
+                totalDebit = totalDebit.add(entry.getAmount());
+            } else {
+                particulars = "Cr " + particulars;
+                credit = String.format("%,.2f", entry.getAmount());
+                totalCredit = totalCredit.add(entry.getAmount());
+            }
+            
+            table.addCell(new PdfPCell(new Phrase(date, tableFont)));
+            table.addCell(new PdfPCell(new Phrase(particulars, tableFont)));
+            table.addCell(new PdfPCell(new Phrase(vchType, tableFont)));
+            table.addCell(new PdfPCell(new Phrase(vchNo, tableFont)));
+            
+            PdfPCell debitCell = new PdfPCell(new Phrase(debit, tableFont));
+            debitCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            table.addCell(debitCell);
+            
+            PdfPCell creditCell = new PdfPCell(new Phrase(credit, tableFont));
+            creditCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            table.addCell(creditCell);
+        }
+        
+        // Add total row
+        PdfPCell totalTextCell = new PdfPCell(new Phrase("TOTAL", new Font(Font.HELVETICA, 10, Font.BOLD)));
+        totalTextCell.setColspan(4);
+        totalTextCell.setBackgroundColor(new java.awt.Color(240, 240, 240));
+        table.addCell(totalTextCell);
+        
+        PdfPCell totalDebitCell = new PdfPCell(new Phrase(String.format("%,.2f", totalDebit), new Font(Font.HELVETICA, 10, Font.BOLD)));
+        totalDebitCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        totalDebitCell.setBackgroundColor(new java.awt.Color(240, 240, 240));
+        table.addCell(totalDebitCell);
+        
+        PdfPCell totalCreditCell = new PdfPCell(new Phrase(String.format("%,.2f", totalCredit), new Font(Font.HELVETICA, 10, Font.BOLD)));
+        totalCreditCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        totalCreditCell.setBackgroundColor(new java.awt.Color(240, 240, 240));
+        table.addCell(totalCreditCell);
+        
+        document.add(table);
+        document.close();
+        
+        byte[] pdfBytes = outputStream.toByteArray();
+        
+        return ResponseEntity.ok()
+                .header("Content-Type", "application/pdf")
+                .header("Content-Disposition", "attachment; filename=\"ledger_" + distributorId + ".pdf\"")
+                .body(pdfBytes);
     }
 }

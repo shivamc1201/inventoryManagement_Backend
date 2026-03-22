@@ -192,11 +192,11 @@ public class ProformaInvoiceService {
         invoice.setModeOfPayment("Bank Transfer");
 
         // Seller details
-        invoice.setCompanyName("Your Company Name");
-        invoice.setCompanyAddress("Your Company Address");
-        invoice.setGstin("Your GSTIN");
-        invoice.setContactNumber("+91-XXXXXXXXXX");
-        invoice.setEmail("sales@yourcompany.com");
+        invoice.setCompanyName("Nectar Origin Private Limited");
+        invoice.setCompanyAddress("360 K, Shiv Parwati Nagar, Block Road No-2, Ward No 16, Kahalgaon, Bhagalpur Bihar, Bihar - 813203, India");
+        invoice.setGstin("U74999BR2016PTC032690");
+        invoice.setContactNumber("06429-450126,9797979522");
+        invoice.setEmail("nectarorigin@gmail.com");
 
         // Buyer details from distributor
         var distributor = distributorRepository.findById(cart.getDistributorId()).orElse(null);

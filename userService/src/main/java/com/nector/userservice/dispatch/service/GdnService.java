@@ -509,9 +509,9 @@ public class GdnService {
         data.put("totalWeight", gdn.getTotalWeight());
         
         // Company details (similar to invoice)
-        data.put("companyName", "Your Company Name");
-        data.put("companyAddress", "Your Company Address");
-        data.put("contactNumber", "+91-XXXXXXXXXX");
+        data.put("companyName", "Nectar Origin Private Limited");
+        data.put("companyAddress", "360 K, Shiv Parwati Nagar, Block Road No-2, Ward No 16, Kahalgaon, Bhagalpur Bihar, Bihar - 813203, India");
+        data.put("contactNumber", "06429-450126,9797979522");
         
         return data;
     }

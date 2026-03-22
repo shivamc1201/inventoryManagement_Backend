@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Distributor Ledger</title>
+
+    <style>
+
+        body{
+        font-family:Arial;
+        margin:20px;
+        }
+
+        .header{
+        background:#f5f5f5;
+        padding:20px;
+        border-radius:5px;
+        margin-bottom:20px;
+        }
+
+        .companyRow{
+        display:flex;
+        justify-content:space-between;
+        margin-top:15px;
+        }
+
+        .companyBlock{
+        width:50%;
+        }
+
+        .partyBlock{
+        width:50%;
+        text-align:right;
+        }
+
+        .download-btn{
+        background:#007bff;
+        color:white;
+        padding:10px 20px;
+        border:none;
+        border-radius:5px;
+        cursor:pointer;
+        font-size:15px;
+        }
+
+        .pdfBtn{
+        background:#28a745;
+        margin-left:10px;
+        }
+
+        table{
+        width:100%;
+        border-collapse:collapse;
+        margin-top:20px;
+        }
+
+        th{
+        background:#f2f2f2;
+        border:1px solid #ddd;
+        padding:8px;
+        }
+
+        td{
+        border:1px solid #ddd;
+        padding:8px;
+        }
+
+        .debit{
+        color:red;
+        text-align:right;
+        }
+
+        .credit{
+        color:green;
+        text-align:right;
+        }
+
+        .center{
+        text-align:center;
+        }
+
+        .totalRow{
+        font-weight:bold;
+        background:#fafafa;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="header">
+
+    <h2>
+
+        LEDGER ACCOUNT :
+        <span id="distributorName"></span>
+
+    </h2>
+
+    <p>
+        <b>FROM:</b>
+        Nectar Origin Private Limited
+    </p>
+
+    <p>
+        <b>PERIOD:</b>
+        <span id="period"></span>
+    </p>
+
+    <div class="companyRow">
+
+        <div class="companyBlock">
+
+            <b>Nectar Origin Private Limited</b><br>
+
+            360 K Shiv Parvati Nagar<br>
+
+            Patna Bihar<br>
+
+            India
+
+        </div>
+
+        <div class="partyBlock">
+
+            <b id="partyName"></b><br>
+
+            Distributor Ledger
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<button class="download-btn"
+        onclick="downloadLedger()">
+
+    Download CSV
+
+</button>
+
+<button class="download-btn pdfBtn"
+        onclick="downloadLedgerPDF()">
+
+    Download PDF
+
+</button>
+
+
+<table>
+
+    <thead>
+
+    <tr>
+
+        <th>Date</th>
+        <th>Particulars</th>
+        <th>Vch Type</th>
+        <th>Vch No</th>
+        <th>Debit</th>
+        <th>Credit</th>
+
+    </tr>
+
+    </thead>
+
+    <tbody id="ledgerBody">
+
+    </tbody>
+
+    <tfoot>
+
+    <tr class="totalRow">
+
+        <td colspan="4">
+            TOTAL
+        </td>
+
+        <td id="totalDebit"
+            class="debit">
+        </td>
+
+        <td id="totalCredit"
+            class="credit">
+        </td>
+
+    </tr>
+
+    </tfoot>
+
+</table>
+
+
+<script>
+
+    const distributorId=1;
+
+    async function loadLedgerData(){
+
+    const response=
+    await fetch(
+    `http://localhost:8080/api/accounts/payment-history/${distributorId}`
+    );
+
+    const data=
+    await response.json();
+
+    const tbody=
+    document.getElementById('ledgerBody');
+
+    tbody.innerHTML='';
+
+    let totalDebit=0;
+
+    let totalCredit=0;
+
+    data.forEach(entry=>{
+
+    const row=
+    document.createElement('tr');
+
+    const date=
+    new Date(entry.createdAt)
+    .toLocaleDateString('en-GB');
+
+    let debit='';
+
+    let credit='';
+
+    if(entry.transactionType==='DEBIT'){
+
+    debit=
+    entry.amount.toFixed(2);
+
+    totalDebit+=entry.amount;
+
+    }
+    else{
+
+    credit=
+    entry.amount.toFixed(2);
+
+    totalCredit+=entry.amount;
+
+    }
+
+    row.innerHTML=`
+
+    <td>${date}</td>
+
+    <td>${entry.transactionType === 'DEBIT' ? 'Dr ' : 'Cr '}${entry.description}</td>
+
+    <td class="center">
+    ${entry.transactionType}
+    </td>
+
+    <td class="center">
+    ${entry.id}
+    </td>
+
+    <td class="debit">
+    ${debit}
+    </td>
+
+    <td class="credit">
+    ${credit}
+    </td>
+
+    `;
+
+    tbody.appendChild(row);
+
+    });
+
+    document.getElementById('totalDebit')
+    .innerHTML=totalDebit.toFixed(2);
+
+    document.getElementById('totalCredit')
+    .innerHTML=totalCredit.toFixed(2);
+
+    document.getElementById('distributorName')
+    .innerHTML="Koshi Bihar Enterprises";
+
+    document.getElementById('partyName')
+    .innerHTML="Koshi Bihar Enterprises";
+
+    document.getElementById('period')
+    .innerHTML="01-04-2025 TO 22-03-2026";
+
+    }
+
+    function downloadLedger(){
+
+    window.open(
+    `http://localhost:8080/api/accounts/payment-history/${distributorId}/download`
+    );
+
+    }
+
+    function downloadLedgerPDF(){
+
+    window.open(
+    `http://localhost:8080/api/accounts/payment-history/${distributorId}/download-pdf`
+    );
+
+    }
+
+    window.onload=loadLedgerData;
+
+</script>
+
+</body>
+
+</html>

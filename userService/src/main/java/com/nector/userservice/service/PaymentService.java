@@ -241,20 +241,39 @@ public class PaymentService {
         return payments;
     }
 
-    public void processJournalVoucher(JournalVoucherRequest request) {
+    public List<DistributorLedger> getJournalVouchersByDistributor(Long distributorId) {
+        return distributorLedgerRepository.findByDistributorIdAndTransactionTypeOrderByCreatedAtDesc(distributorId, "JV");
+    }
+
+    public void processJournalVoucher(Long distributorId, JournalVoucherRequest request) {
         for (JournalVoucherEntry entry : request.getEntries()) {
             if (entry.getDebit() != null && entry.getDebit().compareTo(BigDecimal.ZERO) > 0) {
-                // For debit entries, we need to find the distributor ID from account number
-                // This assumes account number maps to distributor ID - you may need to adjust this logic
-                Long distributorId = getDistributorIdFromAccountNumber(entry.getAccountNumber());
-                updateDistributorBalance(distributorId, entry.getDebit(), "DEBIT",
+                distributorRepository.findById(distributorId).ifPresentOrElse(
+                        distributor -> {
+                            if (!entry.getAccountNumber().equals(distributor.getAccountNumber())) {
+                                throw new RuntimeException("Account number " + entry.getAccountNumber() + " does not match distributor's account number " + distributor.getAccountNumber());
+                            }
+                        },
+                        () -> {
+                            throw new RuntimeException("Distributor not found with ID: " + distributorId);
+                        }
+                );
+                updateDistributorBalance(distributorId, entry.getDebit(), "JV",
                         entry.getDescription() + " - " + request.getNarration());
             }
 
             if (entry.getCredit() != null && entry.getCredit().compareTo(BigDecimal.ZERO) > 0) {
-                // For credit entries
-                Long distributorId = getDistributorIdFromAccountNumber(entry.getAccountNumber());
-                updateDistributorBalance(distributorId, entry.getCredit(), "CREDIT",
+                distributorRepository.findById(distributorId).ifPresentOrElse(
+                        distributor -> {
+                            if (!entry.getAccountNumber().equals(distributor.getAccountNumber())) {
+                                throw new RuntimeException("Account number " + entry.getAccountNumber() + " does not match distributor's account number " + distributor.getAccountNumber());
+                            }
+                        },
+                        () -> {
+                            throw new RuntimeException("Distributor not found with ID: " + distributorId);
+                        }
+                );
+                updateDistributorBalance(distributorId, entry.getCredit(), "JV",
                         entry.getDescription() + " - " + request.getNarration());
             }
         }

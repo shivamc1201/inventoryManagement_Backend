@@ -13,6 +13,7 @@ public class DistributorMapper {
         distributor.setName(dto.getName());
         distributor.setAssignedPerson(dto.getAssignedPerson());
         distributor.setSalespersonId(dto.getSalespersonId());
+        distributor.setSalesPersonRoleType(dto.getSalesPersonRoleType());
         distributor.setDistributorType(dto.getDistributorType());
         distributor.setCompanyType(dto.getCompanyType());
         distributor.setContactEmail(dto.getContactEmail());
@@ -39,6 +40,7 @@ public class DistributorMapper {
         dto.setName(entity.getName());
         dto.setAssignedPerson(entity.getAssignedPerson());
         dto.setSalespersonId(entity.getSalespersonId());
+        dto.setSalesPersonRoleType(entity.getSalesPersonRoleType());
         dto.setDistributorType(entity.getDistributorType());
         dto.setCompanyType(entity.getCompanyType());
         dto.setContactEmail(entity.getContactEmail());
@@ -64,6 +66,7 @@ public class DistributorMapper {
         entity.setName(dto.getName());
         entity.setAssignedPerson(dto.getAssignedPerson());
         entity.setSalespersonId(dto.getSalespersonId());
+        entity.setSalesPersonRoleType(dto.getSalesPersonRoleType());
         entity.setDistributorType(dto.getDistributorType());
         entity.setCompanyType(dto.getCompanyType());
         entity.setContactEmail(dto.getContactEmail());

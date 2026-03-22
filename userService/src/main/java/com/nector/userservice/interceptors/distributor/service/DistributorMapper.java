@@ -10,7 +10,8 @@ public class DistributorMapper {
     
     public Distributor toEntity(DistributorRequestDTO dto) {
         Distributor distributor = new Distributor();
-        distributor.setName(dto.getName());
+        distributor.setFirstName(dto.getFirstName());
+        distributor.setLastName(dto.getLastName());
         distributor.setAssignedPerson(dto.getAssignedPerson());
         distributor.setSalespersonId(dto.getSalespersonId());
         distributor.setSalesPersonRoleType(dto.getSalesPersonRoleType());
@@ -37,7 +38,8 @@ public class DistributorMapper {
     public DistributorResponseDTO toResponseDTO(Distributor entity) {
         DistributorResponseDTO dto = new DistributorResponseDTO();
         dto.setId(entity.getId());
-        dto.setName(entity.getName());
+        dto.setFirstName(entity.getFirstName());
+        dto.setLastName(entity.getLastName());
         dto.setAssignedPerson(entity.getAssignedPerson());
         dto.setSalespersonId(entity.getSalespersonId());
         dto.setSalesPersonRoleType(entity.getSalesPersonRoleType());
@@ -63,7 +65,8 @@ public class DistributorMapper {
     }
     
     public void updateEntity(Distributor entity, DistributorRequestDTO dto) {
-        entity.setName(dto.getName());
+        entity.setFirstName(dto.getFirstName());
+        entity.setLastName(dto.getLastName());
         entity.setAssignedPerson(dto.getAssignedPerson());
         entity.setSalespersonId(dto.getSalespersonId());
         entity.setSalesPersonRoleType(dto.getSalesPersonRoleType());

@@ -77,7 +77,7 @@ public class DistributorServiceImpl implements DistributorService {
             CreateLedgerAccountRequest ledgerRequest = new CreateLedgerAccountRequest();
             ledgerRequest.setCompanyId(1L); // Default company ID
             ledgerRequest.setDistributorId(savedDistributor.getId());
-            ledgerRequest.setAccountName(savedDistributor.getName() + " - Ledger Account");
+            ledgerRequest.setAccountName(savedDistributor.getFirstName() + " - Ledger Account");
             ledgerRequest.setCreditLimit(BigDecimal.ZERO);
 
             ledgerAccountService.createLedgerAccount(ledgerRequest, "system");
@@ -260,7 +260,7 @@ public class DistributorServiceImpl implements DistributorService {
 
                     // Set distributor name
                     distributorRepository.findById(cart.getDistributorId()).ifPresent(distributor -> {
-                        response.setDistributorName(distributor.getName());
+                        response.setDistributorName(distributor.getFirstName());
                     });
 
                     // Map cart items

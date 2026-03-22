@@ -202,7 +202,7 @@ public class CartService {
             response.setDistributorId(cart.getDistributorId());
 
             distributorRepository.findById(cart.getDistributorId()).ifPresent(distributor -> {
-                response.setDistributorName(distributor.getName());
+                response.setDistributorName(distributor.getFirstName());
 
                 // Set salesperson information from distributor's salespersonId
                 if (distributor.getSalespersonId() != null) {
@@ -282,7 +282,7 @@ public class CartService {
 
         // Populate denormalized fields
         distributorRepository.findById(cart.getDistributorId()).ifPresent(distributor -> {
-            cart.setDistributorName(distributor.getName());
+            cart.setDistributorName(distributor.getFirstName());
 
             if (distributor.getSalespersonId() != null) {
                 cart.setSalespersonId(distributor.getSalespersonId());
@@ -512,7 +512,7 @@ public class CartService {
             response.setDistributorName(cart.getDistributorName());
         } else {
             distributorRepository.findById(cart.getDistributorId()).ifPresent(distributor -> {
-                response.setDistributorName(distributor.getName());
+                response.setDistributorName(distributor.getFirstName());
             });
         }
 

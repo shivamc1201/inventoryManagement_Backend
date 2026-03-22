@@ -198,6 +198,49 @@ public class ProformaInvoiceService {
         invoice.setContactNumber("+91-XXXXXXXXXX");
         invoice.setEmail("sales@yourcompany.com");
 
+        // Buyer details from distributor
+        var distributor = distributorRepository.findById(cart.getDistributorId()).orElse(null);
+        log.info("Distributor found for ID {}: {}", cart.getDistributorId(), distributor != null ? distributor.getName() : "NOT FOUND");
+        if (distributor != null) {
+            // Bill To details
+            ProformaInvoice.BuyerDetails billTo = new ProformaInvoice.BuyerDetails();
+            billTo.setName(distributor.getName());
+            billTo.setAddress(distributor.getAddress());
+            billTo.setGstin(distributor.getGstNumber());
+            billTo.setState("Bihar"); // You may want to add state to distributor entity
+            billTo.setStateCode("10"); // Bihar state code
+            invoice.setBillTo(billTo);
+
+            // Ship To details (same as bill to for now, using cart address if available)
+            ProformaInvoice.BuyerDetails shipTo = new ProformaInvoice.BuyerDetails();
+            shipTo.setName(distributor.getName());
+            shipTo.setAddress(cart.getAddress() != null ? cart.getAddress() : distributor.getAddress());
+            shipTo.setGstin(distributor.getGstNumber());
+            shipTo.setState("Bihar"); // You may want to add state to distributor entity
+            shipTo.setStateCode("10"); // Bihar state code
+            invoice.setShipTo(shipTo);
+            log.info("ShipTo set with name: {}", shipTo.getName());
+        } else {
+            log.error("Distributor not found for ID: {}, creating fallback buyer details", cart.getDistributorId());
+            // Create fallback buyer details when distributor is not found
+            ProformaInvoice.BuyerDetails billTo = new ProformaInvoice.BuyerDetails();
+            billTo.setName("Customer Name");
+            billTo.setAddress(cart.getAddress() != null ? cart.getAddress() : "Customer Address");
+            billTo.setGstin("Customer GSTIN");
+            billTo.setState("Bihar");
+            billTo.setStateCode("10");
+            invoice.setBillTo(billTo);
+
+            ProformaInvoice.BuyerDetails shipTo = new ProformaInvoice.BuyerDetails();
+            shipTo.setName("Customer Name");
+            shipTo.setAddress(cart.getAddress() != null ? cart.getAddress() : "Customer Address");
+            shipTo.setGstin("Customer GSTIN");
+            shipTo.setState("Bihar");
+            shipTo.setStateCode("10");
+            invoice.setShipTo(shipTo);
+            log.info("Fallback buyer details created");
+        }
+
         // Items from cart
         List<InvoiceItem> items = IntStream.range(0, cart.getCartItems().size())
                 .mapToObj(i -> {

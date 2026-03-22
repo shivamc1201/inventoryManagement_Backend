@@ -138,7 +138,7 @@ public class AccountsController {
         payments.forEach(payment -> {
             if (payment.getDistributorName() == null) {
                 paymentService.getDistributorRepository().findById(payment.getDistributorId())
-                        .ifPresent(distributor -> payment.setDistributorName(distributor.getName()));
+                        .ifPresent(distributor -> payment.setDistributorName(distributor.getFirstName()));
             }
         });
     }

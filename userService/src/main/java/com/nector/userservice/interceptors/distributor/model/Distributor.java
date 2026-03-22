@@ -13,19 +13,19 @@ public class Distributor {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "username", nullable = false, length = 100)
     private String username;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "password", nullable = false, length = 100)
     private String password;
     
-    @Column(nullable = false, length = 50)
+    @Column(name = "first_name", nullable = false, length = 50)
     private String firstName;
     
-    @Column(nullable = false, length = 50)
+    @Column(name = "last_name", nullable = false, length = 50)
     private String lastName;
     
-    @Column(nullable = false, length = 100)
+    @Column(name = "assigned_person", nullable = false, length = 100)
     private String assignedPerson;
 
     @Column(name = "salesperson_id")
@@ -35,41 +35,40 @@ public class Distributor {
     @Column(name = "salesperson_role_type")
     private SalesRole salesPersonRoleType;
     
-    @Column(nullable = false)
+    @Column(name = "distributor_type", nullable = false)
     private String distributorType;
     
-    @Column(nullable = false)
+    @Column(name = "company_type", nullable = false)
     private String companyType;
     
-    @Column(nullable = false, unique = true)
+    @Column(name = "contact_email", nullable = false, unique = true)
     private String contactEmail;
 
-    @Column(length = 20)
+    @Column(name = "phone_number", length = 20)
     private String phoneNumber;
 
-    @Column(length = 20)
+    @Column(name = "alternate_contact", length = 20)
     private String alternateContact;
 
-    @Column(length = 20)
+    @Column(name = "gst_number", length = 20)
     private String gstNumber;
     
-    @Column(nullable = false, length = 200)
+    @Column(name = "address", nullable = false, length = 200)
     private String address;
     
-    @Column(nullable = false, unique = true, length = 12)
+    @Column(name = "aadhaar_number", nullable = false, unique = true, length = 12)
     private String aadhaarNumber;
     
-    @Column(nullable = false, unique = true, length = 10)
+    @Column(name = "pan_number", nullable = false, unique = true, length = 10)
     private String panNumber;
     
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "status", nullable = false)
     private DistributorStatus status;
     
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_on", nullable = false, updatable = false)
     private LocalDateTime createdOn;
     
-    @Column
+    @Column(name = "updated_on")
     private LocalDateTime updatedOn;
 
     @Column(name = "account_number", nullable = false, length = 100)
@@ -78,7 +77,7 @@ public class Distributor {
     @Column(name = "account_name", nullable = false, length = 100)
     private String accountName;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "ifsc", nullable = false, length = 100)
     private String ifsc;
 
 

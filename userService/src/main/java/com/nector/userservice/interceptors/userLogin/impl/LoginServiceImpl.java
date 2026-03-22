@@ -18,6 +18,9 @@ import com.nector.userservice.model.User;
 import com.nector.userservice.repository.UserRepository;
 // import com.nector.userservice.repository.UserSessionRepository;
 import com.nector.userservice.service.JwtService;
+import com.nector.userservice.model.SalesPerson;
+import com.nector.userservice.enums.SalesRole;
+import com.nector.userservice.repository.SalesPersonRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,108 +40,8 @@ public class LoginServiceImpl implements LoginService {
     // private final UserSessionRepository userSessionRepository; // For future session management
     private final JwtService jwtService;
     private final DistributorRepository distributorRepository;
+    private final SalesPersonRepository salesPersonRepository;
     
-//    @Override
-//     @Transactional // For future session management
-//    public LoginResponse authenticateUser(LoginRequest request) {
-//        log.info("Entering authenticateUser() for username: {}", request.getUsername());
-//
-//        User user = userRepository.findByUsername(request.getUsername())
-//            .orElse(null);
-//
-//        if (user == null) {
-//            log.warn("Exiting authenticateUser() - Username not available: {}", request.getUsername());
-//            throw new RuntimeException("Username not available");
-//        }
-//
-//        if (user.getStatus() != UserStatus.ACTIVE) {
-//            log.warn("Exiting authenticateUser() - Username inactive: {}", request.getUsername());
-//            throw new RuntimeException("Username inactive, Contact ADMIN");
-//        }
-//
-//        // Force logout previous session if user is already logged in
-//        if (user.isLoggedIn()) {
-//            log.warn("User already logged in, forcing logout previous session: {}", request.getUsername());
-//            user.setLoggedIn(false);
-//        }
-//
-//        if (!user.getPassword().equals(request.getPassword())) {
-//            log.warn("Exiting authenticateUser() - Invalid password for username: {}", request.getUsername());
-//            throw new RuntimeException("Invalid password");
-//        }
-//
-//        // Get user with roles and permissions
-//        Optional<User> userWithRoles = userRepository.findByUsernameWithRolesAndPermissions(request.getUsername());
-//        if (userWithRoles.isPresent()) {
-//            user = userWithRoles.get();
-//            log.info("User loaded with {} roles", user.getRoles().size());
-//        } else {
-//            log.warn("User {} found but has no roles assigned", request.getUsername());
-//        }
-//
-//        String token = jwtService.generateToken(request.getUsername());
-//
-//        /* FUTURE SESSION MANAGEMENT CODE - UNCOMMENT WHEN NEEDED
-//        // Create new session
-//        UserSession session = new UserSession();
-//        session.setUserId(user.getId());
-//        session.setSessionToken(token);
-//        session.setLoginTime(LocalDateTime.now());
-//        session.setLastActivity(LocalDateTime.now());
-//        userSessionRepository.save(session);
-//        */
-//
-//        // Update user login status and last login time
-//        user.setLoggedIn(true);
-//        user.setLastLoginTime(LocalDateTime.now());
-//        userRepository.save(user);
-//
-//        Set<Features> features;
-//        boolean isAdmin = user.getRoles().stream()
-//                .anyMatch(role -> "ADMIN".equals(role.getName()));
-//
-//        if (isAdmin) {
-//            features = Set.of(Features.values());
-//            log.info("ADMIN role detected - assigned all {} features", features.size());
-//        } else {
-//            features = user.getRoles().stream()
-//                    .flatMap(role -> {
-//                        log.info("Role: {} has {} permissions", role.getName(), role.getPermissions().size());
-//                        return role.getPermissions().stream();
-//                    })
-//                    .map(permission -> permission.getFeature())
-//                    .collect(Collectors.toSet());
-//            log.info("Total unique features extracted: {}", features.size());
-//        }
-//
-//
-//        List<Object> featureDetails = features.stream()
-//            .map(feature -> Map.of(
-//                "name", feature.name(),
-//                "displayName", feature.getDisplayName(),
-//                "path", feature.getPath()
-//            ))
-//            .collect(Collectors.toList());
-//
-//        Set<String> featureNames = features.stream()
-//            .map(Features::name)
-//            .collect(Collectors.toSet());
-//
-//        LoginResponse response = new LoginResponse(
-//            token,
-//            "Bearer",
-//            request.getUsername(),
-//            "Login successful for " + request.getUsername(),
-//            user.getRoleType().name(),
-//            user.getId(),
-//            featureDetails,
-//            featureNames,
-//            "LOGGED_IN"
-//        );
-//
-//        log.info("Exiting authenticateUser() - Login successful for username: {}", request.getUsername());
-//        return response;
-//    }
 
     @Override
     public BaseLoginResponse authenticate(LoginRequest request) {
@@ -157,13 +60,23 @@ public class LoginServiceImpl implements LoginService {
         }
 
         // =========================================================
-        // 2️⃣ USER LOGIN (SALES OR NORMAL)
+        // 2️⃣ SALESPERSON LOGIN CHECK
+        // =========================================================
+        Optional<SalesPerson> salesPersonOpt =
+                salesPersonRepository.findByUsername(request.getUsername());
+
+        if (salesPersonOpt.isPresent()) {
+            log.info("Salesperson login detected for {}", request.getUsername());
+            return authenticateSalesPersonFromTable(salesPersonOpt.get(), request);
+        }
+
+        // =========================================================
+        // 3️⃣ USER LOGIN (NORMAL)
         // =========================================================
         Optional<User> userOpt =
                 userRepository.findByUsername(request.getUsername());
 
         if (userOpt.isPresent()) {
-
             User user = userOpt.get();
 
             // Load roles
@@ -171,19 +84,70 @@ public class LoginServiceImpl implements LoginService {
                     .findByUsernameWithRolesAndPermissions(request.getUsername())
                     .orElse(user);
 
-            if (isSalesPerson(user)) {
-                log.info("Salesperson login detected for {}", request.getUsername());
-                return authenticateSalesPerson(user, request);
-            }
-
             return authenticateNormalUser(user, request);
         }
 
         // =========================================================
-        // 3️⃣ USER NOT FOUND
+        // 4️⃣ USER NOT FOUND
         // =========================================================
         log.warn("Username not found {}", request.getUsername());
         throw new RuntimeException("Username not available");
+    }
+
+    private LoginResponse authenticateSalesPersonFromTable(SalesPerson salesPerson, LoginRequest request) {
+
+        if (salesPerson.getStatus() != UserStatus.ACTIVE) {
+            throw new RuntimeException("Salesperson account inactive");
+        }
+
+        if (!salesPerson.getPassword().equals(request.getPassword())) {
+            throw new RuntimeException("Invalid password");
+        }
+
+        String token = jwtService.generateToken(request.getUsername());
+
+        // Update last login time if you have that field
+        // salesPerson.setLastLoginTime(LocalDateTime.now());
+        // salesPersonRepository.save(salesPerson);
+
+        // Convert SalesRole to RoleType for compatibility
+        RoleType roleType = convertSalesRoleToRoleType(salesPerson.getRole());
+
+        List<Object> featureDetails = getSalesPersonFeatures(roleType);
+        Set<String> featureNames = getSalesPersonFeatureNames(roleType);
+
+        return new LoginResponse(
+                token,
+                "Bearer",
+                request.getUsername(),
+                "Login successful for Salesperson " + request.getUsername(),
+                roleType.name(),
+                salesPerson.getId(),
+                featureDetails,
+                featureNames,
+                "LOGGED_IN"
+        );
+    }
+
+    private RoleType convertSalesRoleToRoleType(SalesRole salesRole) {
+        switch (salesRole) {
+            case NATIONAL_SALES_MGR:
+                return RoleType.NATIONAL_SALES_MGR;
+            case STATE_SALES_MGR:
+                return RoleType.STATE_SALES_MGR;
+            case ZONAL_SALES_MGR:
+                return RoleType.ZONAL_SALES_MGR;
+            case REGIONAL_SALES_MGR:
+                return RoleType.REGIONAL_SALES_MGR;
+            case AREA_SALES_MGR:
+                return RoleType.AREA_SALES_MGR;
+            case SALES_OFFICER:
+                return RoleType.SALES_OFFICER;
+            case SALES_EXECUTIVE:
+                return RoleType.SALES_EXECUTIVE;
+            default:
+                return RoleType.SALES_EXECUTIVE;
+        }
     }
 
     private LoginResponse authenticateSalesPerson(User user, LoginRequest request) {

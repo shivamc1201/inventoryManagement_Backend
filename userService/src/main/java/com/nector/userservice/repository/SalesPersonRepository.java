@@ -52,4 +52,5 @@ public interface SalesPersonRepository extends JpaRepository<SalesPerson, Long> 
     Optional<SalesPerson> findByEmail(String email);
 
     boolean existsByUsernameAndIdNot(String username, long l);
+    Optional<SalesPerson> findByUsername(String username);
 }

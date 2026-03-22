@@ -1,115 +1,395 @@
 <!DOCTYPE html>
-<html>
+<html xmlns:th="http://www.thymeleaf.org">
+
 <head>
+
+    <meta charset="UTF-8"/>
+
     <style>
-        body { font-family: Arial; font-size: 12px; margin: 20px; }
-        .title { text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 20px; }
-        .section { margin-bottom: 15px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-        td, th { border: 1px solid #000; padding: 8px; }
-        .right { text-align: right; }
-        .center { text-align: center; }
-        .bold { font-weight: bold; }
-        .header-info { margin-bottom: 10px; }
+
+        body{
+        font-family:Arial;
+        font-size:12px;
+        margin:20px;
+        }
+
+        table{
+        width:100%;
+        border-collapse:collapse;
+        }
+
+        .main td{
+        padding:6px;
+        vertical-align:top;
+        }
+
+        .border{
+        border:1px solid black;
+        }
+
+        .items th{
+        border:1px solid black;
+        padding:6px;
+        background:#f2f2f2;
+        text-align:center;
+        }
+
+        .items td{
+        border-left:1px solid black;
+        border-right:1px solid black;
+        padding:6px;
+        }
+
+        .items-bottom{
+        border-bottom:1px solid black;
+        height:220px;
+        }
+
+        .center{
+        text-align:center;
+        }
+
+        .right{
+        text-align:right;
+        }
+
+        .bold{
+        font-weight:bold;
+        }
+
+        .dotted{
+        border-bottom:1px dotted black;
+        display:inline-block;
+        min-width:200px;
+        padding-left:5px;
+        }
+
+        .logo{
+        width:90px;
+        }
+
+        .bigbox{
+        height:260px;
+        border:1px solid black;
+        border-top:none;
+        }
+
     </style>
+
 </head>
+
 <body>
 
-<div class="title">GOODS DELIVERY NOTE (GDN)</div>
+<table>
 
-<div class="header-info">
-    <table>
-        <tr>
-            <td width="50%">
-                <b th:text="${companyName}"></b><br/>
-                <span th:text="${companyAddress}"></span><br/>
-                Contact: <span th:text="${contactNumber}"></span>
-            </td>
-            <td width="50%">
-                <b>GDN Details:</b><br/>
-                GDN No: <span th:text="${gdnNumber}"></span><br/>
-                Date: <span th:text="${gdnDate}"></span><br/>
-                Order ID: <span th:text="${orderId}"></span>
-            </td>
-        </tr>
-    </table>
+    <tr>
+
+        <td width="110">
+
+            <img th:src="@{logo.png}" class="logo"/>
+
+        </td>
+
+        <td class="center">
+
+            <div class="bold" style="font-size:16px;"
+                 th:text="${companyName}">
+            </div>
+
+            <div th:text="${companyAddress}">
+            </div>
+
+        </td>
+
+        <td class="right">
+
+<span th:text="${vendorCode}">
+</span>
+
+        </td>
+
+    </tr>
+
+</table>
+
+<br/>
+
+<div class="center bold">
+
+    GOOD DELIVERY NOTE
+
 </div>
 
-<div class="section">
-    <table>
-        <tr>
-            <td width="50%" class="bold">Dispatch From:</td>
-            <td width="50%" class="bold">Shipping To:</td>
-        </tr>
-        <tr>
-            <td th:text="${dispatchFromAddress}"></td>
-            <td th:text="${shippingAddress}"></td>
-        </tr>
-    </table>
-</div>
+<br/>
 
-<div class="section">
-    <table>
-        <tr>
-            <td width="25%" class="bold">Vehicle No:</td>
-            <td width="25%" th:text="${vehicleNo}"></td>
-            <td width="25%" class="bold">Transport Name:</td>
-            <td width="25%" th:text="${transportName}"></td>
-        </tr>
-        <tr>
-            <td class="bold">Driver Name:</td>
-            <td th:text="${driverName}"></td>
-            <td class="bold">Driver Mobile:</td>
-            <td th:text="${driverMobile}"></td>
-        </tr>
-    </table>
-</div>
+<table class="main">
 
-<div class="section">
-    <table>
-        <tr>
-            <th class="center">Sr No</th>
-            <th>Description</th>
-            <th class="center">Quantity</th>
-            <th class="center">Unit</th>
-            <th class="right">Weight (kg)</th>
-        </tr>
-        <tr th:each="item : ${items}">
-            <td class="center" th:text="${item.srNo}"></td>
-            <td th:text="${item.description}"></td>
-            <td class="center" th:text="${item.quantity}"></td>
-            <td class="center" th:text="${item.unit}"></td>
-            <td class="right" th:text="${item.weight}"></td>
-        </tr>
-        <tr>
-            <td colspan="2" class="bold">Total:</td>
-            <td class="center bold" th:text="${totalPackages}"></td>
-            <td></td>
-            <td class="right bold" th:text="${totalWeight}"></td>
-        </tr>
-    </table>
-</div>
+    <tr>
 
-<div class="section">
-    <table>
-        <tr>
-            <td width="50%">
-                <b>Receiver's Signature:</b><br/><br/><br/>
-                Name: _____________________<br/>
-                Date: _____________________
-            </td>
-            <td width="50%">
-                <b>Dispatched By:</b><br/><br/><br/>
-                Name: _____________________<br/>
-                Date: _____________________
-            </td>
-        </tr>
-    </table>
-</div>
+        <td width="50%">
 
-<div class="section">
-    <small><i>This is a computer-generated document. No signature required for electronic copies.</i></small>
-</div>
+            Delivery Note No :
+
+            <span class="dotted"
+                  th:text="${gdnNumber}">
+</span>
+
+        </td>
+
+        <td width="50%">
+
+            Date :
+
+            <span class="dotted"
+                  th:text="${gdnDate}">
+</span>
+
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td colspan="2">
+
+            Dispatch From :
+
+            <span class="dotted"
+                  style="min-width:500px"
+                  th:text="${dispatchFrom}">
+</span>
+
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td colspan="2">
+
+            Shipping Address :
+
+            <span class="dotted"
+                  style="min-width:500px"
+                  th:text="${shippingAddress}">
+</span>
+
+        </td>
+
+    </tr>
+
+</table>
+
+<br/>
+
+<table class="main">
+
+    <tr>
+
+        <td width="25%">
+
+            Delivery Method :
+
+            <span class="dotted"
+                  th:text="${deliveryMethod}">
+</span>
+
+        </td>
+
+        <td width="25%">
+
+            Vehicle No :
+
+            <span class="dotted"
+                  th:text="${vehicleNo}">
+</span>
+
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td>
+
+            Transport Name :
+
+            <span class="dotted"
+                  th:text="${transportName}">
+</span>
+
+        </td>
+
+        <td>
+
+            Driver Name :
+
+            <span class="dotted"
+                  th:text="${driverName}">
+</span>
+
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td>
+
+            Mobile No :
+
+            <span class="dotted"
+                  th:text="${driverMobile}">
+</span>
+
+        </td>
+
+        <td></td>
+
+    </tr>
+
+</table>
+
+<br/>
+
+<table class="main">
+
+    <tr>
+
+        <td width="50%">
+
+            Total No. of Package :
+
+            <span class="dotted"
+                  th:text="${totalPackages}">
+</span>
+
+        </td>
+
+        <td width="50%">
+
+            Total Weight :
+
+            <span class="dotted"
+                  th:text="${totalWeight}">
+</span>
+
+        </td>
+
+    </tr>
+
+</table>
+
+<br/>
+
+<table class="items">
+
+    <tr>
+
+        <th width="8%">SrNo</th>
+
+        <th width="25%">
+            Unit Type<br/>
+            (Carton, Place etc)
+        </th>
+
+        <th>
+            Item Description
+        </th>
+
+        <th width="20%">
+            No of Units Dispatch
+        </th>
+
+    </tr>
+
+    <tr th:each="item : ${items}">
+
+        <td class="center"
+            th:text="${item['srNo']}">
+        </td>
+
+        <td class="center"
+            th:text="${item['unitType']}">
+        </td>
+
+        <td
+                th:text="${item['description']}">
+        </td>
+
+        <td class="center"
+            th:text="${item['units']}">
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td colspan="4" class="items-bottom"></td>
+
+    </tr>
+
+</table>
+
+<br/>
+
+<table class="main">
+
+    <tr>
+
+        <td>
+
+            Remark :
+
+            <span class="dotted"
+                  style="min-width:500px"
+                  th:text="${remark}">
+</span>
+
+        </td>
+
+    </tr>
+
+</table>
+
+<br/>
+
+<table class="main">
+
+    <tr>
+
+        <td width="50%">
+
+            Name of Person Receiving :
+
+            <span class="dotted"></span>
+
+            <br/><br/>
+
+            Name of Person Delivering :
+
+            <span class="dotted"></span>
+
+        </td>
+
+        <td width="50%">
+
+            Signature of Person Receiving :
+
+            <span class="dotted"></span>
+
+            <br/><br/>
+
+            Signature of Person Delivering :
+
+            <span class="dotted"></span>
+
+        </td>
+
+    </tr>
+
+</table>
 
 </body>
+
 </html>

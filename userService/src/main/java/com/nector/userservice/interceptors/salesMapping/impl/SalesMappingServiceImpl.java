@@ -70,7 +70,7 @@ public class SalesMappingServiceImpl implements SalesMappingService {
         SalespersonDistributorMapping savedMapping = salesMappingRepository.save(mapping);
         
         // Create new ledger account
-        LedgerAccount ledgerAccount = createLedgerAccount(request.getCompanyId(), request.getDistributorId(), distributor.getName(), createdBy, request.getSalespersonId());
+        LedgerAccount ledgerAccount = createLedgerAccount(request.getCompanyId(), request.getDistributorId(), distributor.getFirstName(), createdBy, request.getSalespersonId());
         
         log.info("Mapping created successfully with ID: {}", savedMapping.getId());
         return buildResponseDTO(savedMapping, salesperson, distributor, ledgerAccount);
@@ -152,7 +152,7 @@ public class SalesMappingServiceImpl implements SalesMappingService {
         dto.setSalespersonId(mapping.getSalespersonId());
         dto.setSalespersonName(salesperson != null ? salesperson.getFirstName() + " " + salesperson.getLastName() : "Unknown");
         dto.setDistributorId(mapping.getDistributorId());
-        dto.setDistributorName(distributor != null ? distributor.getName() : "Unknown");
+        dto.setDistributorName(distributor != null ? distributor.getFirstName() : "Unknown");
         dto.setCompanyId(mapping.getCompanyId());
         dto.setStatus(mapping.getStatus());
         dto.setLedgerAccountId(ledgerAccount != null ? ledgerAccount.getId() : null);

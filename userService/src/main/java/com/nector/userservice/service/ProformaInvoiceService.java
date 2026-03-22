@@ -168,7 +168,7 @@ public class ProformaInvoiceService {
 
         if (cart.getDistributorId() != null) {
             distributorRepository.findById(cart.getDistributorId())
-                    .ifPresent(distributor -> piEntity.setDistributorName(distributor.getName()));
+                    .ifPresent(distributor -> piEntity.setDistributorName(distributor.getFirstName()));
         }
 
         // Calculate total amount
@@ -200,11 +200,11 @@ public class ProformaInvoiceService {
 
         // Buyer details from distributor
         var distributor = distributorRepository.findById(cart.getDistributorId()).orElse(null);
-        log.info("Distributor found for ID {}: {}", cart.getDistributorId(), distributor != null ? distributor.getName() : "NOT FOUND");
+        log.info("Distributor found for ID {}: {}", cart.getDistributorId(), distributor != null ? distributor.getFirstName() : "NOT FOUND");
         if (distributor != null) {
             // Bill To details
             ProformaInvoice.BuyerDetails billTo = new ProformaInvoice.BuyerDetails();
-            billTo.setName(distributor.getName());
+            billTo.setName(distributor.getFirstName());
             billTo.setAddress(distributor.getAddress());
             billTo.setGstin(distributor.getGstNumber());
             billTo.setState("Bihar"); // You may want to add state to distributor entity
@@ -213,7 +213,7 @@ public class ProformaInvoiceService {
 
             // Ship To details (same as bill to for now, using cart address if available)
             ProformaInvoice.BuyerDetails shipTo = new ProformaInvoice.BuyerDetails();
-            shipTo.setName(distributor.getName());
+            shipTo.setName(distributor.getFirstName());
             shipTo.setAddress(cart.getAddress() != null ? cart.getAddress() : distributor.getAddress());
             shipTo.setGstin(distributor.getGstNumber());
             shipTo.setState("Bihar"); // You may want to add state to distributor entity

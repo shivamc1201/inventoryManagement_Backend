@@ -10,8 +10,14 @@ import lombok.Data;
 public class DistributorRequestDTO {
 
     @NotBlank
-    @Size(max = 100)
-    private String name; // Distributor Name
+    @Size(max = 50)
+    @Schema(description = "First name", example = "John")
+    private String firstName;
+
+    @NotBlank
+    @Size(max = 50)
+    @Schema(description = "Last name", example = "Doe")
+    private String lastName;
 
     @NotBlank
     @Size(max = 100)

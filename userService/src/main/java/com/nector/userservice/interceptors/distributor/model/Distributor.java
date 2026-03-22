@@ -19,8 +19,11 @@ public class Distributor {
     @Column(nullable = false, length = 100)
     private String password;
     
-    @Column(nullable = false, length = 100)
-    private String name;
+    @Column(nullable = false, length = 50)
+    private String firstName;
+    
+    @Column(nullable = false, length = 50)
+    private String lastName;
     
     @Column(nullable = false, length = 100)
     private String assignedPerson;

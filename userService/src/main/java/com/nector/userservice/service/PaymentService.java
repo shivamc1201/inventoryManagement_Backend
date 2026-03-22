@@ -235,7 +235,7 @@ public class PaymentService {
         // Populate distributor names
         payments.forEach(payment -> {
             distributorRepository.findById(payment.getDistributorId())
-                    .ifPresent(distributor -> payment.setDistributorName(distributor.getName()));
+                    .ifPresent(distributor -> payment.setDistributorName(distributor.getFirstName()));
         });
 
         return payments;

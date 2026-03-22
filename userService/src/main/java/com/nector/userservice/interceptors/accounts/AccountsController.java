@@ -134,20 +134,40 @@ public class AccountsController {
         return ResponseEntity.ok(pendingPayments);
     }
 
+    private void populateDistributorNames(List<PaymentApproval> payments) {
+        payments.forEach(payment -> {
+            if (payment.getDistributorName() == null) {
+                paymentService.getDistributorRepository().findById(payment.getDistributorId())
+                        .ifPresent(distributor -> payment.setDistributorName(distributor.getName()));
+            }
+        });
+    }
+
     @GetMapping("/payments/{distributorId}")
-    @Operation(summary = "Get payments by distributor ID and status", description = "Retrieves payments for a distributor with PAYMENT_ADDED status")
+    @Operation(summary = "Get payments by distributor ID and status", description = "Retrieves payments for a distributor with specified status including all payment details")
     @ApiResponse(responseCode = "200", description = "Payments retrieved successfully")
     public ResponseEntity<List<PaymentStatusResponse>> getPaymentsByDistributorAndStatus(
             @PathVariable Long distributorId,
             @RequestParam(defaultValue = "PAYMENT_ADDED") String status) {
 
         List<PaymentApproval> payments = paymentService.getPaymentsByDistributorAndStatus(distributorId, status);
+        
+        // Populate distributor names
+        populateDistributorNames(payments);
 
         List<PaymentStatusResponse> response = payments.stream()
                 .map(payment -> {
                     PaymentStatusResponse dto = new PaymentStatusResponse();
                     dto.setPaymentId(payment.getId());
                     dto.setStatus(payment.getStatus());
+                    dto.setDistributorId(payment.getDistributorId());
+                    dto.setDistributorName(payment.getDistributorName());
+                    dto.setAmount(payment.getAmount());
+                    dto.setTransactionType(payment.getTransactionType());
+                    dto.setDescription(payment.getDescription());
+                    dto.setCreatedAt(payment.getCreatedAt());
+                    dto.setApprovedAt(payment.getApprovedAt());
+                    dto.setApprovedBy(payment.getApprovedBy());
                     return dto;
                 })
                 .toList();

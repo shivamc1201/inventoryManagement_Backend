@@ -54,13 +54,13 @@ public class FinishedProduct {
     private BigDecimal price;
     
     @Column(nullable = false)
-    private Integer quantity = 0;
+    private Integer quantity;
     
     @Column(nullable = false, name = "minimum_threshold")
-    private Integer minimumThreshold = 0;
+    private Integer minimumThreshold;
     
     @Column(nullable = false)
-    private Boolean active = true;
+    private Boolean active;
     
     @CreationTimestamp
     @Column(updatable = false)

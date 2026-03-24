@@ -13,6 +13,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -158,6 +160,15 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         response.setSku(product.getSku());
         response.setPrice(product.getPrice());
         response.setQuantity(product.getQuantity());
+        
+        // Calculate per piece rate (price / quantity)
+        BigDecimal perPieceRate = BigDecimal.ZERO;
+        if (product.getQuantity() != null && product.getQuantity() > 0 && product.getPrice() != null) {
+            perPieceRate = product.getPrice()
+                .divide(BigDecimal.valueOf(product.getQuantity()), 2, RoundingMode.HALF_UP);
+        }
+        response.setPerPieceRate(perPieceRate);
+        
         response.setMinimumThreshold(product.getMinimumThreshold());
         response.setActive(product.getActive());
         

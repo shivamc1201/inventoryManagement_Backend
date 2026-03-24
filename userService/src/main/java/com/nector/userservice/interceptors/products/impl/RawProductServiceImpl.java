@@ -13,6 +13,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,6 +38,7 @@ public class RawProductServiceImpl implements RawProductService {
         product.setName(request.getName());
         product.setMaterialCode(request.getMaterialCode());
         product.setUnit(request.getUnit());
+        product.setPrice(request.getPrice());
         product.setQuantity(request.getQuantity());
         product.setMinimumThreshold(request.getMinimumThreshold());
         product.setVendorId(request.getVendorId());
@@ -60,6 +63,7 @@ public class RawProductServiceImpl implements RawProductService {
         
         product.setName(request.getName());
         product.setUnit(request.getUnit());
+        product.setPrice(request.getPrice());
         product.setQuantity(request.getQuantity());
         product.setMinimumThreshold(request.getMinimumThreshold());
         product.setVendorId(request.getVendorId());
@@ -165,6 +169,16 @@ public class RawProductServiceImpl implements RawProductService {
         response.setMaterialCode(product.getMaterialCode());
         response.setUnit(product.getUnit());
         response.setQuantity(product.getQuantity());
+        response.setPrice(product.getPrice());
+        
+        // Calculate per item price (price / quantity)
+        BigDecimal perItemPrice = BigDecimal.ZERO;
+        if (product.getQuantity() != null && product.getQuantity() > 0 && product.getPrice() != null) {
+            perItemPrice = product.getPrice()
+                .divide(BigDecimal.valueOf(product.getQuantity()), 2, RoundingMode.HALF_UP);
+        }
+        response.setPerItemPrice(perItemPrice);
+        
         response.setMinimumThreshold(product.getMinimumThreshold());
         response.setActive(product.getActive());
         response.setLowStock(product.getQuantity() <= product.getMinimumThreshold());

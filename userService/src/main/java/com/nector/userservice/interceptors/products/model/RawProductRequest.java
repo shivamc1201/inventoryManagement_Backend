@@ -4,6 +4,8 @@ import com.nector.userservice.model.RawProduct;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Data
 public class RawProductRequest {
     
@@ -17,6 +19,11 @@ public class RawProductRequest {
     
     @NotNull(message = "Unit is required")
     private RawProduct.Unit unit;
+    
+    @NotNull(message = "Price is required")
+    @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
+    @Digits(integer = 8, fraction = 2, message = "Price must have at most 8 integer digits and 2 decimal places")
+    private BigDecimal price;
     
     @NotNull(message = "Quantity is required")
     @Min(value = 0, message = "Quantity must be non-negative")

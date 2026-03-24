@@ -13,6 +13,7 @@ public class FinishedProductResponse {
     private String sku;
     private BigDecimal price;
     private Integer quantity;
+    private BigDecimal perPieceRate;
     private Integer minimumThreshold;
     private Boolean active;
     private Boolean lowStock;

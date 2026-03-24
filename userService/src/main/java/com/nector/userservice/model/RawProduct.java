@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -51,14 +52,17 @@ public class RawProduct {
     @Column(length = 20)
     private String unitStatus;
     
-    @Column(nullable = false)
-    private Integer quantity = 0;
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal price;
     
     @Column(nullable = false)
-    private Integer minimumThreshold = 0;
+    private Integer quantity;
     
     @Column(nullable = false)
-    private Boolean active = true;
+    private Integer minimumThreshold;
+    
+    @Column(nullable = false)
+    private Boolean active;
     
     @CreationTimestamp
     @Column(updatable = false)

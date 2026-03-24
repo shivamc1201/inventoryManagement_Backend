@@ -61,8 +61,8 @@ public class RawProduct {
     @Column(nullable = false)
     private Integer minimumThreshold;
     
-    @Column(nullable = false)
-    private Boolean active;
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private Boolean active = true;
     
     @CreationTimestamp
     @Column(updatable = false)

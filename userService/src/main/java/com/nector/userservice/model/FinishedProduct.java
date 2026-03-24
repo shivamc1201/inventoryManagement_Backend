@@ -59,8 +59,8 @@ public class FinishedProduct {
     @Column(nullable = false, name = "minimum_threshold")
     private Integer minimumThreshold;
     
-    @Column(nullable = false)
-    private Boolean active;
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private Boolean active = true;
     
     @CreationTimestamp
     @Column(updatable = false)

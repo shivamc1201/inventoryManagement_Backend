@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final SalesPersonService salesPersonService;
 
     public List<OrderResponse> getAllOrders() {
         List<OrderWithSalesPerson> orders = orderRepository.findAll();
@@ -34,6 +35,28 @@ public class OrderService {
     public List<OrderResponse> getOrdersWithFilters(OrderStatus status, Long salespersonId,
                                                    Long distributorId, LocalDate dateFrom, LocalDate dateTo) {
         List<OrderWithSalesPerson> orders = orderRepository.findWithFilters(status, salespersonId, distributorId, dateFrom, dateTo);
+        return orders.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<OrderResponse> getOrdersByHierarchy(Long salespersonId, OrderStatus status, 
+                                                   LocalDate dateFrom, LocalDate dateTo) {
+        log.info("Getting orders for salesperson ID {} and their subordinates", salespersonId);
+        
+        // Get all subordinate IDs
+        List<Long> subordinateIds = salesPersonService.getSubordinateIds(salespersonId);
+        
+        // Include the salesperson themselves
+        List<Long> allSalespersonIds = new java.util.ArrayList<>();
+        allSalespersonIds.add(salespersonId);
+        allSalespersonIds.addAll(subordinateIds);
+        
+        log.info("Getting orders for salesperson IDs: {}", allSalespersonIds);
+        
+        // Get orders for all these salespersons
+        List<OrderWithSalesPerson> orders = orderRepository.findBySalespersonIds(allSalespersonIds, status, dateFrom, dateTo);
+        
         return orders.stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
@@ -53,12 +76,20 @@ public class OrderService {
     private OrderResponse convertToResponse(OrderWithSalesPerson order) {
         OrderResponse response = new OrderResponse();
         response.setId(order.getId());
+        response.setUserId(order.getCreatedBy());
         response.setDistributorId(order.getDistributorId());
         response.setAddress(order.getAddress());
         response.setStatus(order.getStatus());
         response.setCreatedAt(order.getCreatedAt());
         response.setUpdatedAt(order.getUpdatedAt());
         response.setCreatedBy(order.getCreatedBy());
+        
+        // Additional fields from OrderWithSalesPerson
+        response.setSalespersonId(order.getSalespersonId());
+        response.setSalespersonName(order.getSalespersonName());
+        response.setDistributorName(order.getDistributorName());
+        response.setTotalCartAmount(order.getTotalCartAmount());
+        
         return response;
     }
 }

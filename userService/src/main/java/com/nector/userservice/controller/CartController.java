@@ -4,6 +4,7 @@ import com.nector.userservice.dto.cart.AddToCartRequest;
 import com.nector.userservice.dto.cart.CartResponse;
 
 import com.nector.userservice.dto.cart.PlaceOrderRequest;
+import com.nector.userservice.model.Cart;
 import com.nector.userservice.service.CartService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -174,6 +175,28 @@ public class CartController {
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        }
+    }
+
+    @GetMapping("/hierarchy")
+    public ResponseEntity<?> getCartsBySalespersonHierarchy(
+            @RequestParam Long managerSalespersonId,
+            @RequestParam String status) {
+        log.info("Fetching carts for salesperson hierarchy under manager {} with status {}", managerSalespersonId, status);
+        try {
+            Cart.CartStatus cartStatus = Cart.CartStatus.valueOf(status.toUpperCase());
+            List<CartResponse> response = cartService.getCartsBySalespersonHierarchy(managerSalespersonId, cartStatus);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid status parameter: {}", status);
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Invalid status. Valid values are: " + java.util.Arrays.toString(Cart.CartStatus.values()));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        } catch (Exception e) {
+            log.error("Error fetching carts for hierarchy: {}", e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 

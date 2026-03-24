@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -140,5 +142,18 @@ public class SalesHierarchyValidationService {
                 }
             }
         }
+    }
+
+    public List<Long> getAllSubordinateIds(Long managerSalespersonId) {
+        List<Long> subordinateIds = new ArrayList<>();
+        List<SalesPerson> directSubordinates = salesPersonRepository.findActiveByManagerId(managerSalespersonId);
+        
+        for (SalesPerson subordinate : directSubordinates) {
+            subordinateIds.add(subordinate.getId());
+            // Recursively get subordinates of this subordinate
+            subordinateIds.addAll(getAllSubordinateIds(subordinate.getId()));
+        }
+        
+        return subordinateIds;
     }
 }

@@ -4,7 +4,12 @@ public enum OrderStatus {
     PENDING("pending"),
     APPROVED("approved"),
     COMPLETED("completed"),
-    REJECTED("rejected");
+    REJECTED("rejected"),
+    PLACED("placed"),
+    PAYMENT_APPROVED("payment_approved"),
+    GDN_GENERATED("gdn_generated"),
+    ACTIVE("active"),
+    DISMISSED("dismissed");
 
     private final String value;
 

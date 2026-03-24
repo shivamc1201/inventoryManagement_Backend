@@ -19,6 +19,7 @@ import com.nector.userservice.interceptors.salesMapping.repository.SalesMappingR
 import com.nector.userservice.dto.invoice.ProformaInvoice;
 import com.nector.userservice.repository.SalesPersonRepository;
 import com.nector.userservice.model.SalesPerson;
+import com.nector.userservice.service.SalesHierarchyValidationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -42,6 +43,7 @@ public class CartService {
     private final DistributorRepository distributorRepository;
     private final UserRepository userRepository;
     private final SalesPersonRepository salesPersonRepository;
+    private final SalesHierarchyValidationService salesHierarchyValidationService;
 
 
     // TODO the dispatch team wil, check the real  quantity of the orders  while checking GDN
@@ -186,6 +188,22 @@ public class CartService {
         Cart newCart = new Cart();
         newCart.setDistributorId(distributorId);
         newCart.setStatus(Cart.CartStatus.ACTIVE);
+
+        // Assign salesperson from distributor and validate against sales_person table
+        distributorRepository.findById(distributorId).ifPresent(distributor -> {
+            if (distributor.getSalespersonId() != null) {
+                // Validate that salesperson exists in sales_person table
+                SalesPerson salesperson = salesPersonRepository.findById(distributor.getSalespersonId())
+                        .orElseThrow(() -> new RuntimeException("Salesperson with ID " + distributor.getSalespersonId() + " not found in sales_person table"));
+                
+                newCart.setSalespersonId(salesperson.getId());
+                newCart.setSalespersonName(salesperson.getName());
+                newCart.setDistributorName(distributor.getFirstName());
+                
+                log.info("Assigned salesperson {} (ID: {}) to cart for distributor {}", 
+                        salesperson.getName(), salesperson.getId(), distributorId);
+            }
+        });
 
         return cartRepository.save(newCart);
     }
@@ -543,5 +561,23 @@ public class CartService {
         }
 
         return response;
+    }
+
+    @Transactional(readOnly = true)
+    public List<CartResponse> getCartsBySalespersonHierarchy(Long managerSalespersonId, Cart.CartStatus status) {
+        log.info("Fetching carts for salesperson hierarchy under manager ID: {} with status: {}", managerSalespersonId, status);
+        
+        // Get all salespersons under this manager (including the manager themselves)
+        List<Long> salespersonIds = salesHierarchyValidationService.getAllSubordinateIds(managerSalespersonId);
+        salespersonIds.add(managerSalespersonId); // Include the manager
+        
+        log.info("Found {} salespersons in hierarchy for manager ID: {}", salespersonIds.size(), managerSalespersonId);
+        
+        // Get carts for these salespersons with the specified status
+        List<Cart> carts = cartRepository.findBySalespersonIdInAndStatus(salespersonIds, status);
+        
+        return carts.stream()
+                .map(this::mapToResponseWithDenormalizedData)
+                .collect(Collectors.toList());
     }
 }

@@ -216,4 +216,31 @@ public class SalesHierarchyController {
         OrderSummaryResponse summary = orderService.getOrderSummary(status);
         return ResponseEntity.ok(summary);
     }
+
+    @Operation(summary = "Get orders by sales hierarchy", description = "Get orders for a salesperson and all their subordinates in the hierarchy")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved"),
+        @ApiResponse(responseCode = "404", description = "Salesperson not found"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "500", description = "Server error")
+    })
+    @GetMapping("/orders/hierarchy/{salespersonId}")
+    public ResponseEntity<List<OrderResponse>> getOrdersByHierarchy(
+            @Parameter(description = "Salesperson ID to get hierarchy orders for") @PathVariable Long salespersonId,
+            
+            @Parameter(description = "Filter by order status") 
+            @RequestParam(required = false) OrderStatus status,
+            
+            @Parameter(description = "Start date (ISO format)") 
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            
+            @Parameter(description = "End date (ISO format)") 
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+        
+        log.info("Getting orders for salesperson ID {} and their subordinates - status: {}, dateFrom: {}, dateTo: {}", 
+                salespersonId, status, dateFrom, dateTo);
+        
+        List<OrderResponse> orders = orderService.getOrdersByHierarchy(salespersonId, status, dateFrom, dateTo);
+        return ResponseEntity.ok(orders);
+    }
 }

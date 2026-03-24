@@ -43,6 +43,9 @@ public interface SalesPersonRepository extends JpaRepository<SalesPerson, Long> 
     @Query("SELECT sp FROM SalesPerson sp WHERE sp.active = true AND sp.managerId IS NULL")
     List<SalesPerson> findActiveTopLevelManagers();
 
+    @Query("SELECT sp FROM SalesPerson sp WHERE sp.active = true AND sp.managerId = :managerId")
+    List<SalesPerson> findActiveByManagerId(@Param("managerId") Long managerId);
+
     boolean existsByPhone(String phone);
 
     Optional<SalesPerson> findByPhone(String phone);

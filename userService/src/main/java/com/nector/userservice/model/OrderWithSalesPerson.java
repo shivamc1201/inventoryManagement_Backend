@@ -44,4 +44,13 @@ public class OrderWithSalesPerson {
 
     @Column(name = "created_by")
     private Long createdBy;
+
+    @Column(name = "salesperson_name")
+    private String salespersonName;
+
+    @Column(name = "distributor_name")
+    private String distributorName;
+
+    @Column(name = "total_cart_amount")
+    private BigDecimal totalCartAmount;
 }

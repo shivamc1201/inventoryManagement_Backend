@@ -257,6 +257,37 @@ public class SalesPersonService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<Long> getSubordinateIds(Long salespersonId) {
+        log.info("Getting subordinate IDs for salesperson ID: {}", salespersonId);
+        
+        // Get the salesperson
+        SalesPerson salesPerson = salesPersonRepository.findById(salespersonId)
+                .orElseThrow(() -> new BusinessException("Salesperson not found"));
+
+        if (!salesPerson.getActive()) {
+            throw new BusinessException("Salesperson not found");
+        }
+
+        // Get all subordinates recursively
+        List<Long> subordinateIds = new java.util.ArrayList<>();
+        getSubordinateIdsRecursive(salespersonId, subordinateIds);
+        
+        log.info("Found {} subordinates for salesperson ID: {}", subordinateIds.size(), salespersonId);
+        return subordinateIds;
+    }
+
+    private void getSubordinateIdsRecursive(Long managerId, List<Long> subordinateIds) {
+        // Get direct subordinates
+        List<SalesPerson> directSubordinates = salesPersonRepository.findActiveByManagerId(managerId);
+        
+        for (SalesPerson subordinate : directSubordinates) {
+            subordinateIds.add(subordinate.getId());
+            // Recursively get subordinates of this subordinate
+            getSubordinateIdsRecursive(subordinate.getId(), subordinateIds);
+        }
+    }
+
     private void propagateChangesToOrders(SalesPerson salesPerson) {
         log.info("Propagating salesperson changes to orders for ID: {}", salesPerson.getId());
     }

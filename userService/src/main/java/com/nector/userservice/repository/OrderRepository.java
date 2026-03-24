@@ -44,4 +44,16 @@ public interface OrderRepository extends JpaRepository<OrderWithSalesPerson, Lon
 
     @Query("SELECT o.status, COUNT(o) FROM OrderWithSalesPerson o GROUP BY o.status")
     List<Object[]> getSummaryByStatus();
+
+    @Query("SELECT o FROM OrderWithSalesPerson o WHERE " +
+           "o.salespersonId IN :salespersonIds AND " +
+           "(:status IS NULL OR o.status = :status) AND " +
+           "(:dateFrom IS NULL OR o.createdAt >= :dateFrom) AND " +
+           "(:dateTo IS NULL OR o.createdAt <= :dateTo)")
+    List<OrderWithSalesPerson> findBySalespersonIds(
+            @Param("salespersonIds") List<Long> salespersonIds,
+            @Param("status") OrderStatus status,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
 }

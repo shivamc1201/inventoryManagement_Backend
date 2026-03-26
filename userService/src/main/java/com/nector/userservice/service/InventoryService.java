@@ -172,7 +172,7 @@ public class InventoryService {
         
         log.info("Stock updated successfully for item ID: {}", itemId);
     }
-    
+
     @Transactional(readOnly = true)
     public Integer getAvailableStock(Long itemId) {
         log.info("Getting available stock for item ID: {}", itemId);
@@ -180,6 +180,16 @@ public class InventoryService {
         Item item = itemRepository.findById(itemId)
             .orElseThrow(() -> new ItemNotFoundException(itemId));
         
+        return item.getQuantity();
+    }
+
+    @Transactional(readOnly = true)
+    public Integer getAvailableStockBySku(String sku) {
+        log.info("Getting available stock for item SKU: {}", sku);
+
+        Item item = itemRepository.findBySku(sku)
+                .orElseThrow(() -> new RuntimeException("Item not found with SKU: " + sku));
+
         return item.getQuantity();
     }
     

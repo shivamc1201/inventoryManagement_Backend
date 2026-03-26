@@ -349,7 +349,8 @@ public class GdnService {
     
     private InventoryVerificationResponse.InventoryItem verifyItemInventory(CartItem cartItem) {
         InventoryVerificationResponse.InventoryItem item = new InventoryVerificationResponse.InventoryItem();
-        
+
+
         // Debug logging to identify the issue
         if (cartItem.getItem() == null) {
             log.error("Cart item has null product for cart item ID: {}", cartItem.getId());
@@ -370,9 +371,16 @@ public class GdnService {
         item.setItemName(cartItem.getItem().getName());
         item.setItemSku(cartItem.getItem().getSku());
         item.setOrderedQuantity(cartItem.getQuantity());
-        
-        // Get current stock from inventory service
-        Integer availableStock = inventoryService.getAvailableStock(itemId);
+
+        // Get current stock from inventory service using SKU instead of ID
+        Integer availableStock;
+        try {
+            availableStock = inventoryService.getAvailableStockBySku(cartItem.getItem().getSku());
+        } catch (Exception e) {
+            log.error("Failed to get stock by SKU: {}, falling back to ID lookup. Error: {}", cartItem.getItem().getSku(), e.getMessage());
+            // Fallback to ID-based lookup if SKU lookup fails
+            availableStock = inventoryService.getAvailableStock(itemId);
+        }
         item.setAvailableQuantity(availableStock);
         item.setSufficientStock(availableStock >= cartItem.getQuantity());
         
@@ -772,7 +780,7 @@ public class GdnService {
     public CartItemDto convertToCartItemDto(CartItem item) {
         CartItemDto dto = new CartItemDto();
         dto.setId(item.getId());
-        dto.setItemId(item.getItem().getId());
+        dto.setItemSku(item.getItem().getSku());
         dto.setItemName(item.getItem().getName());
         dto.setQuantity(item.getQuantity());
         dto.setPrice(item.getPriceAtTime());

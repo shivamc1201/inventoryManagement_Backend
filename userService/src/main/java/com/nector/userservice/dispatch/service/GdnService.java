@@ -385,14 +385,17 @@ public class GdnService {
         item.setItemSku(cartItem.getItem().getSku());
         item.setOrderedQuantity(cartItem.getQuantity());
 
-        // Get current stock from inventory service using SKU instead of ID
+        // Get current stock from inventory service using SKU only
         Integer availableStock;
         try {
             availableStock = inventoryService.getAvailableStockBySku(cartItem.getItem().getSku());
+            log.info("Successfully retrieved stock for SKU: {}, available quantity: {}", 
+                    cartItem.getItem().getSku(), availableStock);
         } catch (Exception e) {
-            log.error("Failed to get stock by SKU: {}, falling back to ID lookup. Error: {}", cartItem.getItem().getSku(), e.getMessage());
-            // Fallback to ID-based lookup if SKU lookup fails
-            availableStock = inventoryService.getAvailableStock(itemId);
+            log.error("Failed to get stock by SKU: {}. Item may not exist in inventory. Error: {}", 
+                     cartItem.getItem().getSku(), e.getMessage());
+            throw new RuntimeException("Item with SKU '" + cartItem.getItem().getSku() + 
+                                       "' not found in inventory. Please ensure the item exists before generating GDN.");
         }
         item.setAvailableQuantity(availableStock);
         item.setSufficientStock(availableStock >= cartItem.getQuantity());

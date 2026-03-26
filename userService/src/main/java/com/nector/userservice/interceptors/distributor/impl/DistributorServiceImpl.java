@@ -268,7 +268,7 @@ public class DistributorServiceImpl implements DistributorService {
                             .map(cartItem -> {
                                 CartItemResponse itemResponse = new CartItemResponse();
                                 itemResponse.setId(cartItem.getId());
-                                itemResponse.setItemId(cartItem.getItem().getId());
+                                itemResponse.setItemId(String.valueOf(cartItem.getItem().getId()));
                                 itemResponse.setItemName(cartItem.getItem().getName());
                                 itemResponse.setItemSku(cartItem.getItem().getSku());
                                 itemResponse.setQuantity(cartItem.getQuantity());

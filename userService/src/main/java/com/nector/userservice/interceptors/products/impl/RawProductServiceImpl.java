@@ -46,6 +46,7 @@ public class RawProductServiceImpl implements RawProductService {
         product.setTransportName(request.getTransportName());
         product.setDriverName(request.getDriverName());
         product.setDriverMobile(request.getDriverMobile());
+        product.setActive(true);
         
         RawProduct savedProduct = rawProductRepository.save(product);
         log.info("Raw product created successfully with ID: {}", savedProduct.getId());

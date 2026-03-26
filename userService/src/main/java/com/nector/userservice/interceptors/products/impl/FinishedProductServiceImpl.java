@@ -41,6 +41,7 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         product.setPrice(request.getPrice());
         product.setQuantity(request.getQuantity());
         product.setMinimumThreshold(request.getMinimumThreshold());
+        product.setActive(true);
         
         FinishedProduct savedProduct = finishedProductRepository.save(product);
         log.info("Finished product created successfully with ID: {}", savedProduct.getId());

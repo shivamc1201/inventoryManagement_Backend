@@ -192,6 +192,54 @@ public class InventoryService {
 
         return item.getQuantity();
     }
+
+    @Transactional
+    public void updateStockBySku(String sku, Integer quantityChange) {
+        log.info("Updating stock for item SKU: {} by: {}", sku, quantityChange);
+        
+        Item item = itemRepository.findBySku(sku)
+            .orElseThrow(() -> new RuntimeException("Item not found with SKU: " + sku));
+        
+        int newQuantity = item.getQuantity() + quantityChange;
+        if (newQuantity < 0) {
+            throw new InsufficientStockException(item.getSku(), Math.abs(quantityChange), item.getQuantity());
+        }
+        
+        item.setQuantity(newQuantity);
+        itemRepository.save(item);
+        
+        log.info("Stock updated successfully for item SKU: {}", sku);
+    }
+
+    @Transactional
+    public void reserveStockBySku(String sku, Integer quantity) {
+        log.info("Reserving stock for item SKU: {} quantity: {}", sku, quantity);
+        
+        Item item = itemRepository.findBySku(sku)
+            .orElseThrow(() -> new RuntimeException("Item not found with SKU: " + sku));
+        
+        if (item.getQuantity() < quantity) {
+            throw new InsufficientStockException(item.getSku(), quantity, item.getQuantity());
+        }
+        
+        item.setQuantity(item.getQuantity() - quantity);
+        itemRepository.save(item);
+        
+        log.info("Stock reserved successfully for item SKU: {}", sku);
+    }
+
+    @Transactional
+    public void releaseStockBySku(String sku, Integer quantity) {
+        log.info("Releasing stock for item SKU: {} quantity: {}", sku, quantity);
+        
+        Item item = itemRepository.findBySku(sku)
+            .orElseThrow(() -> new RuntimeException("Item not found with SKU: " + sku));
+        
+        item.setQuantity(item.getQuantity() + quantity);
+        itemRepository.save(item);
+        
+        log.info("Stock released successfully for item SKU: {}", sku);
+    }
     
     private ItemResponse mapToResponse(Item item) {
         ItemResponse response = new ItemResponse();

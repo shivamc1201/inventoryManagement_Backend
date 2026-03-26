@@ -182,8 +182,16 @@ public class GdnService {
             .map(item -> item.getWeightPerUnit().multiply(BigDecimal.valueOf(item.getNoOfUnitsDispatch())))
             .reduce(BigDecimal.ZERO, BigDecimal::add));
 
+        // Update stock using SKU-based lookup
         for (GdnGenerationRequest.InventoryVerificationItem verifiedItem : request.getVerifiedItems()) {
-            inventoryService.updateStock(verifiedItem.getItemId(), -verifiedItem.getDispatchQuantity());
+            // Get the cart item to find the SKU
+            CartItem cartItem = cartItemMap.get(verifiedItem.getItemId());
+            if (cartItem == null || cartItem.getItem() == null || cartItem.getItem().getSku() == null) {
+                log.error("Cannot find SKU for item ID: {}", verifiedItem.getItemId());
+                throw new RuntimeException("Cannot find SKU for item ID: " + verifiedItem.getItemId());
+            }
+            log.info("Updating stock for SKU: {}, quantity: {}", cartItem.getItem().getSku(), -verifiedItem.getDispatchQuantity());
+            inventoryService.updateStockBySku(cartItem.getItem().getSku(), -verifiedItem.getDispatchQuantity());
         }
 
         Gdn savedGdn = gdnRepository.save(gdn);
@@ -247,9 +255,14 @@ public class GdnService {
             .map(item -> item.getWeightPerUnit().multiply(BigDecimal.valueOf(item.getNoOfUnitsDispatch())))
             .reduce(BigDecimal.ZERO, BigDecimal::add));
 
-        // Update stock based on live cart quantities
+        // Update stock based on live cart quantities using SKU-based lookup
         for (CartItem cartItem : cart.getCartItems()) {
-            inventoryService.updateStock(cartItem.getItem().getId(), -cartItem.getQuantity());
+            if (cartItem.getItem() == null || cartItem.getItem().getSku() == null) {
+                log.error("Cart item ID {} has null item or SKU", cartItem.getId());
+                throw new RuntimeException("Cart item ID " + cartItem.getId() + " has null item or SKU");
+            }
+            log.info("Updating stock for SKU: {}, quantity: {}", cartItem.getItem().getSku(), -cartItem.getQuantity());
+            inventoryService.updateStockBySku(cartItem.getItem().getSku(), -cartItem.getQuantity());
         }
 
         Gdn savedGdn = gdnRepository.save(gdn);

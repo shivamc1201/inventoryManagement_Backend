@@ -402,7 +402,7 @@ public class CartService {
     private CartItemResponse mapCartItemToResponse(CartItem cartItem) {
         CartItemResponse response = new CartItemResponse();
         response.setId(cartItem.getId());
-        response.setItemId(cartItem.getItem().getId());
+        response.setItemId(cartItem.getItem().getSku());
         response.setItemName(cartItem.getItem().getName());
         response.setItemSku(cartItem.getItem().getSku());
         response.setQuantity(cartItem.getQuantity());

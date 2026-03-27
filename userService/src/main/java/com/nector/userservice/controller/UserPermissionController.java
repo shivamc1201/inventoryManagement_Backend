@@ -57,7 +57,7 @@ public class UserPermissionController {
     @ApiResponse(responseCode = "403", description = "Access forbidden")
     public ResponseEntity<Map<String, Object>> getUserPermissions(@PathVariable Long userId) {
         try {
-            Map<String, Object> userPermissions = rbacService.getUserPermissionsWithStatus(userId);
+            Map<String, Object> userPermissions = rbacService. getUserPermissionsWithStatus(userId);
             return ResponseEntity.ok(userPermissions);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)

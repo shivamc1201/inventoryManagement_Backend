@@ -18,6 +18,7 @@ import com.nector.userservice.model.Cart;
 import com.nector.userservice.model.User;
 import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.repository.ItemRepository;
+import com.nector.userservice.service.InvoiceService;
 import com.nector.userservice.service.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +48,7 @@ public class DistributorServiceImpl implements DistributorService {
     private final JwtService jwtService;
     private final UserRepository userRepository;
     private final CartRepository cartRepository;
+    private final InvoiceService invoiceService;
     
     @Override
     public DistributorResponseDTO createDistributor(DistributorRequestDTO request) {
@@ -179,6 +181,15 @@ public class DistributorServiceImpl implements DistributorService {
         
         OrderConfirmation savedConfirmation = orderConfirmationRepository.save(confirmation);
         log.info("Order confirmation saved with ID: {}", savedConfirmation.getId());
+        
+        // Generate and save invoice after order confirmation
+        try {
+            String invoiceResult = invoiceService.generateInvoice(savedConfirmation.getId());
+            log.info("Invoice generated successfully for order confirmation ID: {}", savedConfirmation.getId());
+        } catch (Exception e) {
+            log.error("Failed to generate invoice for order confirmation ID: {} - {}", savedConfirmation.getId(), e.getMessage());
+            // Don't throw here to avoid breaking order confirmation flow
+        }
         
         return mapToResponse(savedConfirmation);
     }

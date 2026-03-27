@@ -4,8 +4,8 @@ import com.nector.userservice.dto.inventory.ItemRequest;
 import com.nector.userservice.dto.inventory.ItemResponse;
 import com.nector.userservice.exception.InsufficientStockException;
 import com.nector.userservice.exception.ItemNotFoundException;
-import com.nector.userservice.model.Item;
-import com.nector.userservice.repository.ItemRepository;
+import com.nector.userservice.model.FinishedProduct;
+import com.nector.userservice.repository.FinishedProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -20,24 +20,24 @@ import java.util.stream.Collectors;
 @Slf4j
 public class InventoryService {
     
-    private final ItemRepository itemRepository;
+    private final FinishedProductRepository finishedProductRepository;
     
     @Transactional
     public ItemResponse createItem(ItemRequest request) {
          log.info("Creating item with SKU: {}", request.getSku());
         
-        if (itemRepository.existsBySku(request.getSku())) {
+        if (finishedProductRepository.existsBySku(request.getSku())) {
             throw new DataIntegrityViolationException("Item with SKU " + request.getSku() + " already exists");
         }
         
-        Item item = new Item();
-        item.setName(request.getName());
-        item.setDescription(request.getDescription());
-        item.setSku(request.getSku());
-        item.setPrice(request.getPrice());
-        item.setQuantity(request.getQuantity());
+        FinishedProduct finishedProduct = new FinishedProduct();
+        finishedProduct.setName(request.getName());
+        finishedProduct.setDescription(request.getDescription());
+        finishedProduct.setSku(request.getSku());
+        finishedProduct.setPrice(request.getPrice());
+        finishedProduct.setQuantity(request.getQuantity());
         
-        Item savedItem = itemRepository.save(item);
+        FinishedProduct savedItem = finishedProductRepository.save(finishedProduct);
         log.info("Item created successfully with ID: {}", savedItem.getId());
         
         return mapToResponse(savedItem);
@@ -47,15 +47,15 @@ public class InventoryService {
     public ItemResponse updateItem(Long id, ItemRequest request) {
         log.info("Updating item with ID: {}", id);
         
-        Item item = itemRepository.findById(id)
+        FinishedProduct finishedProduct = finishedProductRepository.findById(id)
             .orElseThrow(() -> new ItemNotFoundException(id));
         
-        item.setName(request.getName());
-        item.setDescription(request.getDescription());
-        item.setPrice(request.getPrice());
-        item.setQuantity(request.getQuantity());
+        finishedProduct.setName(request.getName());
+        finishedProduct.setDescription(request.getDescription());
+        finishedProduct.setPrice(request.getPrice());
+        finishedProduct.setQuantity(request.getQuantity());
         
-        Item updatedItem = itemRepository.save(item);
+        FinishedProduct updatedItem = finishedProductRepository.save(finishedProduct);
         log.info("Item updated successfully with ID: {}", updatedItem.getId());
         
         return mapToResponse(updatedItem);
@@ -65,11 +65,11 @@ public class InventoryService {
     public void deleteItem(Long id) {
         log.info("Soft deleting item with ID: {}", id);
         
-        Item item = itemRepository.findById(id)
+        FinishedProduct finishedProduct = finishedProductRepository.findById(id)
             .orElseThrow(() -> new ItemNotFoundException(id));
         
-        item.setActive(false);
-        itemRepository.save(item);
+        finishedProduct.setActive(false);
+        finishedProductRepository.save(finishedProduct);
         
         log.info("Item soft deleted successfully with ID: {}", id);
     }
@@ -78,17 +78,17 @@ public class InventoryService {
     public ItemResponse getItemById(Long id) {
         log.info("Fetching item with ID: {}", id);
         
-        Item item = itemRepository.findById(id)
+        FinishedProduct finishedProduct = finishedProductRepository.findById(id)
             .orElseThrow(() -> new ItemNotFoundException(id));
         
-        return mapToResponse(item);
+        return mapToResponse(finishedProduct);
     }
     
     @Transactional(readOnly = true)
     public List<ItemResponse> getAllItems() {
         log.info("Fetching all items");
         
-        return itemRepository.findAll().stream()
+        return finishedProductRepository.findAll().stream()
             .map(this::mapToResponse)
             .collect(Collectors.toList());
     }
@@ -97,11 +97,11 @@ public class InventoryService {
     public ItemResponse increaseStock(Long id, Integer quantity) {
         log.info("Increasing stock for item ID: {} by quantity: {}", id, quantity);
         
-        Item item = itemRepository.findActiveById(id)
+        FinishedProduct finishedProduct = finishedProductRepository.findActiveById(id)
             .orElseThrow(() -> new ItemNotFoundException(id));
         
-        item.setQuantity(item.getQuantity() + quantity);
-        Item updatedItem = itemRepository.save(item);
+        finishedProduct.setQuantity(finishedProduct.getQuantity() + quantity);
+        FinishedProduct updatedItem = finishedProductRepository.save(finishedProduct);
         
         log.info("Stock increased successfully for item ID: {}", id);
         return mapToResponse(updatedItem);
@@ -111,15 +111,15 @@ public class InventoryService {
     public ItemResponse decreaseStock(Long id, Integer quantity) {
         log.info("Decreasing stock for item ID: {} by quantity: {}", id, quantity);
         
-        Item item = itemRepository.findActiveById(id)
+        FinishedProduct finishedProduct = finishedProductRepository.findActiveById(id)
             .orElseThrow(() -> new ItemNotFoundException(id));
         
-        if (item.getQuantity() < quantity) {
-            throw new InsufficientStockException(item.getSku(), quantity, item.getQuantity());
+        if (finishedProduct.getQuantity() < quantity) {
+            throw new InsufficientStockException(finishedProduct.getSku(), quantity, finishedProduct.getQuantity());
         }
         
-        item.setQuantity(item.getQuantity() - quantity);
-        Item updatedItem = itemRepository.save(item);
+        finishedProduct.setQuantity(finishedProduct.getQuantity() - quantity);
+        FinishedProduct updatedItem = finishedProductRepository.save(finishedProduct);
         
         log.info("Stock decreased successfully for item ID: {}", id);
         return mapToResponse(updatedItem);
@@ -129,15 +129,15 @@ public class InventoryService {
     public void reserveStock(Long itemId, Integer quantity) {
         log.info("Reserving stock for item ID: {} quantity: {}", itemId, quantity);
         
-        Item item = itemRepository.findActiveById(itemId)
+        FinishedProduct finishedProduct = finishedProductRepository.findActiveById(itemId)
             .orElseThrow(() -> new ItemNotFoundException(itemId));
         
-        if (item.getQuantity() < quantity) {
-            throw new InsufficientStockException(item.getSku(), quantity, item.getQuantity());
+        if (finishedProduct.getQuantity() < quantity) {
+            throw new InsufficientStockException(finishedProduct.getSku(), quantity, finishedProduct.getQuantity());
         }
         
-        item.setQuantity(item.getQuantity() - quantity);
-        itemRepository.save(item);
+        finishedProduct.setQuantity(finishedProduct.getQuantity() - quantity);
+        finishedProductRepository.save(finishedProduct);
         
         log.info("Stock reserved successfully for item ID: {}", itemId);
     }
@@ -146,11 +146,11 @@ public class InventoryService {
     public void releaseStock(Long itemId, Integer quantity) {
         log.info("Releasing stock for item ID: {} quantity: {}", itemId, quantity);
         
-        Item item = itemRepository.findById(itemId)
+        FinishedProduct finishedProduct = finishedProductRepository.findById(itemId)
             .orElseThrow(() -> new ItemNotFoundException(itemId));
         
-        item.setQuantity(item.getQuantity() + quantity);
-        itemRepository.save(item);
+        finishedProduct.setQuantity(finishedProduct.getQuantity() + quantity);
+        finishedProductRepository.save(finishedProduct);
         
         log.info("Stock released successfully for item ID: {}", itemId);
     }
@@ -159,16 +159,16 @@ public class InventoryService {
     public void updateStock(Long itemId, Integer quantityChange) {
         log.info("Updating stock for item ID: {} by: {}", itemId, quantityChange);
         
-        Item item = itemRepository.findById(itemId)
+        FinishedProduct finishedProduct = finishedProductRepository.findById(itemId)
             .orElseThrow(() -> new ItemNotFoundException(itemId));
         
-        int newQuantity = item.getQuantity() + quantityChange;
+        int newQuantity = finishedProduct.getQuantity() + quantityChange;
         if (newQuantity < 0) {
-            throw new InsufficientStockException(item.getSku(), Math.abs(quantityChange), item.getQuantity());
+            throw new InsufficientStockException(finishedProduct.getSku(), Math.abs(quantityChange), finishedProduct.getQuantity());
         }
         
-        item.setQuantity(newQuantity);
-        itemRepository.save(item);
+        finishedProduct.setQuantity(newQuantity);
+        finishedProductRepository.save(finishedProduct);
         
         log.info("Stock updated successfully for item ID: {}", itemId);
     }
@@ -177,36 +177,36 @@ public class InventoryService {
     public Integer getAvailableStock(Long itemId) {
         log.info("Getting available stock for item ID: {}", itemId);
         
-        Item item = itemRepository.findById(itemId)
+        FinishedProduct finishedProduct = finishedProductRepository.findById(itemId)
             .orElseThrow(() -> new ItemNotFoundException(itemId));
         
-        return item.getQuantity();
+        return finishedProduct.getQuantity();
     }
 
     @Transactional(readOnly = true)
     public Integer getAvailableStockBySku(String sku) {
         log.info("Getting available stock for item SKU: {}", sku);
 
-        Item item = itemRepository.findBySku(sku)
+        FinishedProduct finishedProduct = finishedProductRepository.findBySku(sku)
                 .orElseThrow(() -> new RuntimeException("Item not found with SKU: " + sku));
 
-        return item.getQuantity();
+        return finishedProduct.getQuantity();
     }
 
     @Transactional
     public void updateStockBySku(String sku, Integer quantityChange) {
         log.info("Updating stock for item SKU: {} by: {}", sku, quantityChange);
         
-        Item item = itemRepository.findBySku(sku)
+        FinishedProduct finishedProduct = finishedProductRepository.findBySku(sku)
             .orElseThrow(() -> new RuntimeException("Item not found with SKU: " + sku));
         
-        int newQuantity = item.getQuantity() + quantityChange;
+        int newQuantity = finishedProduct.getQuantity() + quantityChange;
         if (newQuantity < 0) {
-            throw new InsufficientStockException(item.getSku(), Math.abs(quantityChange), item.getQuantity());
+            throw new InsufficientStockException(finishedProduct.getSku(), Math.abs(quantityChange), finishedProduct.getQuantity());
         }
         
-        item.setQuantity(newQuantity);
-        itemRepository.save(item);
+        finishedProduct.setQuantity(newQuantity);
+        finishedProductRepository.save(finishedProduct);
         
         log.info("Stock updated successfully for item SKU: {}", sku);
     }
@@ -215,15 +215,15 @@ public class InventoryService {
     public void reserveStockBySku(String sku, Integer quantity) {
         log.info("Reserving stock for item SKU: {} quantity: {}", sku, quantity);
         
-        Item item = itemRepository.findBySku(sku)
+        FinishedProduct finishedProduct = finishedProductRepository.findBySku(sku)
             .orElseThrow(() -> new RuntimeException("Item not found with SKU: " + sku));
         
-        if (item.getQuantity() < quantity) {
-            throw new InsufficientStockException(item.getSku(), quantity, item.getQuantity());
+        if (finishedProduct.getQuantity() < quantity) {
+            throw new InsufficientStockException(finishedProduct.getSku(), quantity, finishedProduct.getQuantity());
         }
         
-        item.setQuantity(item.getQuantity() - quantity);
-        itemRepository.save(item);
+        finishedProduct.setQuantity(finishedProduct.getQuantity() - quantity);
+        finishedProductRepository.save(finishedProduct);
         
         log.info("Stock reserved successfully for item SKU: {}", sku);
     }
@@ -232,26 +232,26 @@ public class InventoryService {
     public void releaseStockBySku(String sku, Integer quantity) {
         log.info("Releasing stock for item SKU: {} quantity: {}", sku, quantity);
         
-        Item item = itemRepository.findBySku(sku)
+        FinishedProduct finishedProduct = finishedProductRepository.findBySku(sku)
             .orElseThrow(() -> new RuntimeException("Item not found with SKU: " + sku));
         
-        item.setQuantity(item.getQuantity() + quantity);
-        itemRepository.save(item);
+        finishedProduct.setQuantity(finishedProduct.getQuantity() + quantity);
+        finishedProductRepository.save(finishedProduct);
         
         log.info("Stock released successfully for item SKU: {}", sku);
     }
     
-    private ItemResponse mapToResponse(Item item) {
+    private ItemResponse mapToResponse(FinishedProduct finishedProduct) {
         ItemResponse response = new ItemResponse();
-        response.setId(item.getId());
-        response.setName(item.getName());
-        response.setDescription(item.getDescription());
-        response.setSku(item.getSku());
-        response.setPrice(item.getPrice());
-        response.setQuantity(item.getQuantity());
-        response.setActive(item.getActive());
-        response.setCreatedAt(item.getCreatedAt());
-        response.setUpdatedAt(item.getUpdatedAt());
+        response.setId(finishedProduct.getId());
+        response.setName(finishedProduct.getName());
+        response.setDescription(finishedProduct.getDescription());
+        response.setSku(finishedProduct.getSku());
+        response.setPrice(finishedProduct.getPrice());
+        response.setQuantity(finishedProduct.getQuantity());
+        response.setActive(finishedProduct.getActive());
+        response.setCreatedAt(finishedProduct.getCreatedAt());
+        response.setUpdatedAt(finishedProduct.getUpdatedAt());
         return response;
     }
 }

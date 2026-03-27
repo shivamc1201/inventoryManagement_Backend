@@ -13,6 +13,8 @@ import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.repository.DistributorLedgerRepository;
 import com.nector.userservice.service.CartService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -130,7 +132,10 @@ public class DistributorController {
 
     @GetMapping("/order-confirmation/{orderId}")
     @Operation(summary = "Get order confirmation", description = "Get order confirmation details by order ID")
-    public ResponseEntity<ApiResponse<OrderConfirmationResponse>> getOrderConfirmation(@PathVariable Long orderId) {
+    public ResponseEntity<ApiResponse<OrderConfirmationResponse>> getOrderConfirmation(
+            @PathVariable Long orderId,
+            @Parameter(description = "Filter by confirmation status", schema = @Schema(allowableValues = {"RECEIVED_COMPLETE", "RECEIVED_PARTIAL", "DAMAGED", "REJECTED"}))
+            @RequestParam(required = false) OrderConfirmationRequest.ConfirmationStatus status) {
         try {
             OrderConfirmationResponse response = distributorService.getOrderConfirmation(orderId);
             return ResponseEntity.ok(new ApiResponse<>(true, "Order confirmation retrieved successfully", response));

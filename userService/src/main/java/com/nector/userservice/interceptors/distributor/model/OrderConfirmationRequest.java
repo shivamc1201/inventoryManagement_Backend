@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.distributor.model;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -15,8 +16,9 @@ public class OrderConfirmationRequest {
     
     @NotNull(message = "GDN number is required")
     private String gdnNumber;
-    
+
     @NotNull(message = "Confirmation status is required")
+    @Schema(description = "Confirmation status of the order", allowableValues = {"RECEIVED_COMPLETE", "RECEIVED_PARTIAL", "DAMAGED", "REJECTED"})
     private ConfirmationStatus status;
     
     @Min(value = 1, message = "Rating must be between 1 and 5")

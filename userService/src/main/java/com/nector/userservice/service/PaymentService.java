@@ -1,9 +1,6 @@
 package com.nector.userservice.service;
 
-import com.nector.userservice.dto.payment.JournalVoucherEntry;
-import com.nector.userservice.dto.payment.JournalVoucherRequest;
-import com.nector.userservice.dto.payment.PaymentRequest;
-import com.nector.userservice.dto.payment.PaymentResponse;
+import com.nector.userservice.dto.payment.*;
 import com.nector.userservice.model.PaymentApproval;
 import com.nector.userservice.model.ProformaInvoice;
 import com.nector.userservice.model.DistributorLedger;
@@ -60,18 +57,18 @@ public class PaymentService {
         return response;
     }
     
-    public com.nector.userservice.dto.payment.OrderApprovalResponse checkAndApproveOrder(Long orderId, Long distributorId) {
+    public OrderApprovalResponse checkAndApproveOrder(Long orderId, Long distributorId) {
         // Get cart and calculate total amount
         Cart cart = cartRepository.findById(orderId)
             .orElseThrow(() -> new RuntimeException("Cart not found: " + orderId));
         
-        java.math.BigDecimal orderAmount = cart.getCartItems().stream()
+        BigDecimal orderAmount = cart.getCartItems().stream()
             .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         
-        java.math.BigDecimal ledgerBalance = getDistributorBalance(distributorId);
+        BigDecimal ledgerBalance = getDistributorBalance(distributorId);
         
-        com.nector.userservice.dto.payment.OrderApprovalResponse response = new com.nector.userservice.dto.payment.OrderApprovalResponse();
+        OrderApprovalResponse response = new OrderApprovalResponse();
         response.setOrderId(orderId);
         response.setDistributorId(distributorId);
         response.setOrderAmount(orderAmount);

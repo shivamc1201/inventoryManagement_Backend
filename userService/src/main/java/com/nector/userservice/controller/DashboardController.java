@@ -1,8 +1,11 @@
 package com.nector.userservice.controller;
 
 import com.nector.userservice.dto.DashboardResponse;
+import com.nector.userservice.dto.OrderDashboardResponse;
 import com.nector.userservice.model.User;
+import com.nector.userservice.repository.OrderRepository;
 import com.nector.userservice.service.DashboardService;
+import com.nector.userservice.service.DistributorDashboardService;
 import com.nector.userservice.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -11,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Map;
 
 @RestController
@@ -21,6 +26,8 @@ public class DashboardController {
     
     private final DashboardService dashboardService;
     private final UserService userService;
+    private final OrderRepository orderRepository;
+    private final DistributorDashboardService distributorDashboardService;
     
     @GetMapping("/analytics")
     @Operation(summary = "Get dashboard analytics", description = "Retrieves dashboard analytics data for specified time period")
@@ -39,4 +46,57 @@ public class DashboardController {
         User user = userService.getUserByUsername(username);
         return ResponseEntity.ok(user);
     }
+    @GetMapping("/orders")
+    @Operation(summary = "Get order dashboard analytics", description = "Retrieves order analytics data for specified time period")
+    @ApiResponse(responseCode = "200", description = "Order analytics data retrieved successfully")
+    public ResponseEntity<OrderDashboardResponse> getOrderDashboard(
+            @RequestParam(defaultValue = "month") String period,
+            @RequestParam(required = false) Long salespersonId) {
+
+        LocalDate now = LocalDate.now();
+        LocalDate startDate = getStartDateForOrders(now, period);
+
+        Long totalOrders;
+        BigDecimal totalAmount;
+
+        if (salespersonId != null) {
+            // Filter by specific salesperson
+            totalOrders = orderRepository.countOrdersBySalespersonBetweenDates(salespersonId, startDate, now);
+            totalAmount = orderRepository.getTotalAmountBySalespersonBetweenDates(salespersonId, startDate, now);
+        } else {
+            // Get all orders
+            totalOrders = orderRepository.countOrdersBetweenDates(startDate, now);
+            totalAmount = orderRepository.getTotalAmountBetweenDates(startDate, now);
+        }
+
+        // Handle null values
+        totalOrders = totalOrders != null ? totalOrders : 0L;
+        totalAmount = totalAmount != null ? totalAmount : BigDecimal.ZERO;
+
+        OrderDashboardResponse response = new OrderDashboardResponse(totalOrders, totalAmount, period);
+        return ResponseEntity.ok(response);
+    }
+
+    private LocalDate getStartDateForOrders(LocalDate now, String period) {
+        return switch (period.toLowerCase()) {
+            case "day" -> now.minusDays(1);
+            case "week" -> now.minusWeeks(1);
+            case "month" -> now.minusMonths(1);
+            case "year" -> now.minusYears(1);
+            default -> now.minusMonths(1); // Default: month
+        };
+    }
+
+
+    @GetMapping("/distributor-orders")
+    @Operation(summary = "Get distributor order dashboard analytics", description = "Retrieves order analytics data for specified time period and distributor")
+    @ApiResponse(responseCode = "200", description = "Distributor order analytics data retrieved successfully")
+    public ResponseEntity<OrderDashboardResponse> getDistributorOrderDashboard(
+            @RequestParam(defaultValue = "month") String period,
+            @RequestParam(required = false) Long distributorId) {
+
+        OrderDashboardResponse response = distributorDashboardService.getDistributorOrderDashboardData(period, distributorId);
+        return ResponseEntity.ok(response);
+    }
+
 }

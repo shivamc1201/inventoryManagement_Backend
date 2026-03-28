@@ -87,6 +87,8 @@ public class CartService {
                     cartItem.setItem(finishedProduct);
                     cartItem.setQuantity(request.getQuantity());
                     cartItem.setPriceAtTime(finishedProduct.getPrice());
+                    log.info("Setting cart item price: FinishedProduct price={}, CartItem priceAtTime={}", 
+                            finishedProduct.getPrice(), cartItem.getPriceAtTime());
                     cartItemRepository.save(cartItem);
                     cart.getCartItems().add(cartItem);
                 }
@@ -391,6 +393,8 @@ public class CartService {
                 cartItem.setItem(finishedProduct);
                 cartItem.setQuantity(request.getQuantity());
                 cartItem.setPriceAtTime(finishedProduct.getPrice());
+                log.info("Setting cart item price (edit): FinishedProduct price={}, CartItem priceAtTime={}", 
+                        finishedProduct.getPrice(), cartItem.getPriceAtTime());
                 cartItemRepository.save(cartItem);
                 cart.getCartItems().add(cartItem);
             }
@@ -410,6 +414,10 @@ public class CartService {
         response.setQuantity(cartItem.getQuantity());
         response.setPriceAtTime(cartItem.getPriceAtTime());
         response.setTotalPrice(cartItem.getPriceAtTime().multiply(BigDecimal.valueOf(cartItem.getQuantity())));
+        
+        log.info("Mapping cart item to response: Item={}, DB priceAtTime={}, Response priceAtTime={}, TotalPrice={}", 
+                cartItem.getItem().getName(), cartItem.getPriceAtTime(), response.getPriceAtTime(), response.getTotalPrice());
+        
         return response;
     }
 

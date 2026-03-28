@@ -38,6 +38,9 @@ public class PaymentApproval {
     @Column(name = "approved_by")
     private Long approvedBy;
 
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
+
     @Transient
     private String distributorName;
 }

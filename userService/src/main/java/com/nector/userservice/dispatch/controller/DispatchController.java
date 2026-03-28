@@ -257,4 +257,39 @@ public class DispatchController {
         }
     }
 
+    @PostMapping("/carts/{orderId}/reject-gdn")
+    @Operation(summary = "Reject GDN for Order", description = "Reject order and set status to GDN_REJECTED")
+    @ApiResponse(responseCode = "200", description = "Order rejected successfully")
+    public ResponseEntity<?> rejectGdn(@PathVariable Long orderId, @RequestBody(required = false) GdnRejectionRequest rejectionRequest) {
+        log.info("Rejecting GDN for order: {}", orderId);
+        try {
+            Cart cart = cartRepository.findById(orderId)
+                    .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+            if (cart.getStatus() != Cart.CartStatus.PAYMENT_APPROVED) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Only orders with PAYMENT_APPROVED status can be rejected"));
+            }
+
+            // Update cart status to GDN_REJECTED
+            cart.setStatus(Cart.CartStatus.GDN_REJECTED);
+            cartRepository.save(cart);
+
+            String reason = rejectionRequest != null && rejectionRequest.getReason() != null 
+                    ? rejectionRequest.getReason() : "No reason provided";
+            log.info("Order {} rejected with reason: {}", orderId, reason);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Order rejected successfully",
+                    "orderId", orderId,
+                    "status", "GDN_REJECTED",
+                    "rejectionReason", reason
+            ));
+        } catch (Exception e) {
+            log.error("Error rejecting GDN for order {}: {}", orderId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
 }

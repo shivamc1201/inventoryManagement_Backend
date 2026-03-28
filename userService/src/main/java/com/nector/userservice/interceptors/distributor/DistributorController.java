@@ -216,5 +216,18 @@ public class DistributorController {
         }
     }
 
+    @GetMapping("/{distributorId}/address")
+    @Operation(summary = "Get distributor address", description = "Get the address of a distributor by distributor ID")
+    public ResponseEntity<ApiResponse<AddressResponse>> getDistributorAddress(@PathVariable Long distributorId) {
+        try {
+            AddressResponse response = distributorService.getDistributorAddress(distributorId);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Distributor address retrieved successfully", response));
+        } catch (Exception e) {
+            log.error("Error retrieving address for distributor {}: {}", distributorId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
+        }
+    }
+
 
 }

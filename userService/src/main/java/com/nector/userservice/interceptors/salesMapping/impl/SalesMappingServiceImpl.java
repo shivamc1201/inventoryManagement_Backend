@@ -3,6 +3,7 @@ package com.nector.userservice.interceptors.salesMapping.impl;
 import com.nector.userservice.exception.ResourceNotFoundException;
 import com.nector.userservice.interceptors.distributor.model.Distributor;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
+import com.nector.userservice.ledger.repository.LedgerAccountRepository;
 import com.nector.userservice.model.User;
 import com.nector.userservice.repository.UserRepository;
 import com.nector.userservice.interceptors.salesMapping.model.*;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -29,6 +31,7 @@ public class SalesMappingServiceImpl implements SalesMappingService {
     private final UserRepository userRepository;
     private final DistributorRepository distributorRepository;
     private final LedgerAccountService ledgerAccountService;
+    private final LedgerAccountRepository ledgerAccountRepository;
     
     @Override
     @Transactional
@@ -136,13 +139,16 @@ public class SalesMappingServiceImpl implements SalesMappingService {
         User salesperson = userRepository.findById(mapping.getSalespersonId()).orElse(null);
         Distributor distributor = distributorRepository.findById(mapping.getDistributorId()).orElse(null);
         LedgerAccount ledgerAccount = null;
-        
-        try {
-            ledgerAccount = ledgerAccountService.getLedgerAccount(mapping.getCompanyId(), mapping.getDistributorId());
-        } catch (Exception e) {
-            log.warn("Ledger account not found for distributor: {}", mapping.getDistributorId());
-        }
-        
+//
+//        try {
+//            ledgerAccount = ledgerAccountService.getLedgerAccount(mapping.getCompanyId(), mapping.getDistributorId());
+//        } catch (Exception e) {
+//            log.warn("Ledger account not found for distributor: {}", mapping.getDistributorId());
+//        }
+
+        ledgerAccount = ledgerAccountRepository.findByCompanyIdAndDistributorId(mapping.getCompanyId(), mapping.getDistributorId()).orElse(null);
+
+
         return buildResponseDTO(mapping, salesperson, distributor, ledgerAccount);
     }
     
@@ -152,7 +158,7 @@ public class SalesMappingServiceImpl implements SalesMappingService {
         dto.setSalespersonId(mapping.getSalespersonId());
         dto.setSalespersonName(salesperson != null ? salesperson.getFirstName() + " " + salesperson.getLastName() : "Unknown");
         dto.setDistributorId(mapping.getDistributorId());
-        dto.setDistributorName(distributor != null ? distributor.getFirstName() : "Unknown");
+        dto.setDistributorName(distributor != null ? distributor.getFirstName() + " " + distributor.getLastName() : "Unknown");
         dto.setCompanyId(mapping.getCompanyId());
         dto.setStatus(mapping.getStatus());
         dto.setLedgerAccountId(ledgerAccount != null ? ledgerAccount.getId() : null);

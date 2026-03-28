@@ -20,4 +20,6 @@ public interface DistributorService {
 
     List<CartResponse> getAllOrdersForDistributor(Long distributorId);
 
+AddressResponse getDistributorAddress(Long distributorId);
+
 }

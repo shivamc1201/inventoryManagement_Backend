@@ -301,4 +301,18 @@ public class DistributorServiceImpl implements DistributorService {
                 })
                 .collect(Collectors.toList());
     }
+    @Override
+    @Transactional(readOnly = true)
+    public AddressResponse getDistributorAddress(Long distributorId) {
+        log.info("Fetching address for distributor with ID: {}", distributorId);
+        
+        Distributor distributor = distributorRepository.findById(distributorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Distributor not found with ID: " + distributorId));
+        
+        AddressResponse response = new AddressResponse();
+        response.setDistributorId(distributor.getId());
+        response.setAddress(distributor.getAddress());
+        
+        return response;
+    }
 }

@@ -254,6 +254,18 @@ public class PaymentService {
         return payments;
     }
 
+    public List<PaymentApproval> getAllPendingPayments() {
+        List<PaymentApproval> payments = paymentApprovalRepository.findByStatusOrderByCreatedAtDesc("PAYMENT_ADDED");
+
+        // Populate distributor names
+        payments.forEach(payment -> {
+            distributorRepository.findById(payment.getDistributorId())
+                    .ifPresent(distributor -> payment.setDistributorName(distributor.getFirstName()));
+        });
+
+        return payments;
+    }
+
     public List<DistributorLedger> getJournalVouchersByDistributor(Long distributorId) {
         return distributorLedgerRepository.findByDistributorIdAndTransactionTypeOrderByCreatedAtDesc(distributorId, "JV");
     }

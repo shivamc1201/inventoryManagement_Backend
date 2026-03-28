@@ -150,6 +150,14 @@ public class AccountsController {
         return ResponseEntity.ok(pendingPayments);
     }
 
+    @GetMapping("/all-pending-payments")
+    @Operation(summary = "Get pending payments", description = "Retrieves payments with PAYMENT_ADDED status, optionally filtered by distributor")
+    @ApiResponse(responseCode = "200", description = "Pending payments retrieved successfully")
+    public ResponseEntity<List<PaymentApproval>> getAllPendingPayments() {
+        List<PaymentApproval> pendingPayments = paymentService.getAllPendingPayments();
+        return ResponseEntity.ok(pendingPayments);
+    }
+
     private void populateDistributorNames(List<PaymentApproval> payments) {
         payments.forEach(payment -> {
             if (payment.getDistributorName() == null) {

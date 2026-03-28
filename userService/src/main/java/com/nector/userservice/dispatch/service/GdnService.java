@@ -780,6 +780,7 @@ public class GdnService {
         CartDto dto = new CartDto();
         dto.setId(cart.getId());
         dto.setDistributorId(cart.getDistributorId());
+        dto.setDistributorName(cart.getDistributorName());
         dto.setAddress(cart.getAddress());
         dto.setStatus(cart.getStatus());
         dto.setCreatedAt(cart.getCreatedAt());

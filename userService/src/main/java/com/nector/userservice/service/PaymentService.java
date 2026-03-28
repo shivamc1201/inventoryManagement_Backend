@@ -202,6 +202,18 @@ public class PaymentService {
         return savedPayment.getId();
     }
 
+    public Long addPaymentForApprovalWithSalesperson(Long distributorId, Long salespersonId, BigDecimal amount, String transactionType, String description) {
+        PaymentApproval payment = new PaymentApproval();
+        payment.setDistributorId(distributorId);
+        payment.setSalespersonId(salespersonId);
+        payment.setAmount(amount);
+        payment.setTransactionType(transactionType);
+        payment.setDescription(description);
+        payment.setStatus("PAYMENT_ADDED");
+        PaymentApproval savedPayment = paymentApprovalRepository.save(payment);
+        return savedPayment.getId();
+    }
+
     public void approvePayment(Long paymentId, Long approvedBy) {
         PaymentApproval payment = paymentApprovalRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Payment not found: " + paymentId));
@@ -256,6 +268,23 @@ public class PaymentService {
 
     public List<PaymentApproval> getAllPendingPayments() {
         List<PaymentApproval> payments = paymentApprovalRepository.findByStatusOrderByCreatedAtDesc("PAYMENT_ADDED");
+
+        // Populate distributor names
+        payments.forEach(payment -> {
+            distributorRepository.findById(payment.getDistributorId())
+                    .ifPresent(distributor -> payment.setDistributorName(distributor.getFirstName()));
+        });
+
+        return payments;
+    }
+
+    public List<PaymentApproval> getPendingPaymentsBySalesperson(Long salespersonId) {
+        List<PaymentApproval> allPendingPayments = paymentApprovalRepository.findByStatusOrderByCreatedAtDesc("PAYMENT_ADDED");
+        
+        // Filter by salespersonId
+        List<PaymentApproval> payments = allPendingPayments.stream()
+                .filter(payment -> salespersonId.equals(payment.getSalespersonId()))
+                .collect(java.util.stream.Collectors.toList());
 
         // Populate distributor names
         payments.forEach(payment -> {

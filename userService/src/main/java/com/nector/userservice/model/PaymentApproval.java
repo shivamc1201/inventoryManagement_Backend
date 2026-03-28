@@ -17,6 +17,9 @@ public class PaymentApproval {
     @Column(name = "distributor_id")
     private Long distributorId;
 
+    @Column(name = "salesperson_id")
+    private Long salespersonId;
+
     @Column(name = "amount")
     private BigDecimal amount;
 

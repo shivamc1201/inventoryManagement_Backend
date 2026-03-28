@@ -9,6 +9,7 @@ import java.util.List;
 public class CartDto {
     private Long id;
     private Long distributorId;
+    private String distributorName;
     private String address;
     private Cart.CartStatus status;
     private LocalDateTime createdAt;

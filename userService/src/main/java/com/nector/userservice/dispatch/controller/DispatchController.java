@@ -222,6 +222,7 @@ public class DispatchController {
                                     .ifPresent(distributor -> {
                                         cartDto.setSalespersonId(distributor.getSalespersonId());
                                         cartDto.setSalespersonName(distributor.getAssignedPerson());
+                                        cartDto.setDistributorName(distributor.getFirstName() + " " + distributor.getLastName());
                                     });
                         }
                         return cartDto;

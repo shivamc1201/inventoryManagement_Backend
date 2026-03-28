@@ -16,5 +16,6 @@ public class CartResponse {
     private String salespersonName;
     private Long distributorId;
     private String distributorName;
+    private String distributorAddress;
     private java.math.BigDecimal totalCartAmount;
 }

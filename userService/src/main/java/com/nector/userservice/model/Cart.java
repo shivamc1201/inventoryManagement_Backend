@@ -65,6 +65,7 @@ public class Cart {
         PAYMENT_APPROVED,
         GDN_GENERATED,
         PLACED,
-        DISMISSED
+        DISMISSED,
+        GDN_REJECTED
     }
 }

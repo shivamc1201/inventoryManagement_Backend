@@ -221,6 +221,7 @@ public class CartService {
 
             distributorRepository.findById(cart.getDistributorId()).ifPresent(distributor -> {
                 response.setDistributorName(distributor.getFirstName());
+                response.setDistributorAddress(distributor.getAddress());
 
                 // Set salesperson information from distributor's salespersonId
                 if (distributor.getSalespersonId() != null) {

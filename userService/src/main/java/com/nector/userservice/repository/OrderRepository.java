@@ -56,4 +56,49 @@ public interface OrderRepository extends JpaRepository<OrderWithSalesPerson, Lon
             @Param("dateFrom") LocalDate dateFrom,
             @Param("dateTo") LocalDate dateTo
     );
+
+    @Query("SELECT COUNT(o) FROM OrderWithSalesPerson o WHERE " +
+           "o.createdAt BETWEEN :dateFrom AND :dateTo")
+    Long countOrdersBetweenDates(@Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
+
+    @Query("SELECT COALESCE(SUM(o.totalCartAmount), 0) FROM OrderWithSalesPerson o WHERE " +
+           "o.createdAt BETWEEN :dateFrom AND :dateTo")
+    BigDecimal getTotalAmountBetweenDates(@Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
+
+    @Query("SELECT COUNT(o) FROM OrderWithSalesPerson o WHERE " +
+            "o.salespersonId = :salespersonId AND " +
+            "o.createdAt BETWEEN :dateFrom AND :dateTo")
+    Long countOrdersBySalespersonBetweenDates(
+            @Param("salespersonId") Long salespersonId,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
+
+    @Query("SELECT COALESCE(SUM(o.totalCartAmount), 0) FROM OrderWithSalesPerson o WHERE " +
+            "o.salespersonId = :salespersonId AND " +
+            "o.createdAt BETWEEN :dateFrom AND :dateTo")
+    BigDecimal getTotalAmountBySalespersonBetweenDates(
+            @Param("salespersonId") Long salespersonId,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
+
+    @Query("SELECT COUNT(o) FROM OrderWithSalesPerson o WHERE " +
+            "o.distributorId = :distributorId AND " +
+            "o.createdAt BETWEEN :dateFrom AND :dateTo")
+    Long countOrdersByDistributorBetweenDates(
+            @Param("distributorId") Long distributorId,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
+
+    @Query("SELECT COALESCE(SUM(o.totalCartAmount), 0) FROM OrderWithSalesPerson o WHERE " +
+            "o.distributorId = :distributorId AND " +
+            "o.createdAt BETWEEN :dateFrom AND :dateTo")
+    BigDecimal getTotalAmountByDistributorBetweenDates(
+            @Param("distributorId") Long distributorId,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
+
 }

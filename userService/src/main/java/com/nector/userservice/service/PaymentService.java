@@ -221,6 +221,22 @@ public class PaymentService {
         paymentApprovalRepository.save(payment);
     }
 
+    public void rejectPayment(Long paymentId, Long rejectedBy, String reason) {
+        PaymentApproval payment = paymentApprovalRepository.findById(paymentId)
+                .orElseThrow(() -> new RuntimeException("Payment not found: " + paymentId));
+
+        if (!"PAYMENT_ADDED".equals(payment.getStatus())) {
+            throw new RuntimeException("Payment already processed");
+        }
+
+        // Update payment status
+        payment.setStatus("PAYMENT_REJECTED");
+        payment.setApprovedAt(LocalDateTime.now());
+        payment.setApprovedBy(rejectedBy);
+        payment.setRejectionReason(reason);
+        paymentApprovalRepository.save(payment);
+    }
+
     public List<PaymentApproval> getPendingPayments(Long distributorId) {
         List<PaymentApproval> payments;
         if (distributorId != null) {

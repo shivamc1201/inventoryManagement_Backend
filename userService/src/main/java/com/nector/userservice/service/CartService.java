@@ -329,13 +329,14 @@ public class CartService {
 
 
     @Transactional
-    public void dismissCart(Long cartId) {
+    public void dismissCart(Long cartId, String reason) {
         Cart cart = cartRepository.findById(cartId)
                 .orElseThrow(() -> new CartNotFoundException("Cart with ID " + cartId + " not found"));
 
         cart.setStatus(Cart.CartStatus.DISMISSED);
+        cart.setDismissReason(reason);
         cartRepository.save(cart);
-        log.info("Cart {} dismissed successfully", cartId);
+        log.info("Cart {} dismissed successfully with reason: {}", cartId, reason);
     }
 
     @Transactional

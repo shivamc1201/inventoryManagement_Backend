@@ -130,6 +130,17 @@ public class AccountsController {
         return ResponseEntity.ok("Payment approved and ledger updated");
     }
 
+    @PostMapping("/payment-rejection/{paymentId}")
+    @Operation(summary = "Reject payment", description = "Rejects payment added by distributor with reason")
+    @ApiResponse(responseCode = "200", description = "Payment rejected successfully")
+    public ResponseEntity<String> paymentRejection(
+            @PathVariable Long paymentId,
+            @RequestParam Long rejectedBy,
+            @RequestBody PaymentRejectionRequest request) {
+        paymentService.rejectPayment(paymentId, rejectedBy, request.getReason());
+        return ResponseEntity.ok("Payment rejected successfully");
+    }
+
     @GetMapping("/pending-payments")
     @Operation(summary = "Get pending payments", description = "Retrieves payments with PAYMENT_ADDED status, optionally filtered by distributor")
     @ApiResponse(responseCode = "200", description = "Pending payments retrieved successfully")

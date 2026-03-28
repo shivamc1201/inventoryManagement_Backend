@@ -2,8 +2,8 @@ package com.nector.userservice.controller;
 
 import com.nector.userservice.dto.cart.AddToCartRequest;
 import com.nector.userservice.dto.cart.CartResponse;
-
 import com.nector.userservice.dto.cart.PlaceOrderRequest;
+import com.nector.userservice.dto.DismissCartRequest;
 import com.nector.userservice.model.Cart;
 import com.nector.userservice.service.CartService;
 import jakarta.validation.Valid;
@@ -88,10 +88,10 @@ public class CartController {
     }
     
     @DeleteMapping("/{cartId}/dismiss")
-    public ResponseEntity<Map<String, String>> dismissCart(@PathVariable Long cartId) {
-        log.info("Dismissing cart: {}", cartId);
+    public ResponseEntity<Map<String, String>> dismissCart(@PathVariable Long cartId, @RequestBody DismissCartRequest request) {
+        log.info("Dismissing cart: {} with reason: {}", cartId, request.getReason());
         try {
-            cartService.dismissCart(cartId);
+            cartService.dismissCart(cartId, request.getReason());
             Map<String, String> response = new HashMap<>();
             response.put("message", "Cart dismissed successfully");
             return ResponseEntity.ok(response);

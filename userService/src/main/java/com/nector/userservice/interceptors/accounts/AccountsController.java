@@ -120,6 +120,25 @@ public class AccountsController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/update-balance-with-salesperson")
+    @Operation(summary = "Add payment for approval with salesperson", description = "Creates payment entry with PAYMENT_ADDED status including salesperson ID")
+    @ApiResponse(responseCode = "200", description = "Payment added for approval successfully")
+    public ResponseEntity<PaymentApprovalResponse> updateBalanceWithSalesperson(
+            @RequestParam Long distributorId,
+            @RequestParam Long salespersonId,
+            @RequestParam BigDecimal amount,
+            @RequestParam TransactionType transactionType,
+            @RequestParam String description) {
+        Long paymentId = paymentService.addPaymentForApprovalWithSalesperson(distributorId, salespersonId, amount, transactionType.name(), description);
+
+        PaymentApprovalResponse response = new PaymentApprovalResponse();
+        response.setPaymentId(paymentId);
+        response.setMessage("Payment added for approval with salesperson");
+        response.setStatus("PAYMENT_ADDED");
+
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/payment-approval/{paymentId}")
     @Operation(summary = "Approve payment", description = "Approves payment added distributor ")
     @ApiResponse(responseCode = "200", description = "Payment approved successfully")
@@ -142,17 +161,26 @@ public class AccountsController {
     }
 
     @GetMapping("/pending-payments")
-    @Operation(summary = "Get pending payments", description = "Retrieves payments with PAYMENT_ADDED status, optionally filtered by distributor")
+    @Operation(summary = "Get pending payments", description = "Retrieves payments with PAYMENT_ADDED status, optionally filtered by salesperson")
     @ApiResponse(responseCode = "200", description = "Pending payments retrieved successfully")
     public ResponseEntity<List<PaymentApproval>> getPendingPayments(
+            @RequestParam(required = false) Long salespersonId) {
+        List<PaymentApproval> pendingPayments = paymentService.getPendingPaymentsBySalesperson(salespersonId);
+        return ResponseEntity.ok(pendingPayments);
+    }
+
+    @GetMapping("/pending-payments-by-distributor")
+    @Operation(summary = "Get pending payments by distributor", description = "Retrieves payments with PAYMENT_ADDED status, optionally filtered by distributor")
+    @ApiResponse(responseCode = "200", description = "Pending payments retrieved successfully")
+    public ResponseEntity<List<PaymentApproval>> getPendingPaymentsByDistributor(
             @RequestParam(required = false) Long distributorId) {
         List<PaymentApproval> pendingPayments = paymentService.getPendingPayments(distributorId);
         return ResponseEntity.ok(pendingPayments);
     }
 
     @GetMapping("/all-pending-payments")
-    @Operation(summary = "Get pending payments", description = "Retrieves payments with PAYMENT_ADDED status, optionally filtered by distributor")
-    @ApiResponse(responseCode = "200", description = "Pending payments retrieved successfully")
+    @Operation(summary = "Get all pending payments", description = "Retrieves all payments with PAYMENT_ADDED status")
+    @ApiResponse(responseCode = "200", description = "All pending payments retrieved successfully")
     public ResponseEntity<List<PaymentApproval>> getAllPendingPayments() {
         List<PaymentApproval> pendingPayments = paymentService.getAllPendingPayments();
         return ResponseEntity.ok(pendingPayments);

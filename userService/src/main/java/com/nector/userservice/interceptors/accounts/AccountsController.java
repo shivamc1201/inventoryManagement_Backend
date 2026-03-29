@@ -196,13 +196,12 @@ public class AccountsController {
     }
 
     @GetMapping("/payments/{distributorId}")
-    @Operation(summary = "Get payments by distributor ID and status", description = "Retrieves payments for a distributor with specified status including all payment details")
+    @Operation(summary = "Get payments by distributor ID", description = "Retrieves all payments for a distributor including all payment details")
     @ApiResponse(responseCode = "200", description = "Payments retrieved successfully")
-    public ResponseEntity<List<PaymentStatusResponse>> getPaymentsByDistributorAndStatus(
-            @PathVariable Long distributorId,
-            @RequestParam(defaultValue = "PAYMENT_ADDED") String status) {
+    public ResponseEntity<List<PaymentStatusResponse>> getPaymentsByDistributor(
+            @PathVariable Long distributorId) {
 
-        List<PaymentApproval> payments = paymentService.getPaymentsByDistributorAndStatus(distributorId, status);
+        List<PaymentApproval> payments = paymentService.getPaymentsByDistributor(distributorId);
         
         // Populate distributor names
         populateDistributorNames(payments);

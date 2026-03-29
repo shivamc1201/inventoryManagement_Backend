@@ -100,6 +100,10 @@ public class PaymentService {
             .isPresent();
     }
 
+    public List<PaymentApproval> getPaymentsByDistributor(Long distributorId) {
+        return paymentApprovalRepository.findByDistributorIdOrderByCreatedAtDesc(distributorId);
+    }
+
     public List<PaymentApproval> getPaymentsByDistributorAndStatus(Long distributorId, String status) {
         return paymentApprovalRepository.findByDistributorIdAndStatusOrderByCreatedAtDesc(distributorId, status);
     }

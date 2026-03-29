@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -45,40 +46,54 @@ public class SalesHierarchyValidationService {
     }
 
     private void validateRoleHierarchy(SalesRole subordinateRole, SalesRole managerRole) {
-        switch (subordinateRole) {
-            case STATE_SALES_MGR:
-                if (managerRole != SalesRole.NATIONAL_SALES_MGR) {
-                    throw new BusinessException("State Sales Manager must report to National Sales Manager");
-                }
-                break;
-            case ZONAL_SALES_MGR:
-                if (managerRole != SalesRole.STATE_SALES_MGR) {
-                    throw new BusinessException("Zonal Sales Manager must report to State Sales Manager");
-                }
-                break;
-            case REGIONAL_SALES_MGR:
-                if (managerRole != SalesRole.ZONAL_SALES_MGR) {
-                    throw new BusinessException("Regional Sales Manager must report to Zonal Sales Manager");
-                }
-                break;
-            case AREA_SALES_MGR:
-                if (managerRole != SalesRole.REGIONAL_SALES_MGR) {
-                    throw new BusinessException("Area Sales Manager must report to Regional Sales Manager");
-                }
-                break;
-            case SALES_OFFICER:
-                if (managerRole != SalesRole.AREA_SALES_MGR) {
-                    throw new BusinessException("Sales Officer must report to Area Sales Manager");
-                }
-                break;
-            case SALES_EXECUTIVE:
-                if (managerRole != SalesRole.SALES_OFFICER) {
-                    throw new BusinessException("Sales Executive must report to Sales Officer");
-                }
-                break;
-            case NATIONAL_SALES_MGR:
-                throw new BusinessException("National Sales Manager cannot have a manager");
+        // Define the hierarchy levels (lower number = more senior)
+        int subordinateLevel = getRoleLevel(subordinateRole);
+        int managerLevel = getRoleLevel(managerRole);
+        
+        // National Sales Manager cannot have a manager
+        if (subordinateRole == SalesRole.NATIONAL_SALES_MGR) {
+            throw new BusinessException("National Sales Manager cannot have a manager");
         }
+        
+        // Manager must be more senior (lower level number) than subordinate
+        if (managerLevel >= subordinateLevel) {
+            throw new BusinessException(getInvalidManagerMessage(subordinateRole, managerRole));
+        }
+    }
+
+    private int getRoleLevel(SalesRole role) {
+        switch (role) {
+            case NATIONAL_SALES_MGR: return 1;
+            case STATE_SALES_MGR: return 2;
+            case ZONAL_SALES_MGR: return 3;
+            case REGIONAL_SALES_MGR: return 4;
+            case AREA_SALES_MGR: return 5;
+            case SALES_OFFICER: return 6;
+            case SALES_EXECUTIVE: return 7;
+            default: return 8;
+        }
+    }
+
+    private String getInvalidManagerMessage(SalesRole subordinateRole, SalesRole managerRole) {
+        List<SalesRole> validManagers = getValidManagers(subordinateRole);
+        String validManagerNames = validManagers.stream()
+                .map(SalesRole::getLabel)
+                .collect(Collectors.joining(", "));
+        
+        return subordinateRole.getLabel() + " can only report to: " + validManagerNames;
+    }
+
+    private List<SalesRole> getValidManagers(SalesRole role) {
+        List<SalesRole> validManagers = new ArrayList<>();
+        int roleLevel = getRoleLevel(role);
+        
+        for (SalesRole possibleManager : SalesRole.values()) {
+            if (getRoleLevel(possibleManager) < roleLevel) {
+                validManagers.add(possibleManager);
+            }
+        }
+        
+        return validManagers;
     }
 
     public void validateDeletion(SalesPerson salesPerson) {

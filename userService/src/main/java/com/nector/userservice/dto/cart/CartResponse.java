@@ -18,4 +18,5 @@ public class CartResponse {
     private String distributorName;
     private String distributorAddress;
     private java.math.BigDecimal totalCartAmount;
+    private String dismissReason;
 }

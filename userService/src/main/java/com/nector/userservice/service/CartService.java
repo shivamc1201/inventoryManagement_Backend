@@ -164,8 +164,8 @@ public class CartService {
 
     @Transactional(readOnly = true)
     public List<CartResponse> getDismissedCarts(Long distributorId) {
-        List<Cart> pendingCarts = cartRepository.findByStatus(Cart.CartStatus.DISMISSED);
-        return pendingCarts.stream()
+        List<Cart> dismissedCarts = cartRepository.findAllByDistributorIdAndStatus(distributorId, Cart.CartStatus.DISMISSED);
+        return dismissedCarts.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -242,6 +242,9 @@ public class CartService {
                 .collect(Collectors.toList());
 
         response.setCartItems(cartItemResponses);
+
+        // Set dismiss reason if present
+        response.setDismissReason(cart.getDismissReason());
 
         // Calculate total cart amount
         BigDecimal totalAmount = cartItemResponses.stream()
@@ -554,6 +557,9 @@ public class CartService {
                 });
             }
         }
+
+        // Set dismiss reason if present
+        response.setDismissReason(cart.getDismissReason());
 
         List<CartItemResponse> cartItemResponses = cart.getCartItems().stream()
                 .map(this::mapCartItemToResponse)

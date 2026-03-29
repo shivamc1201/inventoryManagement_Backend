@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.products.model;
 
+import com.nector.userservice.enums.Unit;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -11,6 +12,8 @@ public class FinishedProductResponse {
     private String name;
     private String description;
     private String sku;
+    private Unit unit;
+    private BigDecimal weight;
     private BigDecimal price;
     private Integer quantity;
     private BigDecimal perPieceRate;

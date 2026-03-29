@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.products.model;
 
+import com.nector.userservice.enums.Unit;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
@@ -18,6 +19,13 @@ public class FinishedProductRequest {
     @NotBlank(message = "SKU is required")
     @Size(max = 100, message = "SKU must not exceed 100 characters")
     private String sku;
+    
+    @NotNull(message = "Unit is required")
+    private Unit unit;
+    
+    @DecimalMin(value = "0.0", inclusive = true, message = "Weight must be non-negative")
+    @Digits(integer = 7, fraction = 3, message = "Weight must have at most 7 integer digits and 3 decimal places")
+    private BigDecimal weight;
     
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")

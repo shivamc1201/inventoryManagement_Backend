@@ -38,6 +38,8 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         product.setName(request.getName());
         product.setDescription(request.getDescription());
         product.setSku(request.getSku());
+        product.setUnit(request.getUnit());
+        product.setWeight(request.getWeight());
         product.setPrice(request.getPrice());
         product.setQuantity(request.getQuantity());
         product.setMinimumThreshold(request.getMinimumThreshold());
@@ -59,6 +61,9 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         
         product.setName(request.getName());
         product.setDescription(request.getDescription());
+        product.setSku(request.getSku());
+        product.setUnit(request.getUnit());
+        product.setWeight(request.getWeight());
         product.setPrice(request.getPrice());
         product.setQuantity(request.getQuantity());
         product.setMinimumThreshold(request.getMinimumThreshold());
@@ -159,6 +164,8 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         response.setName(product.getName());
         response.setDescription(product.getDescription());
         response.setSku(product.getSku());
+        response.setUnit(product.getUnit());
+        response.setWeight(product.getWeight());
         response.setPrice(product.getPrice());
         response.setQuantity(product.getQuantity());
         

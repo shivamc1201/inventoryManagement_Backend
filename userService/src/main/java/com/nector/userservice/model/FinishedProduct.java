@@ -1,5 +1,6 @@
 package com.nector.userservice.model;
 
+import com.nector.userservice.enums.Unit;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -31,6 +32,13 @@ public class FinishedProduct {
     
     @Column(unique = true, nullable = false)
     private String sku;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Unit unit;
+    
+    @Column(precision = 10, scale = 3)
+    private BigDecimal weight;
     
     @Column(length = 50)
     private String unitType;

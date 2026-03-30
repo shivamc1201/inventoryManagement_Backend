@@ -54,14 +54,14 @@ public class DistributorRequestDTO {
     @Pattern(regexp = "^[0-9]{12}$", message = "Invalid Aadhaar number")
     private String aadhaarNumber;
 
-    @NotBlank
+
     @Pattern(
             regexp = "^[A-Z]{5}[0-9]{4}[A-Z]{1}$",
             message = "Invalid PAN number"
     )
     private String panNumber;
 
-    @NotBlank
+
     @Pattern(
             regexp = "^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$",
             message = "Invalid GST number"
@@ -71,7 +71,7 @@ public class DistributorRequestDTO {
     @NotNull
     private DistributorStatus status;
 
-    @NotNull
+
     private boolean creditLimit;
 
     @NotBlank(message = "Username is required")
@@ -84,13 +84,13 @@ public class DistributorRequestDTO {
     @Schema(description = "User password", example = "SecurePass123!")
     private String password;
 
-    @NotBlank
+
     private String accountNumber;
 
-    @NotBlank
+
     private String accountName;
 
-    @NotBlank
+
     private String ifsc;
 
 }

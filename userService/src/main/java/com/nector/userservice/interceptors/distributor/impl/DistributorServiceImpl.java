@@ -26,7 +26,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.nector.userservice.common.RoleType;
 import com.nector.userservice.model.User;
+import com.nector.userservice.model.SalesPerson;
 import com.nector.userservice.repository.UserRepository;
+import com.nector.userservice.repository.SalesPersonRepository;
 
 
 import java.math.BigDecimal;
@@ -47,6 +49,7 @@ public class DistributorServiceImpl implements DistributorService {
     private final ItemRepository itemRepository;
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final SalesPersonRepository salesPersonRepository;
     private final CartRepository cartRepository;
     private final InvoiceService invoiceService;
     
@@ -69,6 +72,20 @@ public class DistributorServiceImpl implements DistributorService {
         if (distributorRepository.existsByGstNumber(request.getGstNumber())) {
             throw new IllegalArgumentException(
                     "Distributor with GstNumber already exists: " + request.getGstNumber());
+        }
+
+        // Validate salesperson assignment
+        if (request.getSalespersonId() != null) {
+            if (!salesPersonRepository.existsById(request.getSalespersonId())) {
+                throw new IllegalArgumentException(
+                        "Sales person not found with ID: " + request.getSalespersonId());
+            }
+            
+            Optional<SalesPerson> salesPerson = salesPersonRepository.findById(request.getSalespersonId());
+            if (salesPerson.isPresent() && !salesPerson.get().getActive()) {
+                throw new IllegalArgumentException(
+                        "Sales person is not active: " + request.getSalespersonId());
+            }
         }
 
         Distributor distributor = distributorMapper.toEntity(request);

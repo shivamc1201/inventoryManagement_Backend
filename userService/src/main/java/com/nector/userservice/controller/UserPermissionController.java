@@ -114,6 +114,7 @@ public class UserPermissionController {
         response.setLastLoginTime(savedUser.getLastLoginTime());
         response.setLoggedIn(savedUser.isLoggedIn());
         response.setPasswordSetDate(savedUser.getPasswordSetDate());
+        response.setEmployeeRollNo(savedUser.getEmployeeRollNo());
         return response;
     }
 

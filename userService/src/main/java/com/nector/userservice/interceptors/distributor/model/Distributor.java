@@ -53,13 +53,13 @@ public class Distributor {
     @Column(name = "gst_number", length = 20)
     private String gstNumber;
     
-    @Column(name = "address", nullable = false, length = 200)
+    @Column(name = "address", length = 200)
     private String address;
     
-    @Column(name = "aadhaar_number", nullable = false, unique = true, length = 12)
+    @Column(name = "aadhaar_number", unique = true, length = 12)
     private String aadhaarNumber;
     
-    @Column(name = "pan_number", nullable = false, unique = true, length = 10)
+    @Column(name = "pan_number", unique = true, length = 10)
     private String panNumber;
     
     @Enumerated(EnumType.STRING)
@@ -72,13 +72,13 @@ public class Distributor {
     @Column(name = "updated_on")
     private LocalDateTime updatedOn;
 
-    @Column(name = "account_number", nullable = false, length = 100)
+    @Column(name = "account_number", length = 100)
     private String accountNumber;
 
-    @Column(name = "account_name", nullable = false, length = 100)
+    @Column(name = "account_name",  length = 100)
     private String accountName;
 
-    @Column(name = "ifsc", nullable = false, length = 100)
+    @Column(name = "ifsc",  length = 100)
     private String ifsc;
 
 

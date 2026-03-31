@@ -20,6 +20,7 @@ import com.nector.userservice.dto.invoice.ProformaInvoice;
 import com.nector.userservice.repository.SalesPersonRepository;
 import com.nector.userservice.model.SalesPerson;
 import com.nector.userservice.service.SalesHierarchyValidationService;
+import com.nector.userservice.ordertracking.service.OrderTrackingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -44,6 +45,7 @@ public class CartService {
     private final UserRepository userRepository;
     private final SalesPersonRepository salesPersonRepository;
     private final SalesHierarchyValidationService salesHierarchyValidationService;
+    private final OrderTrackingService orderTrackingService;
 
 
     // TODO the dispatch team wil, check the real  quantity of the orders  while checking GDN
@@ -365,6 +367,34 @@ public class CartService {
         cart.setAddress(request.getAddress());
         cart.setStatus(Cart.CartStatus.PLACED);
         Cart updatedCart = cartRepository.save(cart);
+
+        // Create OrderTracking record for workflow management
+        try {
+            String distributorName = updatedCart.getDistributorName() != null ? 
+                updatedCart.getDistributorName() : "Unknown Distributor";
+            String orderNumber = "ORD-" + updatedCart.getId() + "-" + 
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+            
+            BigDecimal totalAmount = updatedCart.getTotalCartAmount() != null ? 
+                updatedCart.getTotalCartAmount() : 
+                updatedCart.getCartItems().stream()
+                    .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            orderTrackingService.createFromCart(
+                updatedCart.getId(), 
+                distributorName, 
+                updatedCart.getDistributorId(),
+                orderNumber,
+                totalAmount
+            );
+            
+            log.info("OrderTracking record created for cart {}", updatedCart.getId());
+        } catch (Exception e) {
+            log.error("Failed to create OrderTracking record for cart {}: {}", 
+                updatedCart.getId(), e.getMessage());
+            // Continue without failing the order placement
+        }
 
         log.info("Order placed successfully for cart {} for distributor {}", request.getCartId(), distributorId);
         return mapToResponse(updatedCart);

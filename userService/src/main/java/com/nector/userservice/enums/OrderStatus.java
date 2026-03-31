@@ -8,6 +8,7 @@ public enum OrderStatus {
     PLACED("placed"),
     PAYMENT_APPROVED("payment_approved"),
     GDN_GENERATED("gdn_generated"),
+    GDN_REJECTED("gdn_rejected"),
     ACTIVE("active"),
     DISMISSED("dismissed");
 

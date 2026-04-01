@@ -6,6 +6,8 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -83,5 +85,26 @@ public class DistributorResponseDTO {
 
     @Schema(description = "IFSC", example = "SBI12345")
     private String IFSC;
+
+    @Schema(description = "Auto-generated distributor code", example = "DIS042026001")
+    private String distributorCode;
+
+    @Schema(description = "Bank guarantee number", example = "BG123456789")
+    private String bankGuaranteeNumber;
+
+    @Schema(description = "Credit amount", example = "500000.00")
+    private BigDecimal creditAmount;
+
+    @Schema(description = "Bank guarantee expiry date", example = "2025-12-31")
+    private LocalDate bgExpiryDate;
+
+    @Schema(description = "District", example = "Patna")
+    private String district;
+
+    @Schema(description = "State", example = "Bihar")
+    private String state;
+
+    @Schema(description = "PIN code", example = "800001")
+    private String pinCode;
 
 }

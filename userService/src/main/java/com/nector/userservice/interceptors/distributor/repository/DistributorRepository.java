@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
@@ -15,4 +17,7 @@ public interface DistributorRepository extends JpaRepository<Distributor, Long> 
     boolean existsByAadhaarNumber(String aadhaarNumber);
     boolean existsByPanNumber(String panNumber);
     boolean existsByGstNumber(String gstNumber);
+    
+    @Query("SELECT COUNT(d) FROM Distributor d WHERE MONTH(d.createdOn) = :month AND YEAR(d.createdOn) = :year")
+    long countByMonthAndYear(@Param("month") int month, @Param("year") int year);
 }

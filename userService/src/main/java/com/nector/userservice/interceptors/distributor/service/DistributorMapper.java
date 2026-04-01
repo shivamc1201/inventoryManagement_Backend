@@ -30,6 +30,12 @@ public class DistributorMapper {
         distributor.setAccountName(dto.getAccountName());
         distributor.setAccountNumber(dto.getAccountNumber());
         distributor.setIfsc(dto.getIfsc());
+        distributor.setBankGuaranteeNumber(dto.getBankGuaranteeNumber());
+        distributor.setCreditAmount(dto.getCreditAmount());
+        distributor.setBgExpiryDate(dto.getBgExpiryDate());
+        distributor.setDistrict(dto.getDistrict());
+        distributor.setState(dto.getState());
+        distributor.setPinCode(dto.getPinCode());
 
 
         return distributor;
@@ -61,6 +67,13 @@ public class DistributorMapper {
         dto.setAccountNumber(entity.getAccountNumber());
         dto.setAccountName(entity.getAccountName());
         dto.setIFSC(entity.getIfsc());
+        dto.setDistributorCode(entity.getDistributorCode());
+        dto.setBankGuaranteeNumber(entity.getBankGuaranteeNumber());
+        dto.setCreditAmount(entity.getCreditAmount());
+        dto.setBgExpiryDate(entity.getBgExpiryDate());
+        dto.setDistrict(entity.getDistrict());
+        dto.setState(entity.getState());
+        dto.setPinCode(entity.getPinCode());
         return dto;
     }
     
@@ -82,5 +95,11 @@ public class DistributorMapper {
         entity.setStatus(dto.getStatus());
         entity.setPassword(dto.getPassword());
         entity.setUsername(dto.getUsername());
+        entity.setBankGuaranteeNumber(dto.getBankGuaranteeNumber());
+        entity.setCreditAmount(dto.getCreditAmount());
+        entity.setBgExpiryDate(dto.getBgExpiryDate());
+        entity.setDistrict(dto.getDistrict());
+        entity.setState(dto.getState());
+        entity.setPinCode(dto.getPinCode());
     }
 }

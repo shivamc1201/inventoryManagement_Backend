@@ -1,395 +1,251 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-
 <head>
-
     <meta charset="UTF-8"/>
-
     <style>
-
-        body{
-        font-family:Arial;
-        font-size:12px;
-        margin:20px;
+        /* A4 Paper Simulation */
+        body {
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 12mm;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+            color: #000;
+            position: relative;
         }
 
-        table{
-        width:100%;
-        border-collapse:collapse;
+        /* Standard Typography */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        .bold { font-weight: bold; }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .italic { font-style: italic; }
+
+        /* Header Styles */
+        .company-header td { vertical-align: middle; }
+        .sub-label { font-size: 9px; color: #444; }
+
+        /* Form Grid Layout */
+        .details-grid { margin-top: 15px; }
+        .details-grid td { padding: 5px 2px; vertical-align: bottom; }
+        .dotted-line {
+            border-bottom: 1px dotted #000;
+            display: inline-block;
+            flex-grow: 1;
+            margin-left: 5px;
+            min-height: 14px;
+            vertical-align: bottom;
+        }
+        .field-container { display: flex; align-items: flex-end; width: 100%; }
+
+        /* Table Design to Match Sample */
+        .items-table {
+            margin-top: 15px;
+            border: 1.2px solid black;
+            table-layout: fixed;
+        }
+        .items-table th {
+            border: 1px solid black;
+            padding: 8px 4px;
+            background: #fff;
+            font-size: 10px;
+        }
+        .items-table td {
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+            padding: 6px 8px;
+            vertical-align: top;
+        }
+        .filler-row td {
+            height: 450px; /* High value to force long vertical lines */
+            border-top: none !important;
         }
 
-        .main td{
-        padding:6px;
-        vertical-align:top;
-        }
+        /* Footer/Signatures */
+        .remark-box { border: 1px solid black; border-top: none; padding: 10px; }
+        .signature-section { margin-top: 40px; }
+        .signature-section td { padding: 10px 0; }
 
-        .border{
-        border:1px solid black;
+        @media print {
+            body { background: none; padding: 0; }
+            .page { box-shadow: none; margin: 0; width: 210mm; height: 297mm; }
         }
-
-        .items th{
-        border:1px solid black;
-        padding:6px;
-        background:#f2f2f2;
-        text-align:center;
-        }
-
-        .items td{
-        border-left:1px solid black;
-        border-right:1px solid black;
-        padding:6px;
-        }
-
-        .items-bottom{
-        border-bottom:1px solid black;
-        height:220px;
-        }
-
-        .center{
-        text-align:center;
-        }
-
-        .right{
-        text-align:right;
-        }
-
-        .bold{
-        font-weight:bold;
-        }
-
-        .dotted{
-        border-bottom:1px dotted black;
-        display:inline-block;
-        min-width:200px;
-        padding-left:5px;
-        }
-
-        .logo{
-        width:90px;
-        }
-
-        .bigbox{
-        height:260px;
-        border:1px solid black;
-        border-top:none;
-        }
-
     </style>
-
 </head>
-
 <body>
 
-<table>
+<div class="page">
+    <table class="company-header">
+        <tr>
+            <td width="15%">
+                <img th:src="${logoPath}" width="90" alt="Logo"/>
+            </td>
+            <td class="center" width="65%">
+                <div class="bold italic" style="font-size: 20px; letter-spacing: 0.5px;">Nectar Origin Private Limited</div>
+                <div style="font-size: 10px; margin-top: 3px;">360 K, Shiv Parwati Nagar, Block Road No -2, Ward No 16, Kahalgaon, Bhagalpur Bihar</div>
+            </td>
+            <td class="right" width="20%" style="font-size: 8px; vertical-align: top;">
+                CHALLAN/ACCOUNT/SITE/VENDOR
+            </td>
+        </tr>
+    </table>
 
-    <tr>
+    <div class="center bold" style="font-size: 14px; margin: 20px 0 10px 0; text-decoration: none;">GOOD DELIVERY NOTE</div>
 
-        <td width="110">
+    <table class="details-grid">
+        <tr>
+            <td width="55%">
+                <div class="field-container">
+                    <span class="bold">Delivery Note No :</span>
+                    <span class="dotted-line" th:text="${gdnNumber}"></span>
+                </div>
+            </td>
+            <td width="45%">
+                <div class="field-container">
+                    <span class="bold">Date :</span>
+                    <span class="dotted-line" th:text="${gdnDate}"></span>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <div class="field-container">
+                    <span class="bold">Dispatch From :</span>
+                    <span class="dotted-line" th:text="${dispatchFrom}"></span>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <div class="field-container">
+                    <span class="bold">Shipping Address :</span>
+                    <span class="dotted-line" th:text="${shippingAddress}"></span>
+                </div>
+            </td>
+        </tr>
+    </table>
 
-            <img th:src="@{logo.png}" class="logo"/>
+    <table class="details-grid" style="margin-top: 5px;">
+        <tr>
+            <td width="50%">
+                <div class="field-container">
+                    <span class="bold">Delivery Method :</span>
+                    <span class="dotted-line" th:text="${deliveryMethod}"></span>
+                </div>
+            </td>
+            <td width="50%">
+                <div class="field-container">
+                    <span class="bold">Vehicle No :</span>
+                    <span class="dotted-line" th:text="${vehicleNo}"></span>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td width="50%">
+                <div class="field-container">
+                    <span class="bold">Transport Name :</span>
+                    <span class="dotted-line" th:text="${transportName}"></span>
+                </div>
+            </td>
+            <td width="50%">
+                <div class="field-container">
+                    <span class="bold">Driver Name :</span>
+                    <span class="dotted-line" th:text="${driverName}"></span>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td width="50%">
+                <div class="field-container">
+                    <span class="bold">Total No. of Package :</span>
+                    <span class="dotted-line" th:text="${totalPackages}"></span>
+                </div>
+            </td>
+            <td width="50%">
+                <div class="field-container">
+                    <span class="bold">Mobile No :</span>
+                    <span class="dotted-line" th:text="${driverMobile}"></span>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="1"></td>
+            <td width="50%">
+                <div class="field-container">
+                    <span class="bold">Total Weight :</span>
+                    <span class="dotted-line" th:text="${totalWeight}"></span>
+                </div>
+            </td>
+        </tr>
+    </table>
 
-        </td>
+    <table class="items-table">
+        <thead>
+        <tr>
+            <th width="7%">SrNo</th>
+            <th width="20%">Unit Type<br/><span class="sub-label">(Carton, Place etc)</span></th>
+            <th width="53%">Item Description</th>
+            <th width="20%">No of Units<br/>Dispatch</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item, iter : ${items}">
+            <td class="center" th:text="${iter.index + 1}"></td>
+            <td class="center" th:text="${item.unitType}"></td>
+            <td class="bold" th:text="${item.description}"></td>
+            <td class="center bold" th:text="${item.units}"></td>
+        </tr>
+        <tr class="filler-row">
+            <td></td><td></td><td></td><td></td>
+        </tr>
+        </tbody>
+    </table>
 
-        <td class="center">
+    <div class="remark-box">
+        <div class="field-container">
+            <span class="bold">Remark :</span>
+            <span class="dotted-line" th:text="${remark}"></span>
+        </div>
+    </div>
 
-            <div class="bold" style="font-size:16px;"
-                 th:text="${companyName}">
-            </div>
-
-            <div th:text="${companyAddress}">
-            </div>
-
-        </td>
-
-        <td class="right">
-
-<span th:text="${vendorCode}">
-</span>
-
-        </td>
-
-    </tr>
-
-</table>
-
-<br/>
-
-<div class="center bold">
-
-    GOOD DELIVERY NOTE
-
+    <table class="signature-section">
+        <tr>
+            <td width="50%">
+                <div class="field-container">
+                    <span class="bold">Name of Person Receiving :</span>
+                    <span class="dotted-line"></span>
+                </div>
+                <div class="field-container" style="margin-top: 15px;">
+                    <span class="bold">Name of Person Delivering :</span>
+                    <span class="dotted-line"></span>
+                </div>
+            </td>
+            <td width="50%" style="padding-left: 20px;">
+                <div class="field-container">
+                    <span class="bold">Signature of Person Receiving :</span>
+                    <span class="dotted-line"></span>
+                </div>
+                <div class="field-container" style="margin-top: 15px;">
+                    <span class="bold">Signature of Person Delivering :</span>
+                    <span class="dotted-line"></span>
+                </div>
+            </td>
+        </tr>
+    </table>
 </div>
 
-<br/>
-
-<table class="main">
-
-    <tr>
-
-        <td width="50%">
-
-            Delivery Note No :
-
-            <span class="dotted"
-                  th:text="${gdnNumber}">
-</span>
-
-        </td>
-
-        <td width="50%">
-
-            Date :
-
-            <span class="dotted"
-                  th:text="${gdnDate}">
-</span>
-
-        </td>
-
-    </tr>
-
-    <tr>
-
-        <td colspan="2">
-
-            Dispatch From :
-
-            <span class="dotted"
-                  style="min-width:500px"
-                  th:text="${dispatchFrom}">
-</span>
-
-        </td>
-
-    </tr>
-
-    <tr>
-
-        <td colspan="2">
-
-            Shipping Address :
-
-            <span class="dotted"
-                  style="min-width:500px"
-                  th:text="${shippingAddress}">
-</span>
-
-        </td>
-
-    </tr>
-
-</table>
-
-<br/>
-
-<table class="main">
-
-    <tr>
-
-        <td width="25%">
-
-            Delivery Method :
-
-            <span class="dotted"
-                  th:text="${deliveryMethod}">
-</span>
-
-        </td>
-
-        <td width="25%">
-
-            Vehicle No :
-
-            <span class="dotted"
-                  th:text="${vehicleNo}">
-</span>
-
-        </td>
-
-    </tr>
-
-    <tr>
-
-        <td>
-
-            Transport Name :
-
-            <span class="dotted"
-                  th:text="${transportName}">
-</span>
-
-        </td>
-
-        <td>
-
-            Driver Name :
-
-            <span class="dotted"
-                  th:text="${driverName}">
-</span>
-
-        </td>
-
-    </tr>
-
-    <tr>
-
-        <td>
-
-            Mobile No :
-
-            <span class="dotted"
-                  th:text="${driverMobile}">
-</span>
-
-        </td>
-
-        <td></td>
-
-    </tr>
-
-</table>
-
-<br/>
-
-<table class="main">
-
-    <tr>
-
-        <td width="50%">
-
-            Total No. of Package :
-
-            <span class="dotted"
-                  th:text="${totalPackages}">
-</span>
-
-        </td>
-
-        <td width="50%">
-
-            Total Weight :
-
-            <span class="dotted"
-                  th:text="${totalWeight}">
-</span>
-
-        </td>
-
-    </tr>
-
-</table>
-
-<br/>
-
-<table class="items">
-
-    <tr>
-
-        <th width="8%">SrNo</th>
-
-        <th width="25%">
-            Unit Type<br/>
-            (Carton, Place etc)
-        </th>
-
-        <th>
-            Item Description
-        </th>
-
-        <th width="20%">
-            No of Units Dispatch
-        </th>
-
-    </tr>
-
-    <tr th:each="item : ${items}">
-
-        <td class="center"
-            th:text="${item['srNo']}">
-        </td>
-
-        <td class="center"
-            th:text="${item['unitType']}">
-        </td>
-
-        <td
-                th:text="${item['description']}">
-        </td>
-
-        <td class="center"
-            th:text="${item['units']}">
-        </td>
-
-    </tr>
-
-    <tr>
-
-        <td colspan="4" class="items-bottom"></td>
-
-    </tr>
-
-</table>
-
-<br/>
-
-<table class="main">
-
-    <tr>
-
-        <td>
-
-            Remark :
-
-            <span class="dotted"
-                  style="min-width:500px"
-                  th:text="${remark}">
-</span>
-
-        </td>
-
-    </tr>
-
-</table>
-
-<br/>
-
-<table class="main">
-
-    <tr>
-
-        <td width="50%">
-
-            Name of Person Receiving :
-
-            <span class="dotted"></span>
-
-            <br/><br/>
-
-            Name of Person Delivering :
-
-            <span class="dotted"></span>
-
-        </td>
-
-        <td width="50%">
-
-            Signature of Person Receiving :
-
-            <span class="dotted"></span>
-
-            <br/><br/>
-
-            Signature of Person Delivering :
-
-            <span class="dotted"></span>
-
-        </td>
-
-    </tr>
-
-</table>
-
 </body>
-
 </html>

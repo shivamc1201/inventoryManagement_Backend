@@ -1,312 +1,221 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-
 <head>
-
     <meta charset="UTF-8"/>
-
     <style>
+        body {
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 10mm;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            box-sizing: border-box;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Arial', sans-serif;
+            font-size: 11px;
+            color: #000;
+        }
+        .main-border-table { border: 1.5px solid black; }
+        .main-border-table td { border: 1px solid black; padding: 3px 5px; vertical-align: top; }
+        .bold { font-weight: bold; }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .italic { font-style: italic; }
 
-        @page{
-        size:A4;
-        margin:10mm;
+        /* Product Table Header */
+        .items-header td {
+            border-top: 1.5px solid black !important;
+            border-bottom: 1.5px solid black !important;
+            font-weight: bold;
+            text-align: center;
         }
 
-        body{
-        font-family:Arial;
-        font-size:12px;
-        }
+        /* Continuous Vertical Lines */
+        .product-row td { border-bottom: none !important; border-top: none !important; }
+        .filler-row { height: 320px; }
+        .filler-row td { border-top: none !important; border-bottom: none !important; }
 
-        table{
-        width:100%;
-        border-collapse:collapse;
-        }
+        /* Bank Section */
+        .bank-details-table td { border: none !important; padding: 1px !important; font-size: 10px; }
 
-        .main{
-        border:1px solid black;
-        }
+        .label-small { font-size: 9px; color: #333; }
 
-        .main td,
-        .main th{
-        border:1px solid black;
-        padding:6px;
+        @media print {
+            body { background: none; padding: 0; }
+            .page { box-shadow: none; margin: 0; width: 100%; }
         }
-
-        .no-border,
-        .no-border td{
-        border:none;
-        }
-
-        .bold{
-        font-weight:bold;
-        }
-
-        .right{
-        text-align:right;
-        }
-
-        .center{
-        text-align:center;
-        }
-
-        .items th{
-        background:#f2f2f2;
-        }
-
     </style>
-
 </head>
-
 <body>
 
-<table class="main">
-
-    <tr>
-
-        <td width="60%">
-
-            <table class="no-border">
-
-                <tr class="no-border">
-
-                    <td class="no-border" width="100">
-
-                        <img src="logo.png" width="90"/>
-
-                    </td>
-
-                    <td class="no-border">
-
-                        <div class="bold" th:text="${invoice.companyName}"></div>
-
-                        <div th:text="${invoice.companyAddress}"></div>
-
-                        GSTIN/UIN :
-                        <span th:text="${invoice.gstin}"></span>
-                        <br/>
-
-                        Contact :
-                        <span th:text="${invoice.contactNumber}"></span>
-
-                        <br/>
-
-                        Email :
-                        <span th:text="${invoice.email}"></span>
-
-                    </td>
-
-                </tr>
-
-            </table>
-
-        </td>
-
-        <td width="40%">
-
-            PI No :
-            <span th:text="${invoice.piNumber}"></span>
-
-            <br/><br/>
-
-            Dated :
-            <span th:text="${invoice.piDate}"></span>
-
-            <br/><br/>
-
-            Mode/Terms of Payment :
-            <span th:text="${invoice.modeOfPayment}"></span>
-
-            <br/><br/>
-
-            Terms of Delivery :
-            Ex-Works
-
-        </td>
-
-    </tr>
-
-    <tr>
-
-        <td>
-
-            <b>Consignee (Ship To)</b>
-
-            <br/><br/>
-
-            <span th:text="${invoice.shipTo.name}"></span>
-
-            <br/>
-
-            <span th:text="${invoice.shipTo.address}"></span>
-
-            <br/>
-
-            GST :
-            <span th:text="${invoice.shipTo.gstin}"></span>
-
-            <br/>
-
-            State :
-            <span th:text="${invoice.shipTo.state}"></span>
-
-            <br/>
-
-            State Code :
-            <span th:text="${invoice.shipTo.stateCode}"></span>
-
-        </td>
-
-        <td>
-
-            <b>Buyer (Bill To)</b>
-
-            <br/><br/>
-
-            <span th:text="${invoice.billTo.name}"></span>
-
-            <br/>
-
-            <span th:text="${invoice.billTo.address}"></span>
-
-            <br/>
-
-            GST :
-            <span th:text="${invoice.billTo.gstin}"></span>
-
-            <br/>
-
-            State :
-            <span th:text="${invoice.billTo.state}"></span>
-
-            <br/>
-
-            State Code :
-            <span th:text="${invoice.billTo.stateCode}"></span>
-
-        </td>
-
-    </tr>
-
-</table>
-
-<br/>
-
-<table class="main items">
-
-    <tr>
-
-        <th>Sr No</th>
-        <th>Description of Goods</th>
-        <th>HSN</th>
-        <th>Quantity</th>
-        <th>Rate</th>
-        <th>Per</th>
-        <th>Amount</th>
-
-    </tr>
-
-    <tr th:each="item : ${invoice.items}">
-
-        <td th:text="${item.srNo}"></td>
-
-        <td th:text="${item.description}"></td>
-
-        <td th:text="${item.hsnCode}"></td>
-
-        <td class="right" th:text="${item.quantity}"></td>
-
-        <td class="right" th:text="${item.ratePerUnit}"></td>
-
-        <td th:text="${item.unit}"></td>
-
-        <td class="right" th:text="${item.amount}"></td>
-
-    </tr>
-
-</table>
-
-<br/>
-
-<table class="main">
-
-    <tr>
-
-        <td width="60%">
-
-            Amount Chargeable (in words)
-
-            <br/><br/>
-
-            <b th:text="${invoice.amountInWords}"></b>
-
-            <br/><br/>
-
-            Declaration :
-
-            <br/>
-
-            We declare that this invoice shows the actual price of the goods described.
-
-        </td>
-
-        <td width="40%">
-
-            <b>Tax Details</b>
-
-            <br/><br/>
-
-            Subtotal :
-            <span class="right" th:text="${invoice.subtotal}"></span>
-
-            <br/><br/>
-
-            CGST :
-            <span class="right" th:text="${invoice.cgst}"></span>
-
-            <br/><br/>
-
-            SGST :
-            <span class="right" th:text="${invoice.sgst}"></span>
-
-            <br/><br/>
-
-            IGST :
-            <span class="right" th:text="${invoice.igst}"></span>
-
-            <br/><br/>
-
-            <b>Grand Total :</b>
-            <span class="right bold" th:text="${invoice.grandTotal}"></span>
-
-        </td>
-
-    </tr>
-
-</table>
-
-<br/>
-
-<table class="main">
-
-    <tr>
-
-        <td class="center">
-
-            <br/><br/>
-
-            for
-            <span th:text="${invoice.companyName}"></span>
-
-            <br/><br/><br/>
-
-            Authorised Signatory
-
-        </td>
-
-    </tr>
-
-</table>
+<div class="page">
+    <div style="text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 2px;">PROFORMA INVOICE</div>
+    <div style="text-align: right; font-size: 9px; margin-bottom: 5px;">Original Copy</div>
+
+    <table class="main-border-table">
+        <tr>
+            <td colspan="3" width="55%">
+                <div style="display: flex; align-items: flex-start;">
+                    <img src="logo.png" width="75" style="margin-right: 15px;"/>
+                    <div>
+                        <div class="bold italic" style="font-size: 18px;">Nectar Origin Private Limited</div>
+                        <div style="font-size: 10px;">
+                            360 K, Shiv Parwati Nagar, Block Road<br/>
+                            No -2, Ward No 16, Kahalgaon, Bhagalpur<br/>
+                            Bihar<br/>
+                            <span class="bold">GSTIN/UIN: 10AAFCN3882K1ZE</span><br/>
+                            CIN: U74999BR2016PTC032690<br/>
+                            Contact No : 06429-450126<br/>
+                            Email : nectarorigin@gmail.com
+                        </div>
+                    </div>
+                </div>
+            </td>
+            <td colspan="2" width="22%">
+                <span class="label-small">PI No.</span><br/>
+                <span class="bold" th:text="${invoice.piNumber}"></span><br/><br/>
+                <span class="label-small">Delivery Note</span><br/>
+                <span th:text="${invoice.deliveryNote}"></span>
+            </td>
+            <td colspan="2" width="23%">
+                <span class="label-small">Dated</span><br/>
+                <span class="bold" th:text="${invoice.piDate}"></span><br/><br/>
+                <span class="label-small">Mode/Terms of Payment</span><br/>
+                <span class="bold" th:text="${invoice.modeOfPayment}"></span>
+            </td>
+        </tr>
+
+        <tr>
+            <td colspan="3" rowspan="2">
+                <span class="label-small">Consignee (Ship To)</span><br/>
+                <div class="bold" th:text="${invoice.shipTo.name}"></div>
+                <div th:text="${invoice.shipTo.address}"></div>
+                <div>Pincode : <span th:text="${invoice.shipTo.pincode}"></span></div>
+                <div>GST IN/ UIN : <span class="bold" th:text="${invoice.shipTo.gstin}"></span></div>
+                <div>State : <span th:text="${invoice.shipTo.state}"></span> <span style="float:right;">Code : <span th:text="${invoice.shipTo.stateCode}"></span></span></div>
+                <div>Contact : <span th:text="${invoice.shipTo.contact}"></span></div>
+            </td>
+            <td colspan="2">Buyer Order No.<br/><span th:text="${invoice.orderNo}"></span></td>
+            <td colspan="2">Dated<br/><span th:text="${invoice.orderDate}"></span></td>
+        </tr>
+        <tr>
+            <td colspan="2">Dispatch Doc No.<br/><span th:text="${invoice.dispatchDocNo}"></span></td>
+            <td colspan="2">Delivery Note Date<br/><span th:text="${invoice.deliveryNoteDate}"></span></td>
+        </tr>
+
+        <tr>
+            <td colspan="3">
+                <span class="label-small">Buyer (Bill To)</span><br/>
+                <div class="bold" th:text="${invoice.billTo.name}"></div>
+                <div th:text="${invoice.billTo.address}"></div>
+                <div>Pincode : <span th:text="${invoice.billTo.pincode}"></span></div>
+                <div>GST IN/ UIN : <span class="bold" th:text="${invoice.billTo.gstin}"></span></div>
+                <div>State : <span th:text="${invoice.billTo.state}"></span> <span style="float:right;">Code : <span th:text="${invoice.billTo.stateCode}"></span></span></div>
+                <div>Contact : <span th:text="${invoice.billTo.contact}"></span></div>
+            </td>
+            <td colspan="4">
+                <span class="label-small">Terms of Delivery</span><br/>
+                <div class="bold">Credit / Partial Credit</div>
+            </td>
+        </tr>
+
+        <tr class="items-header">
+            <td width="5%">SrNo</td>
+            <td width="30%">Description of Goods</td>
+            <td width="10%">HSN</td>
+            <td width="10%">Alt.Qty</td>
+            <td width="15%">Qty.</td>
+            <td width="10%">Rate</td>
+            <td width="8%">Per</td>
+            <td width="12%">Amount</td>
+        </tr>
+
+        <tr class="product-row" th:each="item, iter : ${invoice.items}">
+            <td class="center" th:text="${iter.index + 1}"></td>
+            <td class="bold" th:text="${item.description}"></td>
+            <td class="center" th:text="${item.hsnCode}"></td>
+            <td class="right" th:text="${item.altQty}"></td>
+            <td class="right bold" th:text="${item.quantity}"></td>
+            <td class="right" th:text="${item.ratePerUnit}"></td>
+            <td class="center" th:text="${item.per}"></td>
+            <td class="right bold" th:text="${item.amount}"></td>
+        </tr>
+
+        <tr class="filler-row">
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>
+
+        <tr class="bold">
+            <td colspan="3" class="right">Total</td>
+            <td class="right" th:text="${invoice.totalAltQty}"></td>
+            <td class="right" th:text="${invoice.totalQty}"></td>
+            <td></td>
+            <td></td>
+            <td class="right" th:text="${invoice.grandTotal}"></td>
+        </tr>
+
+        <tr>
+            <td colspan="8">
+                <span class="label-small">Amount Chargeable (in words)</span> <span style="float:right;" class="bold">E & O.E</span><br/>
+                <div class="bold" th:text="${invoice.amountInWords}"></div>
+            </td>
+        </tr>
+
+        <tr>
+            <td colspan="4" rowspan="2" style="border-bottom:none;">
+                <span class="label-small">Tax Amount (in words) :</span> <span class="bold" th:text="${invoice.taxInWords}">NIL</span><br/><br/>
+                <div>Company's PAN : <span class="bold">AAFCN3882K</span></div>
+                <div class="bold" style="margin-top:5px;">Declaration:</div>
+                <div style="font-size: 9px; line-height: 1.1;">
+                    We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
+                </div>
+            </td>
+            <td colspan="3" class="right">Taxable Amount</td>
+            <td class="right bold" th:text="${invoice.subtotal}"></td>
+        </tr>
+        <tr>
+            <td colspan="3" class="right bold">Grand Total of Invoice</td>
+            <td class="right bold" th:text="${invoice.grandTotal}"></td>
+        </tr>
+
+        <tr>
+            <td colspan="8" style="padding: 0;">
+                <table style="width: 100%;">
+                    <tr>
+                        <td width="50%" style="border: none; padding: 5px;">
+                        </td>
+                        <td width="50%" style="border-left: 1.5px solid black; padding: 5px;">
+                            <div class="bold">Company's Bank Details</div>
+                            <table class="bank-details-table">
+                                <tr><td width="35%">A/c Holder's Name</td><td>: <span class="bold">NECTAR ORIGIN PRIVATE LIMITED</span></td></tr>
+                                <tr><td>Bank Name</td><td>: <span class="bold">State Bank of India</span></td></tr>
+                                <tr><td>A/c No.</td><td>: <span class="bold">00000042894533595</span></td></tr>
+                                <tr><td>Branch & IFS Code</td><td>: <span class="bold">COLGONG(02323) & SBIN0002323</span></td></tr>
+                                <tr><td>SWIFT Code</td><td>: </td></tr>
+                            </table>
+                            <br/>
+                            <div class="right">
+                                <span style="font-size: 10px;">for <span class="bold">Nectar Origin Private Limited</span></span>
+                                <br/><br/><br/>
+                                <span class="bold">Authorised Signatory</span>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</div>
 
 </body>
-
 </html>

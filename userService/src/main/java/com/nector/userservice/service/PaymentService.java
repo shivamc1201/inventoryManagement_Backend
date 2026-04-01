@@ -1,6 +1,7 @@
 package com.nector.userservice.service;
 
 import com.nector.userservice.dto.payment.*;
+import com.nector.userservice.interceptors.accounts.model.PaymentHistoryResponse;
 import com.nector.userservice.model.PaymentApproval;
 import com.nector.userservice.model.ProformaInvoice;
 import com.nector.userservice.model.DistributorLedger;
@@ -131,6 +132,18 @@ public class PaymentService {
     
     public List<DistributorLedger> getPaymentHistory(Long distributorId) {
         return distributorLedgerRepository.findByDistributorIdOrderByCreatedAtDesc(distributorId);
+    }
+    
+    public PaymentHistoryResponse getPaymentHistoryWithBalance(Long distributorId) {
+        List<DistributorLedger> paymentHistory = distributorLedgerRepository.findByDistributorIdOrderByCreatedAtDesc(distributorId);
+        BigDecimal closingBalance = distributorLedgerRepository.getDistributorBalance(distributorId);
+        
+        PaymentHistoryResponse response = new PaymentHistoryResponse();
+        response.setPaymentHistory(paymentHistory);
+        response.setClosingBalance(closingBalance);
+        response.setDistributorId(distributorId);
+        
+        return response;
     }
     
     public com.nector.userservice.dto.payment.OrderApprovalResponse approvePaymentForOrder(Long orderId, Long distributorId) {

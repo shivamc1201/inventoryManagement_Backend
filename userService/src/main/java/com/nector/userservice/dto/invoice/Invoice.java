@@ -24,6 +24,7 @@ public class Invoice {
     private BuyerDetails shipTo;
     
     // Order details
+    private String orderNo;
     private String gdnNumber;
     private String orderConfirmationRemarks;
     
@@ -34,6 +35,7 @@ public class Invoice {
     private double subtotal;
     private double taxAmount;
     private double grandTotal;
+    private String totalQty;
     private String amountInWords;
     
     // Footer details

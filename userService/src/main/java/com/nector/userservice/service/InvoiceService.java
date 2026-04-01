@@ -216,6 +216,7 @@ public class InvoiceService {
         invoice.setInvoiceNumber("INV-" + orderConfirmation.getOrderId() + "-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")));
         invoice.setInvoiceDate(LocalDate.now());
         invoice.setPaymentTerms("Due on Receipt");
+        invoice.setOrderNo(String.valueOf(orderConfirmation.getOrderId()));
         invoice.setGdnNumber(orderConfirmation.getGdnNumber());
         invoice.setOrderConfirmationRemarks(orderConfirmation.getRemarks());
 
@@ -308,10 +309,12 @@ public class InvoiceService {
         double subtotal = items.stream().mapToDouble(InvoiceItem::getAmount).sum();
         double taxAmount = subtotal * 0.18; // 18% GST
         double grandTotal = subtotal + taxAmount;
+        int totalQuantity = items.stream().mapToInt(InvoiceItem::getQuantity).sum();
 
         invoice.setSubtotal(subtotal);
         invoice.setTaxAmount(taxAmount);
         invoice.setGrandTotal(grandTotal);
+        invoice.setTotalQty(String.valueOf(totalQuantity));
         invoice.setAmountInWords(convertToWords(grandTotal));
 
         // Additional details

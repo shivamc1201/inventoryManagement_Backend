@@ -209,6 +209,8 @@ public class ProformaInvoiceService {
             billTo.setGstin(distributor.getGstNumber());
             billTo.setState("Bihar"); // You may want to add state to distributor entity
             billTo.setStateCode("10"); // Bihar state code
+            billTo.setPincode("813203"); // Default pincode
+            billTo.setContact(distributor.getPhoneNumber() != null ? distributor.getPhoneNumber() : "06429-450126");
             invoice.setBillTo(billTo);
 
             // Ship To details (same as bill to for now, using cart address if available)
@@ -218,6 +220,8 @@ public class ProformaInvoiceService {
             shipTo.setGstin(distributor.getGstNumber());
             shipTo.setState("Bihar"); // You may want to add state to distributor entity
             shipTo.setStateCode("10"); // Bihar state code
+            shipTo.setPincode("813203"); // Default pincode
+            shipTo.setContact(distributor.getPhoneNumber() != null ? distributor.getPhoneNumber() : "06429-450126");
             invoice.setShipTo(shipTo);
             log.info("ShipTo set with name: {}", shipTo.getName());
         } else {
@@ -249,9 +253,11 @@ public class ProformaInvoiceService {
                     item.setSrNo(i + 1);
                     item.setDescription(cartItem.getItem().getName());
                     item.setHsnCode("1234"); // Default HSN
+                    item.setAltQty(""); // Alternative quantity
                     item.setQuantity(cartItem.getQuantity());
                     item.setRatePerUnit(cartItem.getPriceAtTime().doubleValue());
                     item.setUnit("Pcs");
+                    item.setPer("Pcs"); // Unit per
                     item.setAmount(cartItem.getPriceAtTime().doubleValue() * cartItem.getQuantity());
                     return item;
                 })
@@ -271,6 +277,15 @@ public class ProformaInvoiceService {
         invoice.setIgst(0.0);
         invoice.setGrandTotal(grandTotal);
         invoice.setAmountInWords(convertToWords(grandTotal));
+
+        invoice.setTaxInWords("NIL");
+        invoice.setTotalAltQty("");
+        invoice.setDeliveryNote("");
+        invoice.setOrderNo("");
+        invoice.setOrderDate(LocalDate.now());
+        invoice.setDispatchDocNo("");
+        invoice.setDeliveryNoteDate(LocalDate.now());
+        invoice.setTotalQty(String.valueOf(items.stream().mapToInt(InvoiceItem::getQuantity).sum()));
 
         return invoice;
     }

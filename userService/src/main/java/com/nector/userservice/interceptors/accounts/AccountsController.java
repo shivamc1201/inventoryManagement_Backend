@@ -2,9 +2,10 @@ package com.nector.userservice.interceptors.accounts;
 
 import com.nector.userservice.dto.payment.*;
 import com.nector.userservice.enums.TransactionType;
+import com.nector.userservice.model.DistributorLedger;
 import com.nector.userservice.model.PaymentApproval;
 import com.nector.userservice.model.ProformaInvoice;
-import com.nector.userservice.model.DistributorLedger;
+import com.nector.userservice.interceptors.accounts.model.PaymentHistoryResponse;
 import com.nector.userservice.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -95,11 +96,11 @@ public class AccountsController {
     }
     
     @GetMapping("/payment-history/{distributorId}")
-    @Operation(summary = "Get payment history", description = "Retrieves payment history for a distributor")
+    @Operation(summary = "Get payment history", description = "Retrieves payment history for a distributor with closing balance")
     @ApiResponse(responseCode = "200", description = "Payment history retrieved successfully")
-    public ResponseEntity<List<DistributorLedger>> getPaymentHistory(@PathVariable Long distributorId) {
-        List<DistributorLedger> history = paymentService.getPaymentHistory(distributorId);
-        return ResponseEntity.ok(history);
+    public ResponseEntity<PaymentHistoryResponse> getPaymentHistory(@PathVariable Long distributorId) {
+        PaymentHistoryResponse response = paymentService.getPaymentHistoryWithBalance(distributorId);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/update-balance")
@@ -268,7 +269,9 @@ public class AccountsController {
     @Operation(summary = "Download payment history as CSV", description = "Downloads payment history for a distributor in CSV format")
     @ApiResponse(responseCode = "200", description = "Payment history CSV downloaded successfully")
     public ResponseEntity<byte[]> downloadPaymentHistory(@PathVariable Long distributorId) {
-        List<DistributorLedger> history = paymentService.getPaymentHistory(distributorId);
+        PaymentHistoryResponse paymentResponse = paymentService.getPaymentHistoryWithBalance(distributorId);
+        List<DistributorLedger> history = paymentResponse.getPaymentHistory();
+        BigDecimal closingBalance = paymentResponse.getClosingBalance();
         
         // Get distributor name for the header
         String distributorName = paymentService.getDistributorRepository()
@@ -341,7 +344,9 @@ public class AccountsController {
     @Operation(summary = "Download payment history as PDF", description = "Downloads payment history for a distributor in PDF format")
     @ApiResponse(responseCode = "200", description = "Payment history PDF downloaded successfully")
     public ResponseEntity<byte[]> downloadPaymentHistoryPDF(@PathVariable Long distributorId) throws DocumentException {
-        List<DistributorLedger> history = paymentService.getPaymentHistory(distributorId);
+        PaymentHistoryResponse paymentResponse = paymentService.getPaymentHistoryWithBalance(distributorId);
+        List<DistributorLedger> history = paymentResponse.getPaymentHistory();
+        BigDecimal closingBalance = paymentResponse.getClosingBalance();
         
         // Get distributor name for the header
         String distributorName = paymentService.getDistributorRepository()

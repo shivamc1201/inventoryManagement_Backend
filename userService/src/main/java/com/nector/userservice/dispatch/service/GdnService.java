@@ -229,7 +229,9 @@ public class GdnService {
         Gdn gdn = new Gdn();
         gdn.setGdnNumber(generateGdnNumber());
         gdn.setOrderId(orderId);
-        gdn.setDispatchFromAddress(request.getDispatchFromAddress());
+        gdn.setDispatchFromAddress(request.getDispatchFromAddress() != null ? 
+            request.getDispatchFromAddress() : 
+            "Nectar Origin Private Limited, Kahalgaon, Bhagalpur Bihar");
         gdn.setShippingAddress(request.getShippingAddress());
         gdn.setVehicleNo(request.getVehicleNo());
         gdn.setTransportName(request.getTransportName());

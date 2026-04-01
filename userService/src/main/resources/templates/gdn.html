@@ -124,7 +124,7 @@
             <td colspan="2">
                 <div class="field-container">
                     <span class="bold">Dispatch From :</span>
-                    <span class="dotted-line" th:text="${dispatchFrom}"></span>
+                    <span class="dotted-line" th:text="${dispatchFromAddress}"></span>
                 </div>
             </td>
         </tr>
@@ -204,9 +204,9 @@
         <tbody>
         <tr th:each="item, iter : ${items}">
             <td class="center" th:text="${iter.index + 1}"></td>
-            <td class="center" th:text="${item.unitType}"></td>
+            <td class="center" th:text="${item.unit}"></td>
             <td class="bold" th:text="${item.description}"></td>
-            <td class="center bold" th:text="${item.units}"></td>
+            <td class="center bold" th:text="${item.quantity}"></td>
         </tr>
         <tr class="filler-row">
             <td></td><td></td><td></td><td></td>

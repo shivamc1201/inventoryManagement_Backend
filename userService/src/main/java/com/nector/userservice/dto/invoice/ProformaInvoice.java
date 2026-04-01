@@ -31,13 +31,25 @@ public class ProformaInvoice {
     private double igst;
     private double grandTotal;
     private String amountInWords;
+    private String taxInWords;
+    
+    // Additional fields for template
+    private String deliveryNote;
+    private String orderNo;
+    private LocalDate orderDate;
+    private String dispatchDocNo;
+    private LocalDate deliveryNoteDate;
+    private String totalAltQty;
+    private String totalQty;
     
     @Data
     public static class BuyerDetails {
         private String name;
         private String address;
+        private String pincode;
         private String state;
         private String stateCode;
         private String gstin;
+        private String contact;
     }
 }

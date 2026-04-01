@@ -4,6 +4,8 @@ import com.nector.userservice.enums.SalesRole;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.Data;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Data
 @Schema(description = "Distributor creation/update request")
@@ -92,5 +94,23 @@ public class DistributorRequestDTO {
 
 
     private String ifsc;
+
+    @Schema(description = "Bank guarantee number", example = "BG123456789")
+    private String bankGuaranteeNumber;
+
+    @Schema(description = "Credit amount", example = "500000.00")
+    private java.math.BigDecimal creditAmount;
+
+    @Schema(description = "Bank guarantee expiry date", example = "2025-12-31")
+    private java.time.LocalDate bgExpiryDate;
+
+    @Schema(description = "District", example = "Patna")
+    private String district;
+
+    @Schema(description = "State", example = "Bihar")
+    private String state;
+
+    @Schema(description = "PIN code", example = "800001")
+    private String pinCode;
 
 }

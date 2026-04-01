@@ -3,6 +3,8 @@ package com.nector.userservice.interceptors.distributor.model;
 import com.nector.userservice.enums.SalesRole;
 import jakarta.persistence.*;
 import lombok.Data;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -80,6 +82,27 @@ public class Distributor {
 
     @Column(name = "ifsc",  length = 100)
     private String ifsc;
+
+    @Column(name = "distributor_code", nullable = false, unique = true, length = 15)
+    private String distributorCode;
+
+    @Column(name = "bank_guarantee_number", length = 50)
+    private String bankGuaranteeNumber;
+
+    @Column(name = "credit_amount", precision = 15, scale = 2)
+    private java.math.BigDecimal creditAmount;
+
+    @Column(name = "bg_expiry_date")
+    private java.time.LocalDate bgExpiryDate;
+
+    @Column(name = "district", length = 100)
+    private String district;
+
+    @Column(name = "state", length = 100)
+    private String state;
+
+    @Column(name = "pin_code", length = 10)
+    private String pinCode;
 
 
     @PrePersist

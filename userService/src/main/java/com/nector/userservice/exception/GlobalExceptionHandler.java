@@ -127,6 +127,34 @@ public class GlobalExceptionHandler {
         error.put("error", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
+
+    @ExceptionHandler(DealerNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleDealerNotFound(DealerNotFoundException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(DuplicateDealerPhoneException.class)
+    public ResponseEntity<Map<String, String>> handleDuplicateDealerPhone(DuplicateDealerPhoneException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(DuplicateLedgerReferenceException.class)
+    public ResponseEntity<Map<String, String>> handleDuplicateLedgerReference(DuplicateLedgerReferenceException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(TenantAccessViolationException.class)
+    public ResponseEntity<Map<String, String>> handleTenantAccessViolation(TenantAccessViolationException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
     
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGenericException(Exception ex) {

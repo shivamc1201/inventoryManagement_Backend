@@ -4,6 +4,8 @@ import com.nector.userservice.dto.DealerCreateRequest;
 import com.nector.userservice.dto.DealerUpdateRequest;
 import com.nector.userservice.dto.DealerResponse;
 import com.nector.userservice.exception.BusinessException;
+import com.nector.userservice.interceptors.distributor.model.Distributor;
+import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.model.Dealer;
 import com.nector.userservice.repository.DealerRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ public class DealerService {
 
     private final DealerRepository dealerRepository;
     private final DealerLedgerService dealerLedgerService;
+    private final DistributorRepository distributorRepository;
 
     @Transactional
     public DealerResponse createDealer(DealerCreateRequest request, Long distributorId) {
@@ -118,6 +121,14 @@ public class DealerService {
         DealerResponse response = new DealerResponse();
         response.setId(dealer.getId());
         response.setDistributorId(dealer.getDistributorId());
+        
+        // Fetch distributor name
+        Distributor distributor = distributorRepository.findById(dealer.getDistributorId())
+                .orElse(null);
+        if (distributor != null) {
+            response.setDistributorName(distributor.getFirstName() + " " + distributor.getLastName());
+        }
+        
         response.setFullName(dealer.getFullName());
         response.setPhone(dealer.getPhone());
         response.setAddress(dealer.getAddress());

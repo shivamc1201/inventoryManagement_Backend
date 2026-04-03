@@ -32,6 +32,41 @@ public class DealerLedgerService {
     private final DealerRepository dealerRepository;
 
     @Transactional
+    public void initializeOpeningBalance(Long dealerId, Long distributorId, BigDecimal openingBalance) {
+        log.info("Initializing opening balance for dealer: {} and distributor: {} with amount: {}", 
+                dealerId, distributorId, openingBalance);
+
+        // Verify dealer exists and belongs to distributor
+        Dealer dealer = dealerRepository.findByIdAndDistributorId(dealerId, distributorId)
+                .orElseThrow(() -> new BusinessException("Dealer not found or access denied"));
+
+        // Check if opening balance already exists
+        String openingReference = "OPB-" + dealerId;
+        if (ledgerTransactionRepository.existsByDealerIdAndDistributorIdAndReference(
+                dealerId, distributorId, openingReference)) {
+            log.warn("Opening balance already exists for dealer: {}", dealerId);
+            return;
+        }
+
+        // Create opening balance transaction
+        DealerLedgerTransaction openingTransaction = new DealerLedgerTransaction();
+        openingTransaction.setId("TXN-INIT-" + dealerId);
+        openingTransaction.setDealerId(dealerId);
+        openingTransaction.setDistributorId(distributorId);
+        openingTransaction.setDate(LocalDate.now());
+        openingTransaction.setDescription("Opening Balance");
+        openingTransaction.setReference(openingReference);
+        openingTransaction.setType(com.nector.userservice.enums.LedgerTransactionType.JV);
+        openingTransaction.setDebit(BigDecimal.ZERO);
+        openingTransaction.setCredit(BigDecimal.ZERO);
+        openingTransaction.setBalance(openingBalance);
+        openingTransaction.setCategory(com.nector.userservice.enums.LedgerTransactionCategory.Journal);
+
+        ledgerTransactionRepository.save(openingTransaction);
+        log.info("Created opening balance transaction for dealer: {} with balance: {}", dealerId, openingBalance);
+    }
+
+    @Transactional
     public LedgerTransactionResponse createManualTransaction(LedgerTransactionRequest request, Long distributorId) {
         log.info("Creating manual ledger transaction for dealer: {} and distributor: {}", request.getDealerId(), distributorId);
 

@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 public class DealerService {
 
     private final DealerRepository dealerRepository;
+    private final DealerLedgerService dealerLedgerService;
     private final DistributorRepository distributorRepository;
 
     @Transactional
@@ -42,6 +44,11 @@ public class DealerService {
 
         Dealer savedDealer = dealerRepository.save(dealer);
         log.info("Created dealer with ID: {}", savedDealer.getId());
+
+        // Auto-initialize opening balance for the dealer
+        BigDecimal openingBalance = request.getOpeningBalance() != null ? request.getOpeningBalance() : BigDecimal.ZERO;
+        dealerLedgerService.initializeOpeningBalance(savedDealer.getId(), distributorId, openingBalance);
+        log.info("Initialized opening balance for dealer: {} with amount: {}", savedDealer.getId(), openingBalance);
 
         return convertToResponse(savedDealer);
     }

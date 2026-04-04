@@ -70,6 +70,18 @@ public class OrderTrackingService {
         OrderTrackingStep step = stepRepo.findByIdAndOrderId(stepId, orderId)
             .orElseThrow(() -> new EntityNotFoundException("Step not found"));
 
+        return updateStepInternal(step, req);
+    }
+
+    @Transactional
+    public OrderStepDTO updateStepBySequence(Long orderId, Integer stepSequence, UpdateStepRequest req) {
+        OrderTrackingStep step = stepRepo.findByOrderIdAndStepSequence(orderId, stepSequence)
+            .orElseThrow(() -> new EntityNotFoundException("Step not found with sequence: " + stepSequence));
+
+        return updateStepInternal(step, req);
+    }
+
+    private OrderStepDTO updateStepInternal(OrderTrackingStep step, UpdateStepRequest req) {
         if (req.getStatus() != null)
             step.setStatus(StepStatus.from(req.getStatus()));
         if (req.getDate() != null)
@@ -80,7 +92,7 @@ public class OrderTrackingService {
         // If this step is now completed or cancelled,
         // advance the next step to IN_PROGRESS automatically
         if (step.getStatus() == StepStatus.COMPLETED) {
-            stepRepo.findByOrderIdAndStepSequence(orderId, step.getStepSequence() + 1)
+            stepRepo.findByOrderIdAndStepSequence(step.getOrder().getId(), step.getStepSequence() + 1)
                 .ifPresent(next -> {
                     if (next.getStatus() == StepStatus.PENDING) {
                         next.setStatus(StepStatus.IN_PROGRESS);
@@ -91,7 +103,7 @@ public class OrderTrackingService {
 
         // If cancelled, propagate cancellation to all subsequent steps
         if (step.getStatus() == StepStatus.CANCELLED) {
-            stepRepo.findByOrderIdOrderByStepSequenceAsc(orderId).stream()
+            stepRepo.findByOrderIdOrderByStepSequenceAsc(step.getOrder().getId()).stream()
                 .filter(s -> s.getStepSequence() > step.getStepSequence()
                             && s.getStatus() == StepStatus.PENDING)
                 .forEach(s -> { s.setStatus(StepStatus.CANCELLED); stepRepo.save(s); });

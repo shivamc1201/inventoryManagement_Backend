@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/sales")
 @RequiredArgsConstructor
-@Tag(name = "Sales Management", description = "APIs for managing sales roles and permissions")
+@Tag(name = "Complaint Management", description = "APIs for managing sales roles and permissions")
 public class SalesController {
 
     private final SalesService salesService;

@@ -401,7 +401,8 @@ public class PaymentService {
     private void updatePIGenerationStep(Long orderId) {
         try {
             // Find order tracking by order number (assuming orderId is cartId that maps to orderNumber)
-            String orderNumber = "ORD-" + orderId; // Adjust based on your order numbering convention
+            String orderNumber = "ORD-" + orderId + "-" + 
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
             updateOrderTrackingStep(orderId, 4, "completed", "Proforma Invoice generated successfully");
         } catch (Exception e) {
             // Log error but don't fail the main process
@@ -438,7 +439,8 @@ public class PaymentService {
      */
     private void ensureOrderTrackingExists(Long orderId) {
         try {
-            String orderNumber = "ORD-" + orderId;
+            String orderNumber = "ORD-" + orderId + "-" + 
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
             com.nector.userservice.ordertracking.entity.OrderTracking existingOrder = 
                 orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
             
@@ -471,7 +473,8 @@ public class PaymentService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
             
             // Create order number
-            String orderNumber = "ORD-" + cartId;
+            String orderNumber = "ORD-" + cartId + "-" + 
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
             
             // Use OrderTrackingService to create from cart
             orderTrackingService.createFromCart(
@@ -493,7 +496,8 @@ public class PaymentService {
     private void updateOrderTrackingStep(Long orderId, Integer stepSequence, String status, String remarks) {
         try {
             // Find the order tracking entry by order number
-            String orderNumber = "ORD-" + orderId;
+            String orderNumber = "ORD-" + orderId + "-" + 
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
             com.nector.userservice.ordertracking.entity.OrderTracking order = 
                 orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
             
@@ -503,7 +507,7 @@ public class PaymentService {
                 request.setRemarks(remarks);
                 request.setDate(java.time.LocalDate.now().toString());
                 
-                orderTrackingService.updateStep(order.getId(), stepSequence.longValue(), request);
+                orderTrackingService.updateStepBySequence(order.getId(), stepSequence.intValue(), request);
             } else {
                 System.err.println("Order tracking not found for order number: " + orderNumber);
             }

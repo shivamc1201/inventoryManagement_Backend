@@ -222,7 +222,7 @@ public class DistributorServiceImpl implements DistributorService {
                     "Order not received: " + request.getRemarks());
                 step11Request.setDate(java.time.LocalDate.now().toString());
                 
-                orderTrackingService.updateStep(order.getId(), 11L, step11Request);
+                orderTrackingService.updateStepBySequence(order.getId(), 11, step11Request);
                 log.info("Order tracking Step 11 updated for order {} - received: {}", 
                     request.getOrderId(), isReceived);
             }

@@ -342,7 +342,7 @@ public class CartService {
                 request.setRemarks("Order approved by sales team");
                 request.setDate(java.time.LocalDate.now().toString());
                 
-                orderTrackingService.updateStep(order.getId(), 3L, request);
+                orderTrackingService.updateStepBySequence(order.getId(), 3, request);
                 log.info("Order tracking Step 3 updated for cart {}", updatedCart.getId());
             }
         } catch (Exception e) {
@@ -382,7 +382,7 @@ public class CartService {
                 request.setRemarks("Order rejected by sales: " + reason);
                 request.setDate(java.time.LocalDate.now().toString());
                 
-                orderTrackingService.updateStep(order.getId(), 3L, request);
+                orderTrackingService.updateStepBySequence(order.getId(), 3, request);
                 log.info("Order tracking Step 3 cancelled for cart {} with reason: {}", cartId, reason);
             }
         } catch (Exception e) {

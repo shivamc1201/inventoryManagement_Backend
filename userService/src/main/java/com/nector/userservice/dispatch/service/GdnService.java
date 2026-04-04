@@ -289,28 +289,28 @@ public class GdnService {
                 step7Request.setStatus("completed");
                 step7Request.setRemarks("Logistics confirmation received - GDN generation started");
                 step7Request.setDate(java.time.LocalDate.now().toString());
-                orderTrackingService.updateStep(order.getId(), 7L, step7Request);
+                orderTrackingService.updateStepBySequence(order.getId(), 7, step7Request);
                 
                 // Step 8: Approved from Logistics -> Completed
                 UpdateStepRequest step8Request = new UpdateStepRequest();
                 step8Request.setStatus("completed");
                 step8Request.setRemarks("Logistics approved - GDN generated: " + savedGdn.getGdnNumber());
                 step8Request.setDate(java.time.LocalDate.now().toString());
-                orderTrackingService.updateStep(order.getId(), 8L, step8Request);
+                orderTrackingService.updateStepBySequence(order.getId(), 8, step8Request);
                 
                 // Step 9: GDN Generated -> Completed
                 UpdateStepRequest step9Request = new UpdateStepRequest();
                 step9Request.setStatus("completed");
                 step9Request.setRemarks("GDN generated successfully: " + savedGdn.getGdnNumber());
                 step9Request.setDate(java.time.LocalDate.now().toString());
-                orderTrackingService.updateStep(order.getId(), 9L, step9Request);
+                orderTrackingService.updateStepBySequence(order.getId(), 9, step9Request);
                 
                 // Step 10: Order is On the Way -> Completed
                 UpdateStepRequest step10Request = new UpdateStepRequest();
                 step10Request.setStatus("completed");
                 step10Request.setRemarks("Order is on the way via " + request.getTransportName() + " (" + request.getVehicleNo() + ")");
                 step10Request.setDate(java.time.LocalDate.now().toString());
-                orderTrackingService.updateStep(order.getId(), 10L, step10Request);
+                orderTrackingService.updateStepBySequence(order.getId(), 10, step10Request);
                 
                 log.info("Order tracking Steps 7, 8, 9, 10 updated for order {}", orderId);
             }

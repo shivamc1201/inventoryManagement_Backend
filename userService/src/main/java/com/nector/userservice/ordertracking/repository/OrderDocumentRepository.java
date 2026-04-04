@@ -10,4 +10,6 @@ import java.util.Optional;
 public interface OrderDocumentRepository extends JpaRepository<OrderDocument, Long> {
 
     Optional<OrderDocument> findByOrderIdAndDocType(Long orderId, String docType);
+    
+    boolean existsByOrderIdAndDocType(Long orderId, String docType);
 }

@@ -22,26 +22,21 @@ public interface OrderTrackingRepository extends JpaRepository<OrderTracking, Lo
      * status = 'cancelled' → any step is cancelled
      * status = 'all' or null → no filter
      */
-    @Query("""
-        SELECT DISTINCT o FROM OrderTracking o
-        WHERE (:search IS NULL OR LOWER(o.orderNumber)   LIKE LOWER(CONCAT('%', :search, '%'))
-                          OR LOWER(o.distributorName) LIKE LOWER(CONCAT('%', :search, '%')))
-          AND (
-            :status IS NULL OR :status = 'all'
-            OR (:status = 'completed' AND NOT EXISTS (
-                  SELECT s FROM OrderTrackingStep s WHERE s.order = o
-                  AND s.status <> com.nector.userservice.ordertracking.entity.StepStatus.COMPLETED))
-            OR (:status = 'cancelled' AND EXISTS (
-                  SELECT s FROM OrderTrackingStep s WHERE s.order = o
-                  AND s.status = com.nector.userservice.ordertracking.entity.StepStatus.CANCELLED))
-            OR (:status = 'pending' AND EXISTS (
-                  SELECT s FROM OrderTrackingStep s WHERE s.order = o
-                  AND s.status IN (
-                    com.nector.userservice.ordertracking.entity.StepStatus.PENDING,
-                    com.nector.userservice.ordertracking.entity.StepStatus.IN_PROGRESS)))
-          )
-        ORDER BY o.orderDate DESC
-    """)
+    @Query("SELECT DISTINCT o FROM OrderTracking o " +
+           "WHERE (:search IS NULL OR :search = '' OR " +
+           "o.orderNumber LIKE %:search% OR o.distributorName LIKE %:search%) " +
+           "AND (:status IS NULL OR :status = 'all' OR " +
+           "(:status = 'completed' AND NOT EXISTS (" +
+           "SELECT s FROM OrderTrackingStep s WHERE s.order = o " +
+           "AND s.status <> com.nector.userservice.ordertracking.entity.StepStatus.COMPLETED)) OR " +
+           "(:status = 'cancelled' AND EXISTS (" +
+           "SELECT s FROM OrderTrackingStep s WHERE s.order = o " +
+           "AND s.status = com.nector.userservice.ordertracking.entity.StepStatus.CANCELLED)) OR " +
+           "(:status = 'pending' AND EXISTS (" +
+           "SELECT s FROM OrderTrackingStep s WHERE s.order = o " +
+           "AND s.status IN (com.nector.userservice.ordertracking.entity.StepStatus.PENDING, " +
+           "com.nector.userservice.ordertracking.entity.StepStatus.IN_PROGRESS)))) " +
+           "ORDER BY o.orderDate DESC")
     Page<OrderTracking> findFiltered(
         @Param("search") String search,
         @Param("status") String status,

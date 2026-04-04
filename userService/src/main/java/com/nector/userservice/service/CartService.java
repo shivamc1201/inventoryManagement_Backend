@@ -20,6 +20,8 @@ import com.nector.userservice.dto.invoice.ProformaInvoice;
 import com.nector.userservice.repository.SalesPersonRepository;
 import com.nector.userservice.model.SalesPerson;
 import com.nector.userservice.service.SalesHierarchyValidationService;
+import com.nector.userservice.ordertracking.service.OrderTrackingService;
+import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -44,6 +46,7 @@ public class CartService {
     private final UserRepository userRepository;
     private final SalesPersonRepository salesPersonRepository;
     private final SalesHierarchyValidationService salesHierarchyValidationService;
+    private final OrderTrackingService orderTrackingService;
 
 
     // TODO the dispatch team wil, check the real  quantity of the orders  while checking GDN
@@ -325,6 +328,29 @@ public class CartService {
         cart.setStatus(Cart.CartStatus.APPROVED);
         Cart updatedCart = cartRepository.save(cart);
 
+        // Update Order Tracking Step 3: Approved from Sales
+        try {
+            String orderNumber = "ORD-" + updatedCart.getId() + "-" + 
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+            
+            com.nector.userservice.ordertracking.entity.OrderTracking order = 
+                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+            
+            if (order != null) {
+                UpdateStepRequest request = new UpdateStepRequest();
+                request.setStatus("completed");
+                request.setRemarks("Order approved by sales team");
+                request.setDate(java.time.LocalDate.now().toString());
+                
+                orderTrackingService.updateStep(order.getId(), 3L, request);
+                log.info("Order tracking Step 3 updated for cart {}", updatedCart.getId());
+            }
+        } catch (Exception e) {
+            log.error("Failed to update Order Tracking Step 3 for cart {}: {}", 
+                updatedCart.getId(), e.getMessage());
+            // Continue without failing the approval
+        }
+
         // Generate Proforma Invoice after approval
         proformaInvoiceService.generateProformaInvoice(cartId);
 
@@ -341,6 +367,30 @@ public class CartService {
         cart.setStatus(Cart.CartStatus.DISMISSED);
         cart.setDismissReason(reason);
         cartRepository.save(cart);
+        
+        // Update Order Tracking Step 3: Cancelled (Sales Rejection)
+        try {
+            String orderNumber = "ORD-" + cartId + "-" + 
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+            
+            com.nector.userservice.ordertracking.entity.OrderTracking order = 
+                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+            
+            if (order != null) {
+                UpdateStepRequest request = new UpdateStepRequest();
+                request.setStatus("cancelled");
+                request.setRemarks("Order rejected by sales: " + reason);
+                request.setDate(java.time.LocalDate.now().toString());
+                
+                orderTrackingService.updateStep(order.getId(), 3L, request);
+                log.info("Order tracking Step 3 cancelled for cart {} with reason: {}", cartId, reason);
+            }
+        } catch (Exception e) {
+            log.error("Failed to cancel Order Tracking Step 3 for cart {}: {}", 
+                cartId, e.getMessage());
+            // Continue without failing the dismissal
+        }
+        
         log.info("Cart {} dismissed successfully with reason: {}", cartId, reason);
     }
 
@@ -365,6 +415,34 @@ public class CartService {
         cart.setAddress(request.getAddress());
         cart.setStatus(Cart.CartStatus.PLACED);
         Cart updatedCart = cartRepository.save(cart);
+
+        // Create OrderTracking record for workflow management
+        try {
+            String distributorName = updatedCart.getDistributorName() != null ? 
+                updatedCart.getDistributorName() : "Unknown Distributor";
+            String orderNumber = "ORD-" + updatedCart.getId() + "-" + 
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+            
+            BigDecimal totalAmount = updatedCart.getTotalCartAmount() != null ? 
+                updatedCart.getTotalCartAmount() : 
+                updatedCart.getCartItems().stream()
+                    .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            orderTrackingService.createFromCart(
+                updatedCart.getId(), 
+                distributorName, 
+                updatedCart.getDistributorId(),
+                orderNumber,
+                totalAmount
+            );
+            
+            log.info("OrderTracking record created for cart {}", updatedCart.getId());
+        } catch (Exception e) {
+            log.error("Failed to create OrderTracking record for cart {}: {}", 
+                updatedCart.getId(), e.getMessage());
+            // Continue without failing the order placement
+        }
 
         log.info("Order placed successfully for cart {} for distributor {}", request.getCartId(), distributorId);
         return mapToResponse(updatedCart);

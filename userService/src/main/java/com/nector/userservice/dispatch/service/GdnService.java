@@ -14,6 +14,8 @@ import com.nector.userservice.model.CartItem;
 import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.service.InventoryService;
 import com.nector.userservice.service.HtmlToPdfService;
+import com.nector.userservice.ordertracking.service.OrderTrackingService;
+import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -46,6 +48,7 @@ public class GdnService {
     private final HtmlToPdfService htmlToPdfService;
     private final TemplateEngine templateEngine;
     private final CloudinaryStorageService cloudinaryStorageService;
+    private final OrderTrackingService orderTrackingService;
     
     @Transactional
     public GdnResponse generateGdn(Long orderId, GdnGenerationRequest request) {
@@ -271,6 +274,51 @@ public class GdnService {
 
         cart.setStatus(Cart.CartStatus.GDN_GENERATED);
         cartRepository.save(cart);
+
+        // Update Order Tracking Steps 7, 8, 9, 10
+        try {
+            String orderNumber = "ORD-" + orderId + "-" + 
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+            
+            com.nector.userservice.ordertracking.entity.OrderTracking order = 
+                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+            
+            if (order != null) {
+                // Step 7: Awaiting Confirmation from Logistics -> Completed
+                UpdateStepRequest step7Request = new UpdateStepRequest();
+                step7Request.setStatus("completed");
+                step7Request.setRemarks("Logistics confirmation received - GDN generation started");
+                step7Request.setDate(java.time.LocalDate.now().toString());
+                orderTrackingService.updateStep(order.getId(), 7L, step7Request);
+                
+                // Step 8: Approved from Logistics -> Completed
+                UpdateStepRequest step8Request = new UpdateStepRequest();
+                step8Request.setStatus("completed");
+                step8Request.setRemarks("Logistics approved - GDN generated: " + savedGdn.getGdnNumber());
+                step8Request.setDate(java.time.LocalDate.now().toString());
+                orderTrackingService.updateStep(order.getId(), 8L, step8Request);
+                
+                // Step 9: GDN Generated -> Completed
+                UpdateStepRequest step9Request = new UpdateStepRequest();
+                step9Request.setStatus("completed");
+                step9Request.setRemarks("GDN generated successfully: " + savedGdn.getGdnNumber());
+                step9Request.setDate(java.time.LocalDate.now().toString());
+                orderTrackingService.updateStep(order.getId(), 9L, step9Request);
+                
+                // Step 10: Order is On the Way -> Completed
+                UpdateStepRequest step10Request = new UpdateStepRequest();
+                step10Request.setStatus("completed");
+                step10Request.setRemarks("Order is on the way via " + request.getTransportName() + " (" + request.getVehicleNo() + ")");
+                step10Request.setDate(java.time.LocalDate.now().toString());
+                orderTrackingService.updateStep(order.getId(), 10L, step10Request);
+                
+                log.info("Order tracking Steps 7, 8, 9, 10 updated for order {}", orderId);
+            }
+        } catch (Exception e) {
+            log.error("Failed to update Order Tracking Steps 7-10 for order {}: {}", 
+                orderId, e.getMessage());
+            // Continue without failing the GDN generation
+        }
 
         generateGdnPdf(savedGdn, cart);
 

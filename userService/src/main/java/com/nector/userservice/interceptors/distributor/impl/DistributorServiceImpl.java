@@ -20,6 +20,8 @@ import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.repository.ItemRepository;
 import com.nector.userservice.service.InvoiceService;
 import com.nector.userservice.service.JwtService;
+import com.nector.userservice.ordertracking.service.OrderTrackingService;
+import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -52,6 +54,7 @@ public class DistributorServiceImpl implements DistributorService {
     private final SalesPersonRepository salesPersonRepository;
     private final CartRepository cartRepository;
     private final InvoiceService invoiceService;
+    private final OrderTrackingService orderTrackingService;
     
     @Override
     public DistributorResponseDTO createDistributor(DistributorRequestDTO request) {
@@ -198,6 +201,36 @@ public class DistributorServiceImpl implements DistributorService {
         
         OrderConfirmation savedConfirmation = orderConfirmationRepository.save(confirmation);
         log.info("Order confirmation saved with ID: {}", savedConfirmation.getId());
+        
+        // Update Order Tracking Step 11: Order Received
+        try {
+            String orderNumber = "ORD-" + request.getOrderId() + "-" + 
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+            
+            com.nector.userservice.ordertracking.entity.OrderTracking order = 
+                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+            
+            if (order != null) {
+                // Determine if order was received (yes/no) based on status
+                boolean isReceived = request.getStatus() == OrderConfirmationRequest.ConfirmationStatus.RECEIVED_COMPLETE ||
+                                  request.getStatus() == OrderConfirmationRequest.ConfirmationStatus.RECEIVED_PARTIAL;
+                
+                UpdateStepRequest step11Request = new UpdateStepRequest();
+                step11Request.setStatus(isReceived ? "completed" : "cancelled");
+                step11Request.setRemarks(isReceived ? 
+                    "Order received by distributor: " + request.getFeedback() : 
+                    "Order not received: " + request.getRemarks());
+                step11Request.setDate(java.time.LocalDate.now().toString());
+                
+                orderTrackingService.updateStep(order.getId(), 11L, step11Request);
+                log.info("Order tracking Step 11 updated for order {} - received: {}", 
+                    request.getOrderId(), isReceived);
+            }
+        } catch (Exception e) {
+            log.error("Failed to update Order Tracking Step 11 for order {}: {}", 
+                request.getOrderId(), e.getMessage());
+            // Continue without failing the order confirmation
+        }
         
         // Generate and save invoice after order confirmation
         try {

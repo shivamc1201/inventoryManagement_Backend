@@ -12,6 +12,8 @@ import org.springframework.stereotype.Repository;
 public interface OrderTrackingRepository extends JpaRepository<OrderTracking, Long> {
 
     boolean existsByOrderNumber(String orderNumber);
+    
+    OrderTracking findByOrderNumber(String orderNumber);
 
     /**
      * Supports the 3 filter values from the frontend's filter chips:

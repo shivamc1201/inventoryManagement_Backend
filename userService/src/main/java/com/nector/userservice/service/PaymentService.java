@@ -9,6 +9,9 @@ import com.nector.userservice.repository.*;
 import com.nector.userservice.interceptors.salesMapping.repository.SalesMappingRepository;
 import com.nector.userservice.interceptors.salesMapping.model.MappingStatus;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
+import com.nector.userservice.ordertracking.service.OrderTrackingService;
+import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
+import com.nector.userservice.ordertracking.dto.CreateOrderTrackingRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -38,6 +41,9 @@ public class PaymentService {
 
     @Autowired
     private PaymentApprovalRepository paymentApprovalRepository;
+
+    @Autowired
+    private OrderTrackingService orderTrackingService;
 
     
     public PaymentResponse processPayment(PaymentRequest paymentRequest) {
@@ -77,6 +83,16 @@ public class PaymentService {
         if (ledgerBalance.compareTo(orderAmount) >= 0) {
             response.setStatus("APPROVED");
             response.setMessage("Order approved - sufficient balance");
+            
+            // Ensure order tracking exists before updating steps
+            ensureOrderTrackingExists(orderId);
+            
+            // Update order tracking Step 4: PI Generated
+            updatePIGenerationStep(orderId);
+            
+            // Update order tracking Step 5: Awaiting Payment Confirmation
+            updateAwaitingPaymentStep(orderId);
+            
             // Deduct amount from distributor balance
             updateDistributorLedger(distributorId, orderAmount.negate());
             // Update PI payment status
@@ -84,6 +100,9 @@ public class PaymentService {
             // Update Cart status to PAYMENT_APPROVED
             cart.setStatus(Cart.CartStatus.PAYMENT_APPROVED);
             cartRepository.save(cart);
+            
+            // Update order tracking Step 6: Approved from Accounts
+            updatePaymentApprovedStep(orderId);
         } else {
             response.setStatus("REJECTED");
             response.setMessage("Insufficient balance");
@@ -149,6 +168,12 @@ public class PaymentService {
         response.setLedgerBalance(ledgerBalance);
         
         if (ledgerBalance.compareTo(piAmount) >= 0) {
+            // Ensure order tracking exists before updating steps
+            ensureOrderTrackingExists(orderId);
+            
+            // Update order tracking Step 5: Awaiting Payment Confirmation
+            updateAwaitingPaymentStep(orderId);
+            
             // Deduct amount from distributor ledger
             updateDistributorBalance(distributorId, piAmount, "DEBIT", "Payment for Order #" + orderId);
             
@@ -161,6 +186,9 @@ public class PaymentService {
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
             cart.setStatus(Cart.CartStatus.PAYMENT_APPROVED);
             cartRepository.save(cart);
+            
+            // Update order tracking Step 6: Approved from Accounts
+            updatePaymentApprovedStep(orderId);
             
             response.setStatus("PAYMENT_APPROVED");
             response.setMessage("Payment approved - Order ready for dispatch");
@@ -348,6 +376,126 @@ public class PaymentService {
             return Long.parseLong(accountNumber);
         } catch (NumberFormatException e) {
             throw new RuntimeException("Invalid account number: " + accountNumber);
+        }
+    }
+
+    // Order Tracking Integration Methods
+    
+    /**
+     * Updates order tracking step when Proforma Invoice is generated
+     * Step 4: Proforma Invoice Generated
+     */
+    private void updatePIGenerationStep(Long orderId) {
+        try {
+            // Find order tracking by order number (assuming orderId is cartId that maps to orderNumber)
+            String orderNumber = "ORD-" + orderId; // Adjust based on your order numbering convention
+            updateOrderTrackingStep(orderId, 4, "completed", "Proforma Invoice generated successfully");
+        } catch (Exception e) {
+            // Log error but don't fail the main process
+            System.err.println("Failed to update PI generation step: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Updates order tracking step when awaiting payment confirmation
+     * Step 5: Awaiting Payment Confirmation from Accounts
+     */
+    private void updateAwaitingPaymentStep(Long orderId) {
+        try {
+            updateOrderTrackingStep(orderId, 5, "in_progress", "Awaiting payment confirmation from accounts");
+        } catch (Exception e) {
+            System.err.println("Failed to update awaiting payment step: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Updates order tracking step when payment is approved by accounts
+     * Step 6: Approved from Accounts
+     */
+    private void updatePaymentApprovedStep(Long orderId) {
+        try {
+            updateOrderTrackingStep(orderId, 6, "completed", "Payment approved by accounts team");
+        } catch (Exception e) {
+            System.err.println("Failed to update payment approved step: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Ensures order tracking exists for the given order, creates if missing
+     */
+    private void ensureOrderTrackingExists(Long orderId) {
+        try {
+            String orderNumber = "ORD-" + orderId;
+            com.nector.userservice.ordertracking.entity.OrderTracking existingOrder = 
+                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+            
+            if (existingOrder == null) {
+                // Create order tracking if it doesn't exist
+                createOrderTrackingFromCart(orderId);
+            }
+        } catch (Exception e) {
+            System.err.println("Error ensuring order tracking exists: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Creates OrderTracking entry when cart is approved/converted to order
+     * This should be called when cart status changes to APPROVED
+     */
+    public void createOrderTrackingFromCart(Long cartId) {
+        try {
+            Cart cart = cartRepository.findById(cartId)
+                .orElseThrow(() -> new RuntimeException("Cart not found: " + cartId));
+            
+            // Get distributor info
+            String distributorName = distributorRepository.findById(cart.getDistributorId())
+                .map(distributor -> distributor.getFirstName() + " " + distributor.getLastName())
+                .orElse("Unknown Distributor");
+            
+            // Calculate total amount
+            BigDecimal totalAmount = cart.getCartItems().stream()
+                .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            // Create order number
+            String orderNumber = "ORD-" + cartId;
+            
+            // Use OrderTrackingService to create from cart
+            orderTrackingService.createFromCart(
+                cartId, 
+                distributorName, 
+                cart.getDistributorId(), 
+                orderNumber, 
+                totalAmount
+            );
+            
+        } catch (Exception e) {
+            System.err.println("Failed to create order tracking from cart: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Generic method to update order tracking steps
+     */
+    private void updateOrderTrackingStep(Long orderId, Integer stepSequence, String status, String remarks) {
+        try {
+            // Find the order tracking entry by order number
+            String orderNumber = "ORD-" + orderId;
+            com.nector.userservice.ordertracking.entity.OrderTracking order = 
+                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+            
+            if (order != null) {
+                UpdateStepRequest request = new UpdateStepRequest();
+                request.setStatus(status);
+                request.setRemarks(remarks);
+                request.setDate(java.time.LocalDate.now().toString());
+                
+                orderTrackingService.updateStep(order.getId(), stepSequence.longValue(), request);
+            } else {
+                System.err.println("Order tracking not found for order number: " + orderNumber);
+            }
+        } catch (Exception e) {
+            System.err.println("Error updating order tracking step: " + e.getMessage());
         }
     }
 

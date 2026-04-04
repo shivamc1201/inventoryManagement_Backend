@@ -22,6 +22,11 @@ public class OrderTrackingService {
 
     private final OrderTrackingRepository orderRepo;
     private final OrderTrackingStepRepository stepRepo;
+    
+    // Public method to get repository for external services
+    public OrderTrackingRepository getOrderRepository() {
+        return orderRepo;
+    }
 
     // ── 1. List orders with filters ──────────────────────────────────────────
 

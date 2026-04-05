@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -52,6 +53,18 @@ public class DealerSaleService {
         createSaleLedgerEntry(savedSale, dealer);
 
         return savedSale;
+    }
+
+    @Transactional(readOnly = true)
+    public List<DealerSale> getSalesByDealerId(Long dealerId) {
+        log.info("Fetching sales for dealer: {}", dealerId);
+        return dealerSaleRepository.findByDealerIdOrderByDateDesc(dealerId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DealerSale> getSalesByDistributorId(Long distributorId) {
+        log.info("Fetching sales for distributor: {}", distributorId);
+        return dealerSaleRepository.findByDistributorIdOrderByDateDesc(distributorId);
     }
 
     private void createSaleLedgerEntry(DealerSale sale, Dealer dealer) {

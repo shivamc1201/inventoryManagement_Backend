@@ -70,6 +70,17 @@ public class DealerService {
     }
 
     @Transactional(readOnly = true)
+    public List<DealerResponse> getDealersByDistributorId(Long distributorId) {
+        log.info("Fetching all dealers for distributor: {}", distributorId);
+
+        List<Dealer> dealers = dealerRepository.findByDistributorIdAndIsActiveTrue(distributorId);
+
+        return dealers.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public DealerResponse getDealerById(Long id, Long distributorId) {
         log.info("Fetching dealer by ID: {} for distributor: {}", id, distributorId);
 

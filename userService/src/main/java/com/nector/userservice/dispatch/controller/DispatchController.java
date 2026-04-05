@@ -216,13 +216,14 @@ public class DispatchController {
             List<CartDto> cartDtos = carts.stream()
                     .map(cart -> {
                         CartDto cartDto = gdnService.convertToCartDto(cart);
-                        // Fetch distributor to get salesperson info
+                        // Fetch distributor to get salesperson info and address
                         if (cart.getDistributorId() != null) {
                             distributorRepository.findById(cart.getDistributorId())
                                     .ifPresent(distributor -> {
                                         cartDto.setSalespersonId(distributor.getSalespersonId());
                                         cartDto.setSalespersonName(distributor.getAssignedPerson());
                                         cartDto.setDistributorName(distributor.getFirstName() + " " + distributor.getLastName());
+                                        cartDto.setAddress(distributor.getAddress());
                                     });
                         }
                         return cartDto;

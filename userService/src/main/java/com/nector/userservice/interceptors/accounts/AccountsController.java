@@ -6,6 +6,7 @@ import com.nector.userservice.model.DistributorLedger;
 import com.nector.userservice.model.PaymentApproval;
 import com.nector.userservice.model.ProformaInvoice;
 import com.nector.userservice.interceptors.accounts.model.PaymentHistoryResponse;
+import com.nector.userservice.interceptors.accounts.model.PaymentHistoryWithRunningBalanceResponse;
 import com.nector.userservice.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -100,6 +101,14 @@ public class AccountsController {
     @ApiResponse(responseCode = "200", description = "Payment history retrieved successfully")
     public ResponseEntity<PaymentHistoryResponse> getPaymentHistory(@PathVariable Long distributorId) {
         PaymentHistoryResponse response = paymentService.getPaymentHistoryWithBalance(distributorId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/payment-history-with-balance/{distributorId}")
+    @Operation(summary = "Get payment history with running balance", description = "Retrieves payment history for a distributor with running balance for each transaction")
+    @ApiResponse(responseCode = "200", description = "Payment history with running balance retrieved successfully")
+    public ResponseEntity<PaymentHistoryWithRunningBalanceResponse> getPaymentHistoryWithRunningBalance(@PathVariable Long distributorId) {
+        PaymentHistoryWithRunningBalanceResponse response = paymentService.getPaymentHistoryWithRunningBalance(distributorId);
         return ResponseEntity.ok(response);
     }
 

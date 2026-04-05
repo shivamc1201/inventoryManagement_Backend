@@ -2,6 +2,7 @@ package com.nector.userservice.service;
 
 import com.nector.userservice.dto.payment.*;
 import com.nector.userservice.interceptors.accounts.model.PaymentHistoryResponse;
+import com.nector.userservice.interceptors.accounts.model.PaymentHistoryWithRunningBalanceResponse;
 import com.nector.userservice.model.PaymentApproval;
 import com.nector.userservice.model.ProformaInvoice;
 import com.nector.userservice.model.DistributorLedger;
@@ -17,6 +18,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.math.BigDecimal;
 
 @Service
@@ -163,6 +166,58 @@ public class PaymentService {
         response.setDistributorId(distributorId);
         
         return response;
+    }
+    
+    public PaymentHistoryWithRunningBalanceResponse getPaymentHistoryWithRunningBalance(Long distributorId) {
+        List<DistributorLedger> paymentHistory = distributorLedgerRepository.findByDistributorIdOrderByCreatedAtDesc(distributorId);
+        BigDecimal closingBalance = distributorLedgerRepository.getDistributorBalance(distributorId);
+        
+        // Calculate running balance for each transaction
+        List<PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance> paymentHistoryWithBalance = 
+            calculateRunningBalance(paymentHistory, closingBalance);
+        
+        PaymentHistoryWithRunningBalanceResponse response = new PaymentHistoryWithRunningBalanceResponse();
+        response.setPaymentHistory(paymentHistoryWithBalance);
+        response.setClosingBalance(closingBalance);
+        response.setDistributorId(distributorId);
+        
+        return response;
+    }
+    
+    private List<PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance> calculateRunningBalance(
+            List<DistributorLedger> paymentHistory, BigDecimal closingBalance) {
+        
+        List<PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance> result = new ArrayList<>();
+        BigDecimal runningBalance = closingBalance;
+        
+        // Process transactions in reverse order (oldest first) to calculate running balance
+        for (int i = paymentHistory.size() - 1; i >= 0; i--) {
+            DistributorLedger transaction = paymentHistory.get(i);
+            PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance item = 
+                new PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance();
+            
+            item.setId(transaction.getId());
+            item.setAmount(transaction.getAmount());
+            item.setCreatedAt(transaction.getCreatedAt());
+            item.setDescription(transaction.getDescription());
+            item.setDistributorId(transaction.getDistributorId());
+            item.setTransactionType(transaction.getTransactionType());
+            item.setCurrentCB(runningBalance);
+            
+            result.add(item);
+            
+            // Calculate balance before this transaction
+            if ("DEBIT".equalsIgnoreCase(transaction.getTransactionType())) {
+                runningBalance = runningBalance.subtract(transaction.getAmount());
+            } else if ("CREDIT".equalsIgnoreCase(transaction.getTransactionType())) {
+                runningBalance = runningBalance.add(transaction.getAmount());
+            }
+        }
+        
+        // Reverse the list to maintain chronological order (newest first)
+        Collections.reverse(result);
+        
+        return result;
     }
     
     public com.nector.userservice.dto.payment.OrderApprovalResponse approvePaymentForOrder(Long orderId, Long distributorId) {

@@ -26,12 +26,13 @@ public class DealerController {
     private final DealerService dealerService;
 
     @PostMapping
-    @Operation(summary = "Create a new dealer", description = "Register a new dealer for the authenticated distributor")
+    @Operation(summary = "Create a new dealer", description = "Register a new dealer for a specific distributor")
     public ResponseEntity<DealerResponse> createDealer(
             @RequestBody DealerCreateRequest request,
+            @Parameter(description = "Distributor ID to assign the dealer to") 
+            @RequestParam Long distributorId,
             @AuthenticationPrincipal UserDetails userDetails) {
         
-        Long distributorId = getDistributorIdFromUser(userDetails);
         DealerResponse response = dealerService.createDealer(request, distributorId);
         return ResponseEntity.ok(response);
     }

@@ -28,9 +28,10 @@ public class DealerSaleController {
     @Operation(summary = "Create dealer sale", description = "Create a new dealer sale and automatically generate corresponding ledger entry")
     public ResponseEntity<DealerSale> createDealerSale(
             @RequestBody DealerSaleRequest request,
+            @Parameter(description = "Distributor ID for the dealer") 
+            @RequestParam Long distributorId,
             @AuthenticationPrincipal UserDetails userDetails) {
         
-        Long distributorId = getDistributorIdFromUser(userDetails);
         DealerSale sale = dealerSaleService.createDealerSale(request, distributorId);
         return ResponseEntity.ok(sale);
     }

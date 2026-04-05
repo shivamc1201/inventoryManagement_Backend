@@ -1,6 +1,7 @@
 package com.nector.userservice.interceptors.products;
 
 import com.nector.userservice.dto.inventory.StockUpdateRequest;
+import com.nector.userservice.enums.StatusUpdateRequest;
 import com.nector.userservice.interceptors.products.impl.UpdateMachinePart;
 import com.nector.userservice.interceptors.products.model.*;
 import com.nector.userservice.interceptors.products.service.FinishedProductService;
@@ -45,10 +46,25 @@ public class ProductsController {
     @GetMapping("/finished-products")
     @Operation(summary = "Get all finished products", description = "Retrieves all finished products")
     public ResponseEntity<List<FinishedProductResponse>> getAllFinishedProducts() {
-        List<FinishedProductResponse> response = finishedProductService.getAllFinishedProducts();
+        List<FinishedProductResponse> response = finishedProductService.getAllActiveFinishedProducts();
         return ResponseEntity.ok(response);
     }
-    
+    @PutMapping("/finished-products/{id}/status")
+    @Operation(summary = "Update finished product status", description = "Updates the status of a finished product (active/inactive)")
+    public ResponseEntity<FinishedProductResponse> updateFinishedProductStatus(
+            @PathVariable Long id,
+            @RequestBody @Valid StatusUpdateRequest request) {
+        FinishedProductResponse response = finishedProductService.updateProductStatus(id, request.getStatus());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/finished-products/all")
+    @Operation(summary = "Get all finished products (including inactive)", description = "Retrieves all finished products regardless of active status")
+    public ResponseEntity<List<FinishedProductResponse>> getAllFinishedProductsWithoutStatusCheck() {
+        List<FinishedProductResponse> response = finishedProductService.getAllFinishedProductsWithoutStatusCheck();
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/finished-products/{id}")
     @Operation(summary = "Get finished product by ID", description = "Retrieves a finished product by its ID")
     public ResponseEntity<FinishedProductResponse> getFinishedProductById(@PathVariable Long id) {

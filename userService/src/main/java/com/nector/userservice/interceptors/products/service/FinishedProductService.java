@@ -15,11 +15,15 @@ public interface FinishedProductService {
     
     FinishedProductResponse getFinishedProductById(Long id);
     
-    List<FinishedProductResponse> getAllFinishedProducts();
+    List<FinishedProductResponse> getAllActiveFinishedProducts();
     
     FinishedProductResponse increaseStock(Long id, Integer quantity);
     
     FinishedProductResponse decreaseStock(Long id, Integer quantity);
     
     List<FinishedProductResponse> getLowStockItems();
+
+    FinishedProductResponse updateProductStatus(Long id, Boolean status);
+
+    List<FinishedProductResponse> getAllFinishedProductsWithoutStatusCheck();
 }

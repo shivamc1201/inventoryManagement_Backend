@@ -127,6 +127,17 @@ public class OrderTrackingService {
                         stepRepo.save(next);
                     }
                 });
+            
+            // Complete previous step if it was IN_PROGRESS
+            if (step.getStepSequence() > 1) {
+                stepRepo.findByOrderIdAndStepSequence(step.getOrder().getId(), step.getStepSequence() - 1)
+                    .ifPresent(previous -> {
+                        if (previous.getStatus() == StepStatus.IN_PROGRESS) {
+                            previous.setStatus(StepStatus.COMPLETED);
+                            stepRepo.save(previous);
+                        }
+                    });
+            }
         }
 
         // If cancelled, propagate cancellation to all subsequent steps

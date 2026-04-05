@@ -357,6 +357,33 @@ public class CartService {
                 
                 orderTrackingService.updateStepBySequence(order.getId(), 3, request);
                 log.info("Order tracking Step 3 updated for cart {}", updatedCart.getId());
+                
+                // Also explicitly complete Step 2 (Pending Approval from Sales) if it was IN_PROGRESS
+                UpdateStepRequest step2Request = new UpdateStepRequest();
+                step2Request.setStatus("completed");
+                step2Request.setRemarks("Sales approval completed");
+                step2Request.setDate(java.time.LocalDate.now().toString());
+                
+                // Add assigned person (salesperson) information
+                if (updatedCart.getSalespersonId() != null) {
+                    step2Request.setAssignedPersonId(updatedCart.getSalespersonId());
+                    step2Request.setAssignedPersonName(updatedCart.getSalespersonName());
+                    step2Request.setAssignedPersonRole("SALES_EXECUTIVE");
+                    
+                    // Get salesperson details
+                    salesPersonRepository.findById(updatedCart.getSalespersonId()).ifPresent(salesperson -> {
+                        step2Request.setAssignedPersonPhone(salesperson.getPhone());
+                        step2Request.setAssignedPersonEmail(salesperson.getEmail());
+                    });
+                }
+                
+                try {
+                    orderTrackingService.updateStepBySequence(order.getId(), 2, step2Request);
+                    log.info("Order tracking Step 2 also completed for cart {}", updatedCart.getId());
+                } catch (Exception e) {
+                    // Step 2 might already be completed, log but don't fail
+                    log.warn("Step 2 already completed or not found for cart {}: {}", updatedCart.getId(), e.getMessage());
+                }
             }
         } catch (Exception e) {
             log.error("Failed to update Order Tracking Step 3 for cart {}: {}", 

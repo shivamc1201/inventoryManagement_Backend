@@ -217,13 +217,34 @@ public class PaymentService {
             List<DistributorLedger> paymentHistory, BigDecimal closingBalance) {
         
         List<PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance> result = new ArrayList<>();
-        BigDecimal runningBalance = closingBalance;
         
-        // Process transactions in reverse order (oldest first) to calculate running balance
-        for (int i = paymentHistory.size() - 1; i >= 0; i--) {
-            DistributorLedger transaction = paymentHistory.get(i);
+        // Calculate opening balance by working backwards from closing balance
+        BigDecimal openingBalance = closingBalance;
+        List<DistributorLedger> reversedHistory = new ArrayList<>(paymentHistory);
+        Collections.reverse(reversedHistory); // Now oldest to newest
+        
+        // Calculate opening balance by subtracting all transactions from closing balance
+        for (DistributorLedger transaction : reversedHistory) {
+            if ("DEBIT".equalsIgnoreCase(transaction.getTransactionType())) {
+                openingBalance = openingBalance.add(transaction.getAmount());
+            } else if ("CREDIT".equalsIgnoreCase(transaction.getTransactionType())) {
+                openingBalance = openingBalance.subtract(transaction.getAmount());
+            }
+        }
+        
+        // Now calculate running balance forward from opening balance
+        BigDecimal runningBalance = openingBalance;
+        
+        for (DistributorLedger transaction : reversedHistory) {
             PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance item = 
                 new PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance();
+            
+            // Apply transaction to get new balance
+            if ("DEBIT".equalsIgnoreCase(transaction.getTransactionType())) {
+                runningBalance = runningBalance.subtract(transaction.getAmount());
+            } else if ("CREDIT".equalsIgnoreCase(transaction.getTransactionType())) {
+                runningBalance = runningBalance.add(transaction.getAmount());
+            }
             
             item.setId(transaction.getId());
             item.setAmount(transaction.getAmount());
@@ -231,16 +252,9 @@ public class PaymentService {
             item.setDescription(transaction.getDescription());
             item.setDistributorId(transaction.getDistributorId());
             item.setTransactionType(transaction.getTransactionType());
-            item.setCurrentCB(runningBalance);
+            item.setCurrentCB(runningBalance); // Balance AFTER this transaction
             
             result.add(item);
-            
-            // Calculate balance before this transaction
-            if ("DEBIT".equalsIgnoreCase(transaction.getTransactionType())) {
-                runningBalance = runningBalance.subtract(transaction.getAmount());
-            } else if ("CREDIT".equalsIgnoreCase(transaction.getTransactionType())) {
-                runningBalance = runningBalance.add(transaction.getAmount());
-            }
         }
         
         // Reverse the list to maintain chronological order (newest first)
@@ -564,6 +578,21 @@ public class PaymentService {
                 request.setAssignedPersonRole("ACCOUNTS_MANAGER");
                 
                 orderTrackingService.updateStepBySequence(order.getId(), 6, request);
+                
+                // Also explicitly complete Step 5 (Awaiting Payment Confirmation) if it was IN_PROGRESS
+                UpdateStepRequest step5Request = new UpdateStepRequest();
+                step5Request.setStatus("completed");
+                step5Request.setRemarks("Payment confirmed and approved");
+                step5Request.setDate(java.time.LocalDate.now().toString());
+                setCurrentUserDetails(step5Request);
+                step5Request.setAssignedPersonRole("ACCOUNTS_MANAGER");
+                
+                try {
+                    orderTrackingService.updateStepBySequence(order.getId(), 5, step5Request);
+                } catch (Exception e) {
+                    // Step 5 might already be completed, log but don't fail
+                    System.err.println("Step 5 already completed or not found: " + e.getMessage());
+                }
             } else {
                 System.err.println("Order tracking not found for order number: " + orderNumber);
             }

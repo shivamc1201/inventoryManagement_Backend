@@ -14,6 +14,7 @@ import com.nector.userservice.interceptors.distributor.repository.DistributorRep
 import com.nector.userservice.ordertracking.service.OrderTrackingService;
 import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
 import com.nector.userservice.ordertracking.dto.CreateOrderTrackingRequest;
+import com.nector.userservice.service.RbacService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -48,6 +49,34 @@ public class PaymentService {
 
     @Autowired
     private OrderTrackingService orderTrackingService;
+    
+    @Autowired
+    private RbacService rbacService;
+    
+    /**
+     * Get current user ID from security context
+     * For now, returns hardcoded user ID 1L (same as RbacService)
+     * TODO: Replace with actual authentication context when available
+     */
+    private Long getCurrentUserId() {
+        // Currently using hardcoded user ID as per RbacService implementation
+        // When authentication is properly implemented, this should get the actual current user ID
+        return 1L;
+    }
+    
+    /**
+     * Get current user details for assigning to order tracking steps
+     */
+    private void setCurrentUserDetails(UpdateStepRequest request) {
+        Long currentUserId = getCurrentUserId();
+        userRepository.findById(currentUserId).ifPresent(user -> {
+            request.setAssignedPersonId(currentUserId);
+            request.setAssignedPersonName(user.getFirstName() + " " + user.getLastName());
+            request.setAssignedPersonEmail(user.getEmail());
+            // Set phone if available, otherwise use default
+            request.setAssignedPersonPhone(user.getContactNo() != null ? user.getContactNo() : "1800-ACCOUNTS");
+        });
+    }
 
     
     public PaymentResponse processPayment(PaymentRequest paymentRequest) {
@@ -458,7 +487,25 @@ public class PaymentService {
             // Find order tracking by order number (assuming orderId is cartId that maps to orderNumber)
             String orderNumber = "ORD-" + orderId + "-" + 
                 java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-            updateOrderTrackingStep(orderId, 4, "completed", "Proforma Invoice generated successfully");
+            com.nector.userservice.ordertracking.entity.OrderTracking order = 
+                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+            
+            if (order != null) {
+                UpdateStepRequest request = new UpdateStepRequest();
+                request.setStatus("completed");
+                request.setRemarks("Proforma Invoice generated successfully");
+                request.setDate(java.time.LocalDate.now().toString());
+                request.setHasDownload(true);
+                request.setDownloadLabel("Download Proforma Invoice");
+                
+                // Add assigned person (accounts team) information
+                setCurrentUserDetails(request);
+                request.setAssignedPersonRole("ACCOUNTS_MANAGER");
+                
+                orderTrackingService.updateStepBySequence(order.getId(), 4, request);
+            } else {
+                System.err.println("Order tracking not found for order number: " + orderNumber);
+            }
         } catch (Exception e) {
             // Log error but don't fail the main process
             System.err.println("Failed to update PI generation step: " + e.getMessage());
@@ -471,7 +518,25 @@ public class PaymentService {
      */
     private void updateAwaitingPaymentStep(Long orderId) {
         try {
-            updateOrderTrackingStep(orderId, 5, "in_progress", "Awaiting payment confirmation from accounts");
+            String orderNumber = "ORD-" + orderId + "-" + 
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+            com.nector.userservice.ordertracking.entity.OrderTracking order = 
+                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+            
+            if (order != null) {
+                UpdateStepRequest request = new UpdateStepRequest();
+                request.setStatus("in_progress");
+                request.setRemarks("Awaiting payment confirmation from accounts");
+                request.setDate(java.time.LocalDate.now().toString());
+                
+                // Add assigned person (accounts team) information
+                setCurrentUserDetails(request);
+                request.setAssignedPersonRole("ACCOUNTS_MANAGER");
+                
+                orderTrackingService.updateStepBySequence(order.getId(), 5, request);
+            } else {
+                System.err.println("Order tracking not found for order number: " + orderNumber);
+            }
         } catch (Exception e) {
             System.err.println("Failed to update awaiting payment step: " + e.getMessage());
         }
@@ -483,7 +548,25 @@ public class PaymentService {
      */
     private void updatePaymentApprovedStep(Long orderId) {
         try {
-            updateOrderTrackingStep(orderId, 6, "completed", "Payment approved by accounts team");
+            String orderNumber = "ORD-" + orderId + "-" + 
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+            com.nector.userservice.ordertracking.entity.OrderTracking order = 
+                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+            
+            if (order != null) {
+                UpdateStepRequest request = new UpdateStepRequest();
+                request.setStatus("completed");
+                request.setRemarks("Payment approved by accounts team");
+                request.setDate(java.time.LocalDate.now().toString());
+                
+                // Add assigned person (accounts team) information
+                setCurrentUserDetails(request);
+                request.setAssignedPersonRole("ACCOUNTS_MANAGER");
+                
+                orderTrackingService.updateStepBySequence(order.getId(), 6, request);
+            } else {
+                System.err.println("Order tracking not found for order number: " + orderNumber);
+            }
         } catch (Exception e) {
             System.err.println("Failed to update payment approved step: " + e.getMessage());
         }

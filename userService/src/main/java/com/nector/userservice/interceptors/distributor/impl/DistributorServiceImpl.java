@@ -222,6 +222,19 @@ public class DistributorServiceImpl implements DistributorService {
                     "Order not received: " + request.getRemarks());
                 step11Request.setDate(java.time.LocalDate.now().toString());
                 
+                // Add assigned person (distributor) information
+                step11Request.setAssignedPersonId(distributorId);
+                step11Request.setHasAction(true);
+                step11Request.setActionResponse(isReceived ? "yes" : "no");
+                
+                // Get distributor details
+                distributorRepository.findById(distributorId).ifPresent(distributor -> {
+                    step11Request.setAssignedPersonName(distributor.getFirstName() + " " + distributor.getLastName());
+                    step11Request.setAssignedPersonRole("DISTRIBUTOR");
+                    step11Request.setAssignedPersonEmail(distributor.getContactEmail());
+                    step11Request.setAssignedPersonPhone(distributor.getPhoneNumber());
+                });
+                
                 orderTrackingService.updateStepBySequence(order.getId(), 11, step11Request);
                 log.info("Order tracking Step 11 updated for order {} - received: {}", 
                     request.getOrderId(), isReceived);

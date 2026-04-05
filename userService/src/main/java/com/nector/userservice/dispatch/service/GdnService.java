@@ -16,6 +16,8 @@ import com.nector.userservice.service.InventoryService;
 import com.nector.userservice.service.HtmlToPdfService;
 import com.nector.userservice.ordertracking.service.OrderTrackingService;
 import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
+import com.nector.userservice.repository.UserRepository;
+import com.nector.userservice.service.RbacService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -49,6 +51,33 @@ public class GdnService {
     private final TemplateEngine templateEngine;
     private final CloudinaryStorageService cloudinaryStorageService;
     private final OrderTrackingService orderTrackingService;
+    private final UserRepository userRepository;
+    private final RbacService rbacService;
+    
+    /**
+     * Get current user ID from security context
+     * For now, returns hardcoded user ID 2L for logistics team
+     * TODO: Replace with actual authentication context when available
+     */
+    private Long getCurrentUserId() {
+        // Currently using hardcoded user ID for logistics team
+        // When authentication is properly implemented, this should get the actual current user ID
+        return 2L;
+    }
+    
+    /**
+     * Get current user details for assigning to order tracking steps
+     */
+    private void setCurrentUserDetails(UpdateStepRequest request) {
+        Long currentUserId = getCurrentUserId();
+        userRepository.findById(currentUserId).ifPresent(user -> {
+            request.setAssignedPersonId(currentUserId);
+            request.setAssignedPersonName(user.getFirstName() + " " + user.getLastName());
+            request.setAssignedPersonEmail(user.getEmail());
+            // Set phone if available, otherwise use default
+            request.setAssignedPersonPhone(user.getContactNo() != null ? user.getContactNo() : "1800-LOGISTICS");
+        });
+    }
     
     @Transactional
     public GdnResponse generateGdn(Long orderId, GdnGenerationRequest request) {
@@ -289,6 +318,11 @@ public class GdnService {
                 step7Request.setStatus("completed");
                 step7Request.setRemarks("Logistics confirmation received - GDN generation started");
                 step7Request.setDate(java.time.LocalDate.now().toString());
+                
+                // Add assigned person (logistics team) information
+                setCurrentUserDetails(step7Request);
+                step7Request.setAssignedPersonRole("LOGISTICS_MANAGER");
+                
                 orderTrackingService.updateStepBySequence(order.getId(), 7, step7Request);
                 
                 // Step 8: Approved from Logistics -> Completed
@@ -296,6 +330,11 @@ public class GdnService {
                 step8Request.setStatus("completed");
                 step8Request.setRemarks("Logistics approved - GDN generated: " + savedGdn.getGdnNumber());
                 step8Request.setDate(java.time.LocalDate.now().toString());
+                
+                // Add assigned person (logistics team) information
+                setCurrentUserDetails(step8Request);
+                step8Request.setAssignedPersonRole("LOGISTICS_MANAGER");
+                
                 orderTrackingService.updateStepBySequence(order.getId(), 8, step8Request);
                 
                 // Step 9: GDN Generated -> Completed
@@ -303,6 +342,14 @@ public class GdnService {
                 step9Request.setStatus("completed");
                 step9Request.setRemarks("GDN generated successfully: " + savedGdn.getGdnNumber());
                 step9Request.setDate(java.time.LocalDate.now().toString());
+                step9Request.setHasDownload(true);
+                step9Request.setDownloadLabel("Download GDN");
+                step9Request.setDocumentPath("/documents/gdn/" + savedGdn.getGdnNumber() + ".pdf");
+                
+                // Add assigned person (logistics team) information
+                setCurrentUserDetails(step9Request);
+                step9Request.setAssignedPersonRole("LOGISTICS_MANAGER");
+                
                 orderTrackingService.updateStepBySequence(order.getId(), 9, step9Request);
                 
                 // Step 10: Order is On the Way -> Completed
@@ -310,6 +357,11 @@ public class GdnService {
                 step10Request.setStatus("completed");
                 step10Request.setRemarks("Order is on the way via " + request.getTransportName() + " (" + request.getVehicleNo() + ")");
                 step10Request.setDate(java.time.LocalDate.now().toString());
+                
+                // Add assigned person (logistics team) information
+                setCurrentUserDetails(step10Request);
+                step10Request.setAssignedPersonRole("LOGISTICS_MANAGER");
+                
                 orderTrackingService.updateStepBySequence(order.getId(), 10, step10Request);
                 
                 log.info("Order tracking Steps 7, 8, 9, 10 updated for order {}", orderId);

@@ -342,6 +342,19 @@ public class CartService {
                 request.setRemarks("Order approved by sales team");
                 request.setDate(java.time.LocalDate.now().toString());
                 
+                // Add assigned person (salesperson) information
+                if (updatedCart.getSalespersonId() != null) {
+                    request.setAssignedPersonId(updatedCart.getSalespersonId());
+                    request.setAssignedPersonName(updatedCart.getSalespersonName());
+                    request.setAssignedPersonRole("SALES_EXECUTIVE");
+                    
+                    // Get salesperson details
+                    salesPersonRepository.findById(updatedCart.getSalespersonId()).ifPresent(salesperson -> {
+                        request.setAssignedPersonPhone(salesperson.getPhone());
+                        request.setAssignedPersonEmail(salesperson.getEmail());
+                    });
+                }
+                
                 orderTrackingService.updateStepBySequence(order.getId(), 3, request);
                 log.info("Order tracking Step 3 updated for cart {}", updatedCart.getId());
             }
@@ -381,6 +394,19 @@ public class CartService {
                 request.setStatus("cancelled");
                 request.setRemarks("Order rejected by sales: " + reason);
                 request.setDate(java.time.LocalDate.now().toString());
+                
+                // Add assigned person (salesperson) information
+                if (cart.getSalespersonId() != null) {
+                    request.setAssignedPersonId(cart.getSalespersonId());
+                    request.setAssignedPersonName(cart.getSalespersonName());
+                    request.setAssignedPersonRole("SALES_EXECUTIVE");
+                    
+                    // Get salesperson details
+                    salesPersonRepository.findById(cart.getSalespersonId()).ifPresent(salesperson -> {
+                        request.setAssignedPersonPhone(salesperson.getPhone());
+                        request.setAssignedPersonEmail(salesperson.getEmail());
+                    });
+                }
                 
                 orderTrackingService.updateStepBySequence(order.getId(), 3, request);
                 log.info("Order tracking Step 3 cancelled for cart {} with reason: {}", cartId, reason);

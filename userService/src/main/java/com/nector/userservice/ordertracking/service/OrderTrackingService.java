@@ -3,6 +3,8 @@ package com.nector.userservice.ordertracking.service;
 import com.nector.userservice.ordertracking.dto.*;
 import com.nector.userservice.ordertracking.entity.*;
 import com.nector.userservice.ordertracking.repository.*;
+import com.nector.userservice.repository.UserRepository;
+import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +24,8 @@ public class OrderTrackingService {
 
     private final OrderTrackingRepository orderRepo;
     private final OrderTrackingStepRepository stepRepo;
+    private final UserRepository userRepository;
+    private final DistributorRepository distributorRepository;
     
     // Public method to get repository for external services
     public OrderTrackingRepository getOrderRepository() {
@@ -88,6 +92,30 @@ public class OrderTrackingService {
             step.setStepDate(LocalDate.parse(req.getDate()));
         if (req.getRemarks() != null)
             step.setRemarks(req.getRemarks());
+            
+        // Update assigned person information
+        if (req.getAssignedPersonId() != null)
+            step.setAssignedPersonId(req.getAssignedPersonId());
+        if (req.getAssignedPersonName() != null)
+            step.setAssignedPersonName(req.getAssignedPersonName());
+        if (req.getAssignedPersonRole() != null)
+            step.setAssignedPersonRole(req.getAssignedPersonRole());
+        if (req.getAssignedPersonPhone() != null)
+            step.setAssignedPersonPhone(req.getAssignedPersonPhone());
+        if (req.getAssignedPersonEmail() != null)
+            step.setAssignedPersonEmail(req.getAssignedPersonEmail());
+            
+        // Update document information
+        step.setHasDownload(req.isHasDownload());
+        if (req.getDownloadLabel() != null)
+            step.setDownloadLabel(req.getDownloadLabel());
+        if (req.getDocumentPath() != null)
+            step.setDocumentPath(req.getDocumentPath());
+            
+        // Update action response (for step 11)
+        step.setHasAction(req.isHasAction());
+        if (req.getActionResponse() != null)
+            step.setActionResponse(req.getActionResponse());
 
         // If this step is now completed or cancelled,
         // advance the next step to IN_PROGRESS automatically
@@ -244,7 +272,7 @@ public class OrderTrackingService {
 
         return java.util.stream.IntStream.range(0, defs.size()).mapToObj(i -> {
             StepDef d = defs.get(i);
-            return OrderTrackingStep.builder()
+            var stepBuilder = OrderTrackingStep.builder()
                 .order(order)
                 .stepSequence(i + 1)
                 .label(d.label())
@@ -253,8 +281,24 @@ public class OrderTrackingService {
                 .remarks(i == 0 ? "Order submitted by distributor" : null)
                 .hasDownload(d.hasDownload())
                 .downloadLabel(d.downloadLabel())
-                .hasAction(d.hasAction())
-                .build();
+                .hasAction(d.hasAction());
+            
+            // Add assigned person information for Step 1 (Order Placed)
+            if (i == 0) {
+                stepBuilder
+                    .assignedPersonId(order.getDistributorId())
+                    .assignedPersonName(order.getDistributorName())
+                    .assignedPersonRole("DISTRIBUTOR");
+                    
+                // Get distributor details
+                distributorRepository.findById(order.getDistributorId()).ifPresent(distributor -> {
+                    stepBuilder
+                        .assignedPersonEmail(distributor.getContactEmail())
+                        .assignedPersonPhone(distributor.getPhoneNumber());
+                });
+            }
+            
+            return stepBuilder.build();
         }).collect(Collectors.toList());
     }
 }

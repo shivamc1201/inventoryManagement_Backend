@@ -101,7 +101,7 @@ public class FinishedProductServiceImpl implements FinishedProductService {
     
     @Override
     @Transactional(readOnly = true)
-    public List<FinishedProductResponse> getAllFinishedProducts() {
+    public List<FinishedProductResponse> getAllActiveFinishedProducts() {
         log.info("Fetching all finished products");
         
         return finishedProductRepository.findByActiveTrue().stream()
@@ -186,5 +186,28 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         response.setCreatedAt(product.getCreatedAt());
         response.setUpdatedAt(product.getUpdatedAt());
         return response;
+    }
+
+    @Override
+    public FinishedProductResponse updateProductStatus(Long id, Boolean status) {
+        FinishedProduct product = finishedProductRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Finished product not found: " + id));
+
+        product.setActive(status);
+        FinishedProduct updatedProduct = finishedProductRepository.save(product);
+
+        String action = status ? "activated" : "suspended";
+        log.info("Finished product {}: {}", action, updatedProduct.getSku());
+        return mapToResponse(updatedProduct);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FinishedProductResponse> getAllFinishedProductsWithoutStatusCheck() {
+        log.info("Fetching all finished products (including inactive)");
+
+        return finishedProductRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 }

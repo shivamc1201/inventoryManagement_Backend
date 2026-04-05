@@ -39,4 +39,9 @@ public interface DealerSaleRepository extends JpaRepository<DealerSale, Long> {
     @Query("SELECT ds FROM DealerSale ds WHERE ds.distributorId = :distributorId AND " +
            "(LOWER(ds.itemName) LIKE LOWER(CONCAT('%', :search, '%')))")
     List<DealerSale> searchSalesByDistributor(@Param("distributorId") Long distributorId, @Param("search") String search);
+
+    // New methods for getting all sales by dealer or distributor
+    List<DealerSale> findByDealerIdOrderByDateDesc(Long dealerId);
+
+    List<DealerSale> findByDistributorIdOrderByDateDesc(Long distributorId);
 }

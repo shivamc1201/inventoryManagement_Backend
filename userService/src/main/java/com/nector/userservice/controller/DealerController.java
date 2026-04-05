@@ -60,6 +60,16 @@ public class DealerController {
         return ResponseEntity.ok(dealer);
     }
 
+    @GetMapping("/distributor/{distributorId}")
+    @Operation(summary = "Get dealers by distributor ID", description = "Retrieve all dealers for a specific distributor")
+    public ResponseEntity<List<DealerResponse>> getDealersByDistributorId(
+            @Parameter(description = "Distributor ID") 
+            @PathVariable Long distributorId) {
+        
+        List<DealerResponse> dealers = dealerService.getDealersByDistributorId(distributorId);
+        return ResponseEntity.ok(dealers);
+    }
+
     @PutMapping("/{id}")
     @Operation(summary = "Update dealer", description = "Update dealer details")
     public ResponseEntity<DealerResponse> updateDealer(

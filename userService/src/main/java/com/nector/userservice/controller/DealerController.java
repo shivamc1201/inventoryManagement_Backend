@@ -31,9 +31,11 @@ public class DealerController {
             @RequestBody DealerCreateRequest request,
             @Parameter(description = "Distributor ID to assign the dealer to") 
             @RequestParam Long distributorId,
+            @Parameter(description = "Salesperson ID (optional)") 
+            @RequestParam(required = false) Long salespersonId,
             @AuthenticationPrincipal UserDetails userDetails) {
         
-        DealerResponse response = dealerService.createDealer(request, distributorId);
+        DealerResponse response = dealerService.createDealer(request, distributorId, salespersonId);
         return ResponseEntity.ok(response);
     }
 

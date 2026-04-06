@@ -121,8 +121,10 @@ public class DealerLedgerService {
         log.info("Fetching ledger for dealer: {} and distributor: {}", dealerId, distributorId);
 
         // Verify dealer exists and belongs to distributor
-        dealerRepository.findByIdAndDistributorId(dealerId, distributorId)
+        Dealer dealer = dealerRepository.findByIdAndDistributorId(dealerId, distributorId)
                 .orElseThrow(() -> new BusinessException("Dealer not found or access denied"));
+        
+        log.info("Found dealer: {} belonging to distributor: {}", dealer.getFullName(), dealer.getDistributorId());
 
         List<DealerLedgerTransaction> transactions;
         if (dateFrom != null && dateTo != null) {
@@ -132,6 +134,8 @@ public class DealerLedgerService {
             transactions = ledgerTransactionRepository.findByDealerIdAndDistributorIdOrderByDateDescCreatedAtDesc(
                     dealerId, distributorId);
         }
+        
+        log.info("Found {} transactions for dealer: {}", transactions.size(), dealerId);
 
         List<LedgerTransactionResponse> responses = transactions.stream()
                 .map(this::convertToResponse)

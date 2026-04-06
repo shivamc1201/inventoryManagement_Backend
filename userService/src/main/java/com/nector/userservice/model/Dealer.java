@@ -25,6 +25,9 @@ public class Dealer {
     @Column(name = "distributor_id")
     private Long distributorId;
 
+    @Column(name = "salesperson_id")
+    private Long salespersonId;
+
     @Size(max = 100, message = "Full name cannot exceed 100 characters")
     @Column(name = "full_name")
     private String fullName;

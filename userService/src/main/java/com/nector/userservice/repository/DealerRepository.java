@@ -15,6 +15,9 @@ import java.util.Optional;
 public interface DealerRepository extends JpaRepository<Dealer, Long> {
 
     // Tenant isolation methods
+    Optional<Dealer> findById(Long id);
+
+
     Optional<Dealer> findByIdAndDistributorId(Long id, Long distributorId);
 
     List<Dealer> findByDistributorIdAndIsActiveTrue(Long distributorId);
@@ -37,4 +40,19 @@ public interface DealerRepository extends JpaRepository<Dealer, Long> {
     // Count methods
     @Query("SELECT COUNT(d) FROM Dealer d WHERE d.distributorId = :distributorId AND d.isActive = true")
     long countActiveDealersByDistributor(@Param("distributorId") Long distributorId);
+
+    // Salesperson related queries
+    List<Dealer> findBySalespersonIdAndIsActiveTrue(Long salespersonId);
+
+    @Query("SELECT d FROM Dealer d WHERE d.salespersonId = :salespersonId AND d.isActive = true AND " +
+           "(LOWER(d.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(d.phone) LIKE LOWER(CONCAT('%', :search, '%'))) ")
+    List<Dealer> searchActiveDealersBySalesperson(@Param("salespersonId") Long salespersonId, @Param("search") String search);
+
+    @Query("SELECT COUNT(d) FROM Dealer d WHERE d.salespersonId = :salespersonId AND d.isActive = true")
+    long countActiveDealersBySalesperson(@Param("salespersonId") Long salespersonId);
+
+    // Find dealers without salesperson assignment
+    @Query("SELECT d FROM Dealer d WHERE d.distributorId = :distributorId AND d.salespersonId IS NULL AND d.isActive = true")
+    List<Dealer> findUnassignedDealersByDistributor(@Param("distributorId") Long distributorId);
 }

@@ -68,6 +68,13 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         product.setQuantity(request.getQuantity());
         product.setMinimumThreshold(request.getMinimumThreshold());
         
+        // Update status if provided in request
+        if (request.getActive() != null) {
+            product.setActive(request.getActive());
+            String statusAction = request.getActive() ? "activated" : "deactivated";
+            log.info("Product status updated to {} for finished product ID: {}", statusAction, id);
+        }
+        
         FinishedProduct updatedProduct = finishedProductRepository.save(product);
         log.info("Finished product updated successfully with ID: {}", updatedProduct.getId());
         

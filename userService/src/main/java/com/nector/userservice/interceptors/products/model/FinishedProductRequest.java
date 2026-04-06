@@ -39,4 +39,6 @@ public class FinishedProductRequest {
     @NotNull(message = "Minimum threshold is required")
     @Min(value = 0, message = "Minimum threshold must be non-negative")
     private Integer minimumThreshold;
+    
+    private Boolean active;
 }

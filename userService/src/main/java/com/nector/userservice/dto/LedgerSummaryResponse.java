@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 public class LedgerSummaryResponse {
 
     private Long dealerId;
+    private Long distributorId;
     private String dealerName;
     private BigDecimal totalDebits;
     private BigDecimal totalCredits;

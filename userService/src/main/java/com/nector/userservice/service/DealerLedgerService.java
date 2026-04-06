@@ -160,6 +160,7 @@ public class DealerLedgerService {
 
         LedgerSummaryResponse response = new LedgerSummaryResponse();
         response.setDealerId(dealerId);
+        response.setDistributorId(distributorId);
         response.setDealerName(dealer.getFullName());
         response.setTotalDebits(totalDebits != null ? totalDebits : BigDecimal.ZERO);
         response.setTotalCredits(totalCredits != null ? totalCredits : BigDecimal.ZERO);

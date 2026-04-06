@@ -96,6 +96,18 @@ public class DealerLedgerController {
         return ResponseEntity.ok(ledger);
     }
 
+    @GetMapping("/summary/by-distributor")
+    @Operation(summary = "Get ledger summary by distributor", description = "Get KPI summary for a dealer's ledger with explicit distributorId")
+    public ResponseEntity<LedgerSummaryResponse> getLedgerSummaryByDistributor(
+            @Parameter(description = "Dealer ID") 
+            @RequestParam Long dealerId,
+            @Parameter(description = "Distributor ID") 
+            @RequestParam Long distributorId) {
+        
+        LedgerSummaryResponse summary = dealerLedgerService.getLedgerSummary(dealerId, distributorId);
+        return ResponseEntity.ok(summary);
+    }
+
     @GetMapping("/summary")
     @Operation(summary = "Get ledger summary", description = "Get KPI summary for a dealer's ledger")
     public ResponseEntity<LedgerSummaryResponse> getLedgerSummary(

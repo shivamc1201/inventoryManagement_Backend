@@ -14,12 +14,7 @@ public class DistributorRequestDTO {
     @NotBlank
     @Size(max = 50)
     @Schema(description = "First name", example = "John")
-    private String firstName;
-
-    @NotBlank
-    @Size(max = 50)
-    @Schema(description = "Last name", example = "Doe")
-    private String lastName;
+    private String firmName;
 
     @NotBlank
     @Size(max = 100)
@@ -52,22 +47,10 @@ public class DistributorRequestDTO {
     @Size(max = 200)
     private String address;
 
-    @NotBlank
-    @Pattern(regexp = "^[0-9]{12}$", message = "Invalid Aadhaar number")
     private String aadhaarNumber;
 
-
-    @Pattern(
-            regexp = "^[A-Z]{5}[0-9]{4}[A-Z]{1}$",
-            message = "Invalid PAN number"
-    )
     private String panNumber;
 
-
-    @Pattern(
-            regexp = "^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$",
-            message = "Invalid GST number"
-    )
     private String gstNumber;
 
     @NotNull

@@ -2,6 +2,7 @@ package com.nector.userservice.dto;
 
 import com.nector.userservice.enums.LedgerTransactionCategory;
 import com.nector.userservice.enums.LedgerTransactionType;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -15,7 +16,11 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class LedgerTransactionRequest {
 
+    @NotNull(message = "Dealer ID is required")
     private Long dealerId;
+    
+    @NotNull(message = "Distributor ID is required")
+    private Long distributorId;
 
     private LocalDate date;
 

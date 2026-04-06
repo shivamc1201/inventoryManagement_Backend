@@ -35,7 +35,9 @@ public class DealerLedgerController {
             @RequestBody LedgerTransactionRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         
-        Long distributorId = getDistributorIdFromUser(userDetails);
+        // Use distributorId from request
+        Long distributorId = request.getDistributorId();
+        
         LedgerTransactionResponse response = dealerLedgerService.createManualTransaction(request, distributorId);
         return ResponseEntity.ok(response);
     }

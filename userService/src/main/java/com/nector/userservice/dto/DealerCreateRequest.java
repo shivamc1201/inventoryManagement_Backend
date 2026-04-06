@@ -23,4 +23,6 @@ public class DealerCreateRequest {
     private String address;
 
     private BigDecimal openingBalance;
+
+    private Long salespersonId;
 }

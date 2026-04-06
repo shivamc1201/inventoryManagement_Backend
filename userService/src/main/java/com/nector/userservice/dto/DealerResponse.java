@@ -14,6 +14,8 @@ public class DealerResponse {
     private Long id;
     private Long distributorId;
     private String distributorName;
+    private Long salespersonId;
+    private String salespersonName;
     private String fullName;
     private String phone;
     private String address;

@@ -7,7 +7,9 @@ import com.nector.userservice.exception.BusinessException;
 import com.nector.userservice.interceptors.distributor.model.Distributor;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.model.Dealer;
+import com.nector.userservice.model.SalesPerson;
 import com.nector.userservice.repository.DealerRepository;
+import com.nector.userservice.repository.SalesPersonRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,18 +27,30 @@ public class DealerService {
     private final DealerRepository dealerRepository;
     private final DealerLedgerService dealerLedgerService;
     private final DistributorRepository distributorRepository;
+    private final SalesPersonRepository salesPersonRepository;
 
     @Transactional
-    public DealerResponse createDealer(DealerCreateRequest request, Long distributorId) {
-        log.info("Creating dealer for distributor: {}", distributorId);
+    public DealerResponse createDealer(DealerCreateRequest request, Long distributorId, Long salespersonId) {
+        log.info("Creating dealer for distributor: {} with salesperson: {}", distributorId, salespersonId);
 
         // Check if phone already exists for this distributor
         if (dealerRepository.existsByPhoneAndDistributorId(request.getPhone(), distributorId)) {
             throw new BusinessException("Phone number already exists for this distributor");
         }
 
+        // Validate salesperson if provided
+        if (salespersonId != null) {
+            SalesPerson salesPerson = salesPersonRepository.findById(salespersonId)
+                    .orElseThrow(() -> new BusinessException("Salesperson not found"));
+            
+            if (!salesPerson.getActive()) {
+                throw new BusinessException("Salesperson is not active");
+            }
+        }
+
         Dealer dealer = new Dealer();
         dealer.setDistributorId(distributorId);
+        dealer.setSalespersonId(salespersonId);
         dealer.setFullName(request.getFullName());
         dealer.setPhone(request.getPhone());
         dealer.setAddress(request.getAddress());
@@ -132,12 +146,22 @@ public class DealerService {
         DealerResponse response = new DealerResponse();
         response.setId(dealer.getId());
         response.setDistributorId(dealer.getDistributorId());
+        response.setSalespersonId(dealer.getSalespersonId());
         
         // Fetch distributor name
         Distributor distributor = distributorRepository.findById(dealer.getDistributorId())
                 .orElse(null);
         if (distributor != null) {
             response.setDistributorName(distributor.getFirstName() + " " + distributor.getLastName());
+        }
+        
+        // Fetch salesperson name if assigned
+        if (dealer.getSalespersonId() != null) {
+            SalesPerson salesPerson = salesPersonRepository.findById(dealer.getSalespersonId())
+                    .orElse(null);
+            if (salesPerson != null) {
+                response.setSalespersonName(salesPerson.getName());
+            }
         }
         
         response.setFullName(dealer.getFullName());

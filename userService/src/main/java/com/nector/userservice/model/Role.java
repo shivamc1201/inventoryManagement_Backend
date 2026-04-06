@@ -1,6 +1,5 @@
 package com.nector.userservice.model;
 
-import com.nector.userservice.common.PermissionLevel;
 import com.nector.userservice.common.RoleType;
 import jakarta.persistence.*;
 import lombok.Data;

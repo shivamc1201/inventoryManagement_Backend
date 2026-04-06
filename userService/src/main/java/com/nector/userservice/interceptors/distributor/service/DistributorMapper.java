@@ -10,8 +10,7 @@ public class DistributorMapper {
     
     public Distributor toEntity(DistributorRequestDTO dto) {
         Distributor distributor = new Distributor();
-        distributor.setFirstName(dto.getFirstName());
-        distributor.setLastName(dto.getLastName());
+        distributor.setFirstName(dto.getFirmName());
         distributor.setAssignedPerson(dto.getAssignedPerson());
         distributor.setSalespersonId(dto.getSalespersonId());
         distributor.setSalesPersonRoleType(dto.getSalesPersonRoleType());
@@ -78,8 +77,7 @@ public class DistributorMapper {
     }
     
     public void updateEntity(Distributor entity, DistributorRequestDTO dto) {
-        entity.setFirstName(dto.getFirstName());
-        entity.setLastName(dto.getLastName());
+        entity.setFirstName(dto.getFirmName());
         entity.setAssignedPerson(dto.getAssignedPerson());
         entity.setSalespersonId(dto.getSalespersonId());
         entity.setSalesPersonRoleType(dto.getSalesPersonRoleType());

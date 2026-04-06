@@ -64,7 +64,7 @@ public class SecurityService {
         log.debug("Checking permission - userId: {}, operation: {}, resourceType: {}", userId, operation, resourceType);
         
         try {
-            User user = userRepository.findByIdWithRolesAndPermissions(userId)
+            User user = userRepository.findById(userId)
                 .orElse(null);
             
             if (user == null) {
@@ -137,7 +137,7 @@ public class SecurityService {
     @Transactional(readOnly = true)
     public java.util.List<Features> getCurrentUserFeatures(String operation) {
         Long userId = getCurrentUserId();
-        User user = userRepository.findByIdWithRolesAndPermissions(userId)
+        User user = userRepository.findById(userId)
             .orElse(null);
         
         if (user == null) {

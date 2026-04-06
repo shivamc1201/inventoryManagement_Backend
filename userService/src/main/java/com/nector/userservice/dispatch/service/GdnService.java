@@ -43,6 +43,8 @@ import java.io.IOException;
 @Slf4j
 public class GdnService {
     
+    private static final String DEFAULT_DISPATCH_ADDRESS = "Nectar Origin Private Limited\nPlot No 152/ 952, Salempur Saini , Khalgaon Barahat Bypass Road , Bhagalpur , Bihar -813222";
+    
     private final GdnRepository gdnRepository;
     private final CartRepository cartRepository;
     private final InventoryVerificationRepository inventoryVerificationRepository;
@@ -166,7 +168,9 @@ public class GdnService {
         Gdn gdn = new Gdn();
         gdn.setGdnNumber(generateGdnNumber());
         gdn.setOrderId(orderId);
-        gdn.setDispatchFromAddress(request.getDispatchFromAddress());
+        gdn.setDispatchFromAddress(request.getDispatchFromAddress() != null ? 
+            request.getDispatchFromAddress() : 
+            DEFAULT_DISPATCH_ADDRESS);
         gdn.setShippingAddress(request.getShippingAddress());
         gdn.setVehicleNo(request.getVehicleNo());
         gdn.setTransportName(request.getTransportName());
@@ -263,7 +267,7 @@ public class GdnService {
         gdn.setOrderId(orderId);
         gdn.setDispatchFromAddress(request.getDispatchFromAddress() != null ? 
             request.getDispatchFromAddress() : 
-            "Nectar Origin Private Limited, Kahalgaon, Bhagalpur Bihar");
+            DEFAULT_DISPATCH_ADDRESS);
         gdn.setShippingAddress(request.getShippingAddress());
         gdn.setVehicleNo(request.getVehicleNo());
         gdn.setTransportName(request.getTransportName());

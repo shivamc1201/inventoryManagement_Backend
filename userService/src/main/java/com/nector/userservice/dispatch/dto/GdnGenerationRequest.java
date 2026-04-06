@@ -6,7 +6,9 @@ import java.util.List;
 
 @Data
 public class GdnGenerationRequest {
-    private String dispatchFromAddress;
+    private static final String DEFAULT_DISPATCH_ADDRESS = "Nectar Origin Private Limited\nPlot No 152/ 952, Salempur Saini , Khalgaon Barahat Bypass Road , Bhagalpur , Bihar -813222";
+    
+    private String dispatchFromAddress = DEFAULT_DISPATCH_ADDRESS;
     private String shippingAddress;
     private String vehicleNo;
     private String transportName;

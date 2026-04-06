@@ -1,5 +1,6 @@
 package com.nector.userservice.service;
 
+import com.nector.userservice.common.PermissionLevel;
 import com.nector.userservice.common.UserStatus;
 import com.nector.userservice.common.features.Features;
 import com.nector.userservice.model.User;

@@ -9,7 +9,10 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "order_tracking_steps", 
        uniqueConstraints = @UniqueConstraint(columnNames = {"order_id", "step_sequence"}),
-       indexes = @Index(name = "idx_ots_order", columnList = "order_id"))
+       indexes = {
+           @Index(name = "idx_ots_order", columnList = "order_id"),
+           @Index(name = "idx_ots_distributor_id", columnList = "distributor_id")
+       })
 @Data
 @Builder
 @NoArgsConstructor
@@ -76,4 +79,8 @@ public class OrderTrackingStep {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    // Direct distributor reference for performance and filtering
+    @Column(name = "distributor_id")
+    private Long distributorId;
 }

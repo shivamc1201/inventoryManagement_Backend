@@ -43,9 +43,8 @@ public class DistributorMapper {
     public DistributorResponseDTO toResponseDTO(Distributor entity) {
         DistributorResponseDTO dto = new DistributorResponseDTO();
         dto.setId(entity.getId());
-        dto.setFirstName(entity.getFirstName());
-        dto.setLastName(entity.getLastName());
-        dto.setAssignedPerson(entity.getAssignedPerson());
+        dto.setFirmName(entity.getFirstName());
+                dto.setAssignedPerson(entity.getAssignedPerson());
         dto.setSalespersonId(entity.getSalespersonId());
         dto.setSalesPersonRoleType(entity.getSalesPersonRoleType());
         dto.setDistributorType(entity.getDistributorType());

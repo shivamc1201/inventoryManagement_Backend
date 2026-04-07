@@ -34,13 +34,21 @@ public class OrderTrackingService {
 
     // ── 1. List orders with filters ──────────────────────────────────────────
 
-    public OrderTrackingListResponse listOrders(String search, String status,
+    public OrderTrackingListResponse listOrders(String search, String status, Long distributorId,
                                               int page, int size) {
         String searchParam = (search == null || search.isBlank()) ? null : search.trim();
         String statusParam = (status == null || "all".equalsIgnoreCase(status)) ? null : status.trim();
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "orderDate"));
-        Page<OrderTracking> result = orderRepo.findFiltered(searchParam, statusParam, pageable);
+        Page<OrderTracking> result;
+
+        if (distributorId != null) {
+            // Filter by specific distributor
+            result = orderRepo.findByDistributorId(distributorId, pageable);
+        } else {
+            // Use existing filtering logic
+            result = orderRepo.findFiltered(searchParam, statusParam, pageable);
+        }
 
         List<OrderTrackingDTO> orders = result.getContent()
             .stream().map(this::toDTO).collect(Collectors.toList());
@@ -292,7 +300,8 @@ public class OrderTrackingService {
                 .remarks(i == 0 ? "Order submitted by distributor" : null)
                 .hasDownload(d.hasDownload())
                 .downloadLabel(d.downloadLabel())
-                .hasAction(d.hasAction());
+                .hasAction(d.hasAction())
+                .distributorId(order.getDistributorId()); // Set distributor_id for all steps
             
             // Add assigned person information for Step 1 (Order Placed)
             if (i == 0) {

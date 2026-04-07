@@ -20,7 +20,7 @@ public class OrderTrackingController {
     private final OrderTrackingService service;
 
     /**
-     * GET /api/order/tracking?status=pending&search=ORD&page=0&size=50
+     * GET /api/order/tracking?status=pending&search=ORD&distributorId=5&page=0&size=50
      * Replaces loadSampleOrders() — primary load call on page init.
      */
     @GetMapping
@@ -28,10 +28,11 @@ public class OrderTrackingController {
     public ResponseEntity<OrderTrackingListResponse> list(
             @RequestParam(defaultValue = "all") String status,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) Long distributorId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
 
-        return ResponseEntity.ok(service.listOrders(search, status, page, size));
+        return ResponseEntity.ok(service.listOrders(search, status, distributorId, page, size));
     }
 
     /**
@@ -91,4 +92,5 @@ public class OrderTrackingController {
 
         return ResponseEntity.ok(service.markReceived(id, req));
     }
-}
+
+    }

@@ -92,6 +92,11 @@ public class DistributorServiceImpl implements DistributorService {
         }
 
         Distributor distributor = distributorMapper.toEntity(request);
+        
+        // Generate auto distributor code
+        String distributorCode = generateDistributorCode();
+        distributor.setDistributorCode(distributorCode);
+        
         Distributor savedDistributor = distributorRepository.save(distributor);
 
         // Auto-create ledger account for the distributor
@@ -377,5 +382,24 @@ public class DistributorServiceImpl implements DistributorService {
         response.setAddress(distributor.getAddress());
         
         return response;
+    }
+    
+    /**
+     * Generates distributor code in format: DIS+MM+YYYY+SR.NO
+     * Where SR.NO is a 3-digit sequence number for the current month
+     */
+    private String generateDistributorCode() {
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        int month = now.getMonthValue();
+        int year = now.getYear();
+        
+        // Get count of distributors created in current month and year
+        long count = distributorRepository.countByMonthAndYear(month, year);
+        
+        // Generate 3-digit sequence number (count + 1)
+        String sequence = String.format("%03d", count + 1);
+        
+        // Format: DIS+MM+YYYY+SR.NO
+        return String.format("DIS%02d%d%s", month, year, sequence);
     }
 }

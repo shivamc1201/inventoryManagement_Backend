@@ -147,8 +147,7 @@ public class PaymentService {
     
     public boolean isSalespersonAuthorizedForDistributor(Long salespersonId, Long distributorId) {
         return distributorRepository.findById(distributorId)
-            .flatMap(distributor -> userRepository.findById(salespersonId)
-                .filter(user -> user.getRoleType().name().equals(distributor.getAssignedPerson())))
+            .filter(distributor -> salespersonId.equals(distributor.getSalespersonId()))
             .isPresent();
     }
 

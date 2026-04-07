@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface OrderTrackingRepository extends JpaRepository<OrderTracking, Long> {
 
@@ -55,4 +57,12 @@ public interface OrderTrackingRepository extends JpaRepository<OrderTracking, Lo
            "(com.nector.userservice.ordertracking.entity.StepStatus.PENDING, " +
            " com.nector.userservice.ordertracking.entity.StepStatus.IN_PROGRESS)")
     long countPending();
+
+    // Methods for distributor-based filtering
+    Page<OrderTracking> findByDistributorId(Long distributorId, Pageable pageable);
+    
+    List<OrderTracking> findByDistributorId(Long distributorId);
+    
+    @Query("SELECT COUNT(o) FROM OrderTracking o WHERE o.distributorId = :distributorId")
+    long countByDistributorId(@Param("distributorId") Long distributorId);
 }

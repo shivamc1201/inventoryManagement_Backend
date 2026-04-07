@@ -63,6 +63,9 @@ public class CartService {
         }
 
         Cart cart = getOrCreateActiveCart(distributorId);
+        
+        // Initialize order tracking for this cart if it doesn't exist
+        initializeOrderTrackingForCart(cart, distributorId);
 
         for (AddToCartRequest request : requests) {
             log.info("Processing item {} for distributor {}", request.getItemId(), distributorId);
@@ -469,7 +472,7 @@ public class CartService {
         cart.setStatus(Cart.CartStatus.PLACED);
         Cart updatedCart = cartRepository.save(cart);
 
-        // Create OrderTracking record for workflow management
+        // Create OrderTracking record for workflow management only if it doesn't exist
         try {
             String distributorName = updatedCart.getDistributorName() != null ? 
                 updatedCart.getDistributorName() : "Unknown Distributor";
@@ -482,15 +485,20 @@ public class CartService {
                     .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            orderTrackingService.createFromCart(
-                updatedCart.getId(), 
-                distributorName, 
-                updatedCart.getDistributorId(),
-                orderNumber,
-                totalAmount
-            );
-            
-            log.info("OrderTracking record created for cart {}", updatedCart.getId());
+            // Check if OrderTracking already exists for this cart/order
+            if (orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber) == null) {
+                orderTrackingService.createFromCart(
+                    updatedCart.getId(), 
+                    distributorName, 
+                    updatedCart.getDistributorId(),
+                    orderNumber,
+                    totalAmount
+                );
+                
+                log.info("OrderTracking record created for cart {}", updatedCart.getId());
+            } else {
+                log.info("OrderTracking record already exists for cart {}, skipping creation", updatedCart.getId());
+            }
         } catch (Exception e) {
             log.error("Failed to create OrderTracking record for cart {}: {}", 
                 updatedCart.getId(), e.getMessage());
@@ -726,5 +734,39 @@ public class CartService {
         return carts.stream()
                 .map(this::mapToResponseWithDenormalizedData)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Initialize order tracking for a cart when items are first added
+     * This ensures distributor tracking starts from the very beginning
+     */
+    private void initializeOrderTrackingForCart(Cart cart, Long distributorId) {
+        try {
+            // Check if order tracking already exists for this cart
+            String orderNumber = "ORD-" + cart.getId() + "-" + 
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+            
+            if (orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber) == null) {
+                // Get distributor information
+                String distributorName = distributorRepository.findById(distributorId)
+                    .map(distributor -> distributor.getFirstName() != null ? distributor.getFirstName() : "Unknown Distributor")
+                    .orElse("Unknown Distributor");
+                
+                // Create initial order tracking record with distributor information
+                orderTrackingService.createFromCart(
+                    cart.getId(), 
+                    distributorName, 
+                    distributorId,
+                    orderNumber,
+                    BigDecimal.ZERO // Initial amount, will be updated when order is placed
+                );
+                
+                log.info("Order tracking initialized for cart {} with distributor {} ({})", 
+                    cart.getId(), distributorName, distributorId);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to initialize order tracking for cart {}: {}", cart.getId(), e.getMessage());
+            // Don't fail the cart operation if tracking initialization fails
+        }
     }
 }

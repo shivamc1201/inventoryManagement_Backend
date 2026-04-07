@@ -15,4 +15,10 @@ public interface OrderTrackingStepRepository extends JpaRepository<OrderTracking
     Optional<OrderTrackingStep> findByIdAndOrderId(Long id, Long orderId);
 
     Optional<OrderTrackingStep> findByOrderIdAndStepSequence(Long orderId, int stepSequence);
+
+    // Distributor-based queries
+    List<OrderTrackingStep> findByDistributorIdOrderByStepSequenceAsc(Long distributorId);
+    
+    List<OrderTrackingStep> findByDistributorIdAndStatusOrderByStepSequenceAsc(Long distributorId, 
+        com.nector.userservice.ordertracking.entity.StepStatus status);
 }

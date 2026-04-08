@@ -29,11 +29,12 @@ public class DistributorDashboardService {
         BigDecimal totalAmount;
 
         if (distributorId != null) {
-            // Filter by specific distributor
-            totalOrders = orderRepository.countOrdersByDistributorBetweenDates(distributorId, startDate, now);
-            totalAmount = orderRepository.getTotalAmountByDistributorBetweenDates(distributorId, startDate, now);
+            // Filter by specific distributor - prioritize distributorId over date filtering
+            // Get all orders for this distributor regardless of date when distributorId is provided
+            totalOrders = orderRepository.countOrdersByDistributor(distributorId);
+            totalAmount = orderRepository.getTotalAmountByDistributor(distributorId);
         } else {
-            // Get all orders
+            // Get all orders with date filtering (only when no distributorId is specified)
             totalOrders = orderRepository.countOrdersBetweenDates(startDate, now);
             totalAmount = orderRepository.getTotalAmountBetweenDates(startDate, now);
         }
@@ -56,6 +57,7 @@ public class DistributorDashboardService {
             case "week" -> now.minusWeeks(1);
             case "month" -> now.minusMonths(1);
             case "year" -> now.minusYears(1);
+            case "all" -> LocalDate.of(2000, 1, 1); // All-time data
             default -> now.minusMonths(1); // Default: month
         };
         

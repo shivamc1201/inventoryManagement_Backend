@@ -101,4 +101,12 @@ public interface OrderRepository extends JpaRepository<OrderWithSalesPerson, Lon
             @Param("dateTo") LocalDate dateTo
     );
 
+    @Query("SELECT COUNT(o) FROM OrderWithSalesPerson o WHERE " +
+            "o.distributorId = :distributorId")
+    Long countOrdersByDistributor(@Param("distributorId") Long distributorId);
+
+    @Query("SELECT COALESCE(SUM(o.totalCartAmount), 0) FROM OrderWithSalesPerson o WHERE " +
+            "o.distributorId = :distributorId")
+    BigDecimal getTotalAmountByDistributor(@Param("distributorId") Long distributorId);
+
 }

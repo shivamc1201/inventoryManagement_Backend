@@ -273,19 +273,31 @@ public class DispatchController {
                         .body(Map.of("error", "Only orders with PAYMENT_APPROVED status can be rejected"));
             }
 
+            String reason = rejectionRequest != null && rejectionRequest.getReason() != null 
+                    ? rejectionRequest.getReason() : "No reason provided";
+
+            // Revert money to distributor ledger
+            try {
+                gdnService.revertMoneyToDistributorLedger(orderId, reason);
+                log.info("Money reverted to distributor ledger for order: {}", orderId);
+            } catch (Exception e) {
+                log.error("Failed to revert money for order {}: {}", orderId, e.getMessage());
+                // Continue with rejection even if money reversal fails
+                // but log the error for investigation
+            }
+
             // Update cart status to GDN_REJECTED
             cart.setStatus(Cart.CartStatus.GDN_REJECTED);
             cartRepository.save(cart);
 
-            String reason = rejectionRequest != null && rejectionRequest.getReason() != null 
-                    ? rejectionRequest.getReason() : "No reason provided";
             log.info("Order {} rejected with reason: {}", orderId, reason);
 
             return ResponseEntity.ok(Map.of(
-                    "message", "Order rejected successfully",
+                    "message", "Order rejected successfully and money reverted to distributor ledger",
                     "orderId", orderId,
                     "status", "GDN_REJECTED",
-                    "rejectionReason", reason
+                    "rejectionReason", reason,
+                    "moneyReverted", true
             ));
         } catch (Exception e) {
             log.error("Error rejecting GDN for order {}: {}", orderId, e.getMessage());

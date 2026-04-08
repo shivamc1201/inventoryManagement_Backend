@@ -18,6 +18,10 @@ import com.nector.userservice.ordertracking.service.OrderTrackingService;
 import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
 import com.nector.userservice.repository.UserRepository;
 import com.nector.userservice.service.RbacService;
+import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
+import com.nector.userservice.interceptors.distributor.model.Distributor;
+import com.nector.userservice.repository.DistributorLedgerRepository;
+import com.nector.userservice.model.DistributorLedger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -55,6 +59,8 @@ public class GdnService {
     private final OrderTrackingService orderTrackingService;
     private final UserRepository userRepository;
     private final RbacService rbacService;
+    private final DistributorRepository distributorRepository;
+    private final DistributorLedgerRepository distributorLedgerRepository;
     
     /**
      * Get current user ID from security context
@@ -614,6 +620,38 @@ public class GdnService {
         data.put("dispatchFromAddress", gdn.getDispatchFromAddress());
         data.put("shippingAddress", gdn.getShippingAddress());
         
+        // Distributor details
+        String distributorName = "N/A";
+        String distributorAddress = "N/A";
+        String distributorContact = "N/A";
+        
+        if (cart.getDistributorId() != null) {
+            try {
+                Distributor distributor = distributorRepository.findById(cart.getDistributorId()).orElse(null);
+                if (distributor != null) {
+                    distributorName = distributor.getFirstName() + " " + distributor.getLastName();
+                    distributorAddress = distributor.getAddress() != null ? distributor.getAddress() : "N/A";
+                    distributorContact = distributor.getPhoneNumber() != null ? distributor.getPhoneNumber() : "N/A";
+                    log.info("Found distributor for GDN: {} - {}", distributorName, distributorAddress);
+                } else {
+                    log.warn("Distributor not found for ID: {} in cart: {}", cart.getDistributorId(), cart.getId());
+                }
+            } catch (Exception e) {
+                log.error("Error fetching distributor data for cart {}: {}", cart.getId(), e.getMessage());
+            }
+        } else {
+            log.warn("No distributor ID found in cart: {}", cart.getId());
+        }
+        
+        // Use cart distributor name as fallback
+        if ("N/A".equals(distributorName) && cart.getDistributorName() != null) {
+            distributorName = cart.getDistributorName();
+        }
+        
+        data.put("distributorName", distributorName);
+        data.put("distributorAddress", distributorAddress);
+        data.put("distributorContact", distributorContact);
+        
         // Transport details
         data.put("vehicleNo", gdn.getVehicleNo());
         data.put("transportName", gdn.getTransportName());
@@ -642,6 +680,7 @@ public class GdnService {
         data.put("companyName", "Nectar Origin Private Limited");
         data.put("companyAddress", "360 K, Shiv Parwati Nagar, Block Road No-2, Ward No 16, Kahalgaon, Bhagalpur Bihar, Bihar - 813203, India");
         data.put("contactNumber", "06429-450126,9797979522");
+        data.put("logoPath", "/templates/logo.png"); // Path to logo in templates directory
         
         return data;
     }
@@ -908,6 +947,52 @@ public class GdnService {
         dto.setQuantity(item.getQuantity());
         dto.setPrice(item.getPriceAtTime());
         return dto;
+    }
+
+    /**
+     * Revert money to distributor ledger when GDN is rejected
+     */
+    @Transactional
+    public void revertMoneyToDistributorLedger(Long orderId, String rejectionReason) {
+        log.info("Reverting money to distributor ledger for rejected order: {}", orderId);
+        
+        try {
+            // Get cart to find distributor and order amount
+            Cart cart = cartRepository.findById(orderId)
+                    .orElseThrow(() -> new RuntimeException("Cart not found for order: " + orderId));
+            
+            if (cart.getDistributorId() == null) {
+                log.warn("No distributor ID found for cart: {}", orderId);
+                return;
+            }
+            
+            // Calculate total order amount
+            BigDecimal orderAmount = cart.getCartItems().stream()
+                    .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            if (orderAmount.compareTo(BigDecimal.ZERO) <= 0) {
+                log.warn("Order amount is zero or negative for order: {}, skipping reversal", orderId);
+                return;
+            }
+            
+            // Create credit transaction to revert the money
+            DistributorLedger reversalTransaction = new DistributorLedger();
+            reversalTransaction.setDistributorId(cart.getDistributorId());
+            reversalTransaction.setAmount(orderAmount);
+            reversalTransaction.setTransactionType("CREDIT");
+            reversalTransaction.setDescription(String.format("GDN Rejection - Order #%s - %s", orderId, 
+                    rejectionReason != null ? rejectionReason : "No reason provided"));
+            
+            distributorLedgerRepository.save(reversalTransaction);
+            
+            log.info("Successfully reverted {} to distributor {} ledger for rejected order: {}", 
+                    orderAmount, cart.getDistributorId(), orderId);
+            
+        } catch (Exception e) {
+            log.error("Failed to revert money to distributor ledger for order {}: {}", orderId, e.getMessage());
+            throw new RuntimeException("Failed to revert money: " + e.getMessage(), e);
+        }
     }
 
 }

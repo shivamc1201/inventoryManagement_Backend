@@ -1,251 +1,544 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
+
     <meta charset="UTF-8"/>
+
     <style>
-        /* A4 Paper Simulation */
-        body {
-            background-color: #f0f0f0;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-        }
-        .page {
-            width: 210mm;
-            min-height: 297mm;
-            padding: 12mm;
-            background: white;
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
-            box-sizing: border-box;
-            font-family: 'Arial', sans-serif;
-            color: #000;
-            position: relative;
+
+        body{
+        background:#efefef;
+        padding:20px;
+        display:flex;
+        justify-content:center;
+        font-family:Arial, Helvetica, sans-serif;
         }
 
-        /* Standard Typography */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11px;
-        }
-        .bold { font-weight: bold; }
-        .center { text-align: center; }
-        .right { text-align: right; }
-        .italic { font-style: italic; }
-
-        /* Header Styles */
-        .company-header td { vertical-align: middle; }
-        .sub-label { font-size: 9px; color: #444; }
-
-        /* Form Grid Layout */
-        .details-grid { margin-top: 15px; }
-        .details-grid td { padding: 5px 2px; vertical-align: bottom; }
-        .dotted-line {
-            border-bottom: 1px dotted #000;
-            display: inline-block;
-            flex-grow: 1;
-            margin-left: 5px;
-            min-height: 14px;
-            vertical-align: bottom;
-        }
-        .field-container { display: flex; align-items: flex-end; width: 100%; }
-
-        /* Table Design to Match Sample */
-        .items-table {
-            margin-top: 15px;
-            border: 1.2px solid black;
-            table-layout: fixed;
-        }
-        .items-table th {
-            border: 1px solid black;
-            padding: 8px 4px;
-            background: #fff;
-            font-size: 10px;
-        }
-        .items-table td {
-            border-left: 1px solid black;
-            border-right: 1px solid black;
-            padding: 6px 8px;
-            vertical-align: top;
-        }
-        .filler-row td {
-            height: 450px; /* High value to force long vertical lines */
-            border-top: none !important;
+        .page{
+        width:210mm;
+        height:297mm;
+        background:white;
+        padding:10mm;
+        box-shadow:0 0 6px rgba(0,0,0,.15);
         }
 
-        /* Footer/Signatures */
-        .remark-box { border: 1px solid black; border-top: none; padding: 10px; }
-        .signature-section { margin-top: 40px; }
-        .signature-section td { padding: 10px 0; }
-
-        @media print {
-            body { background: none; padding: 0; }
-            .page { box-shadow: none; margin: 0; width: 210mm; height: 297mm; }
+        table{
+        width:100%;
+        border-collapse:collapse;
+        font-size:12px;
         }
+
+        .bold{
+        font-weight:bold;
+        }
+
+        .center{
+        text-align:center;
+        }
+
+        .right{
+        text-align:right;
+        }
+
+        .details-grid td{
+        padding:4px 2px;
+        vertical-align:bottom;
+        }
+
+        .field{
+        display:flex;
+        align-items:flex-end;
+        width:100%;
+        }
+
+        .line{
+        border-bottom:1px dotted black;
+        flex:1;
+        margin-left:8px;
+        height:14px;
+        }
+
+        .header-title{
+        font-size:20px;
+        font-weight:bold;
+        }
+
+        .header-address{
+        font-size:11px;
+        margin-top:2px;
+        }
+
+        .gdn{
+        text-align:center;
+        font-weight:bold;
+        font-size:14px;
+        margin:15px 0 10px;
+        }
+
+        .items{
+        margin-top:15px;
+        border:1px solid black;
+        table-layout:fixed;
+        }
+
+        .items th{
+        border:1px solid black;
+        padding:6px;
+        font-size:11px;
+        }
+
+        .items td{
+        border-left:1px solid black;
+        border-right:1px solid black;
+        }
+
+        .big-space td{
+        height:470px;
+        }
+
+        .remark{
+        border:1px solid black;
+        border-top:none;
+        padding:8px;
+        }
+
+        .signature{
+        margin-top:30px;
+        }
+
+        @media print{
+
+        body{
+        background:white;
+        padding:0;
+        }
+
+        .page{
+        box-shadow:none;
+        }
+
+        }
+
     </style>
+
 </head>
+
 <body>
 
 <div class="page">
-    <table class="company-header">
+
+    <table>
+
         <tr>
-            <td width="15%">
-                <img th:src="${logoPath}" width="90" alt="Logo"/>
+
+            <td width="20%">
+                <img th:src="${logoPath}" width="80">
             </td>
-            <td class="center" width="65%">
-                <div class="bold italic" style="font-size: 20px; letter-spacing: 0.5px;">Nectar Origin Private Limited</div>
-                <div style="font-size: 10px; margin-top: 3px;">360 K, Shiv Parwati Nagar, Block Road No -2, Ward No 16, Kahalgaon, Bhagalpur Bihar</div>
+
+            <td width="60%" class="center">
+
+                <div class="header-title">
+                    Nectar Origin Private Limited
+                </div>
+
+                <div class="header-address">
+                    360 K Shiv Parwati Nagar, Block Road No-2, Ward 16,
+                    Kahalgaon, Bhagalpur Bihar
+                </div>
+
             </td>
-            <td class="right" width="20%" style="font-size: 8px; vertical-align: top;">
-                CHALLAN/ACCOUNT/SITE/VENDOR
+
+            <td width="20%" class="right" style="font-size:10px;">
+                CHALLAN / ACCOUNT / SITE / VENDOR
             </td>
+
         </tr>
+
     </table>
 
-    <div class="center bold" style="font-size: 14px; margin: 20px 0 10px 0; text-decoration: none;">GOOD DELIVERY NOTE</div>
 
-    <table class="details-grid">
-        <tr>
-            <td width="55%">
-                <div class="field-container">
-                    <span class="bold">Delivery Note No :</span>
-                    <span class="dotted-line" th:text="${gdnNumber}"></span>
-                </div>
-            </td>
-            <td width="45%">
-                <div class="field-container">
-                    <span class="bold">Date :</span>
-                    <span class="dotted-line" th:text="${gdnDate}"></span>
-                </div>
-            </td>
-        </tr>
-        <tr>
-            <td colspan="2">
-                <div class="field-container">
-                    <span class="bold">Dispatch From :</span>
-                    <span class="dotted-line" th:text="${dispatchFromAddress}"></span>
-                </div>
-            </td>
-        </tr>
-        <tr>
-            <td colspan="2">
-                <div class="field-container">
-                    <span class="bold">Shipping Address :</span>
-                    <span class="dotted-line" th:text="${shippingAddress}"></span>
-                </div>
-            </td>
-        </tr>
-    </table>
-
-    <table class="details-grid" style="margin-top: 5px;">
-        <tr>
-            <td width="50%">
-                <div class="field-container">
-                    <span class="bold">Delivery Method :</span>
-                    <span class="dotted-line" th:text="${deliveryMethod}"></span>
-                </div>
-            </td>
-            <td width="50%">
-                <div class="field-container">
-                    <span class="bold">Vehicle No :</span>
-                    <span class="dotted-line" th:text="${vehicleNo}"></span>
-                </div>
-            </td>
-        </tr>
-        <tr>
-            <td width="50%">
-                <div class="field-container">
-                    <span class="bold">Transport Name :</span>
-                    <span class="dotted-line" th:text="${transportName}"></span>
-                </div>
-            </td>
-            <td width="50%">
-                <div class="field-container">
-                    <span class="bold">Driver Name :</span>
-                    <span class="dotted-line" th:text="${driverName}"></span>
-                </div>
-            </td>
-        </tr>
-        <tr>
-            <td width="50%">
-                <div class="field-container">
-                    <span class="bold">Total No. of Package :</span>
-                    <span class="dotted-line" th:text="${totalPackages}"></span>
-                </div>
-            </td>
-            <td width="50%">
-                <div class="field-container">
-                    <span class="bold">Mobile No :</span>
-                    <span class="dotted-line" th:text="${driverMobile}"></span>
-                </div>
-            </td>
-        </tr>
-        <tr>
-            <td colspan="1"></td>
-            <td width="50%">
-                <div class="field-container">
-                    <span class="bold">Total Weight :</span>
-                    <span class="dotted-line" th:text="${totalWeight}"></span>
-                </div>
-            </td>
-        </tr>
-    </table>
-
-    <table class="items-table">
-        <thead>
-        <tr>
-            <th width="7%">SrNo</th>
-            <th width="20%">Unit Type<br/><span class="sub-label">(Carton, Place etc)</span></th>
-            <th width="53%">Item Description</th>
-            <th width="20%">No of Units<br/>Dispatch</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="item, iter : ${items}">
-            <td class="center" th:text="${iter.index + 1}"></td>
-            <td class="center" th:text="${item.unit}"></td>
-            <td class="bold" th:text="${item.description}"></td>
-            <td class="center bold" th:text="${item.quantity}"></td>
-        </tr>
-        <tr class="filler-row">
-            <td></td><td></td><td></td><td></td>
-        </tr>
-        </tbody>
-    </table>
-
-    <div class="remark-box">
-        <div class="field-container">
-            <span class="bold">Remark :</span>
-            <span class="dotted-line" th:text="${remark}"></span>
-        </div>
+    <div class="gdn">
+        GOOD DELIVERY NOTE
     </div>
 
-    <table class="signature-section">
+
+    <table class="details-grid">
+
         <tr>
-            <td width="50%">
-                <div class="field-container">
-                    <span class="bold">Name of Person Receiving :</span>
-                    <span class="dotted-line"></span>
+
+            <td width="60%">
+
+                <div class="field">
+
+<span class="bold">
+Delivery Note No :
+</span>
+
+                    <span class="line"
+                          th:text="${gdnNumber}">
+</span>
+
                 </div>
-                <div class="field-container" style="margin-top: 15px;">
-                    <span class="bold">Name of Person Delivering :</span>
-                    <span class="dotted-line"></span>
-                </div>
+
             </td>
-            <td width="50%" style="padding-left: 20px;">
-                <div class="field-container">
-                    <span class="bold">Signature of Person Receiving :</span>
-                    <span class="dotted-line"></span>
+
+            <td width="40%">
+
+                <div class="field">
+
+<span class="bold">
+Date :
+</span>
+
+                    <span class="line"
+                          th:text="${gdnDate}">
+</span>
+
                 </div>
-                <div class="field-container" style="margin-top: 15px;">
-                    <span class="bold">Signature of Person Delivering :</span>
-                    <span class="dotted-line"></span>
-                </div>
+
             </td>
+
         </tr>
+
+
+        <tr>
+
+            <td colspan="2">
+
+                <div class="field">
+
+<span class="bold">
+Dispatch From :
+</span>
+
+                    <span class="line"
+                          th:text="${dispatchFromAddress}">
+</span>
+
+                </div>
+
+            </td>
+
+        </tr>
+
+
+        <tr>
+
+            <td colspan="2">
+
+                <div class="field">
+
+<span class="bold">
+Shipping Address :
+</span>
+
+                    <span class="line"
+                          th:text="${shippingAddress}">
+</span>
+
+                </div>
+
+            </td>
+
+        </tr>
+
+
+        <tr>
+
+            <td colspan="2">
+
+                <div class="field">
+
+<span class="bold">
+Distributor Name :
+</span>
+
+                    <span class="line"
+                          th:text="${distributorName}">
+</span>
+
+                </div>
+
+            </td>
+
+        </tr>
+
+
+        <tr>
+
+            <td colspan="2">
+
+                <div class="field">
+
+<span class="bold">
+Distributor Address :
+</span>
+
+                    <span class="line"
+                          th:text="${distributorAddress}">
+</span>
+
+                </div>
+
+            </td>
+
+        </tr>
+
+
+        <tr>
+
+            <td>
+
+                <div class="field">
+
+<span class="bold">
+Delivery Method :
+</span>
+
+                    <span class="line"
+                          th:text="${deliveryMethod}">
+</span>
+
+                </div>
+
+            </td>
+
+
+            <td>
+
+                <div class="field">
+
+<span class="bold">
+Vehicle No :
+</span>
+
+                    <span class="line"
+                          th:text="${vehicleNo}">
+</span>
+
+                </div>
+
+            </td>
+
+        </tr>
+
+
+        <tr>
+
+            <td>
+
+                <div class="field">
+
+<span class="bold">
+Transport Name :
+</span>
+
+                    <span class="line"
+                          th:text="${transportName}">
+</span>
+
+                </div>
+
+            </td>
+
+
+            <td>
+
+                <div class="field">
+
+<span class="bold">
+Driver Name :
+</span>
+
+                    <span class="line"
+                          th:text="${driverName}">
+</span>
+
+                </div>
+
+            </td>
+
+        </tr>
+
+
+        <tr>
+
+            <td>
+
+                <div class="field">
+
+<span class="bold">
+Total No. of Package :
+</span>
+
+                    <span class="line"
+                          th:text="${totalPackages}">
+</span>
+
+                </div>
+
+            </td>
+
+
+            <td>
+
+                <div class="field">
+
+<span class="bold">
+Mobile No :
+</span>
+
+                    <span class="line"
+                          th:text="${driverMobile}">
+</span>
+
+                </div>
+
+            </td>
+
+        </tr>
+
+
+        <tr>
+
+            <td></td>
+
+            <td>
+
+                <div class="field">
+
+<span class="bold">
+Total Weight :
+</span>
+
+                    <span class="line"
+                          th:text="${totalWeight}">
+</span>
+
+                </div>
+
+            </td>
+
+        </tr>
+
     </table>
+
+
+
+    <table class="items">
+
+        <tr>
+
+            <th width="8%">
+                SrNo
+            </th>
+
+            <th width="20%">
+                Unit Type
+            </th>
+
+            <th width="52%">
+                Item Description
+            </th>
+
+            <th width="20%">
+                No of Units Dispatch
+            </th>
+
+        </tr>
+
+
+        <tr th:each="item,iter:${items}">
+
+            <td class="center"
+                th:text="${iter.index+1}">
+            </td>
+
+            <td class="center"
+                th:text="${item.unit}">
+            </td>
+
+            <td th:text="${item.description}">
+            </td>
+
+            <td class="center"
+                th:text="${item.quantity}">
+            </td>
+
+        </tr>
+
+
+        <tr class="big-space">
+
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+
+        </tr>
+
+    </table>
+
+
+
+    <div class="remark">
+
+        <div class="field">
+
+<span class="bold">
+Remark :
+</span>
+
+            <span class="line"
+                  th:text="${remark}">
+</span>
+
+        </div>
+
+    </div>
+
+
+
+    <table class="signature">
+
+        <tr>
+
+            <td width="50%">
+
+                <div class="field">
+
+<span class="bold">
+Name of Person Receiving :
+</span>
+
+                    <span class="line"></span>
+
+                </div>
+
+            </td>
+
+
+            <td width="50%">
+
+                <div class="field">
+
+<span class="bold">
+Signature of Person Receiving :
+</span>
+
+                    <span class="line"></span>
+
+                </div>
+
+            </td>
+
+        </tr>
+
+    </table>
+
+
 </div>
 
 </body>
+
 </html>

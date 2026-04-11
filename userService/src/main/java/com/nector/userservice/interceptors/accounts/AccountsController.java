@@ -5,6 +5,7 @@ import com.nector.userservice.enums.TransactionType;
 import com.nector.userservice.model.DistributorLedger;
 import com.nector.userservice.model.PaymentApproval;
 import com.nector.userservice.model.ProformaInvoice;
+import com.nector.userservice.model.Cart;
 import com.nector.userservice.interceptors.accounts.model.PaymentHistoryResponse;
 import com.nector.userservice.interceptors.accounts.model.PaymentHistoryWithRunningBalanceResponse;
 import com.nector.userservice.service.PaymentService;
@@ -86,6 +87,60 @@ public class AccountsController {
             @RequestParam Long distributorId) {
         OrderApprovalResponse approval = paymentService.approvePaymentForOrder(orderId, distributorId);
         return ResponseEntity.ok(approval);
+    }
+    
+    @PostMapping("/approve-PI-using-credit/{orderId}")
+    @Operation(summary = "Approve PI using credit", description = "Approves PI using available credit without balance check")
+    @ApiResponse(responseCode = "200", description = "PI approved using credit successfully")
+    public ResponseEntity<OrderApprovalResponse> approvePIUsingCredit(
+            @PathVariable Long orderId,
+            @RequestParam Long distributorId) {
+        
+        // Get PI for the order
+        ProformaInvoice pi = paymentService.getProformaInvoiceRepository().findByCartId(orderId)
+            .orElseThrow(() -> new RuntimeException("Proforma Invoice not found for order: " + orderId));
+        
+        // Update PI status to PAID directly (using credit)
+        pi.setPaymentStatus(ProformaInvoice.PaymentStatus.PAID);
+        paymentService.getProformaInvoiceRepository().save(pi);
+        
+        // Update Cart status to PAYMENT_APPROVED
+        Cart cart = paymentService.getCartRepository().findById(orderId)
+            .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+        cart.setStatus(Cart.CartStatus.PAYMENT_APPROVED);
+        paymentService.getCartRepository().save(cart);
+        
+        // Deduct amount from distributor's creditAmount (this is the correct approach!)
+        var distributor = paymentService.getDistributorRepository().findById(distributorId)
+            .orElseThrow(() -> new RuntimeException("Distributor not found: " + distributorId));
+        
+        BigDecimal currentCredit = distributor.getCreditAmount();
+        BigDecimal orderAmount = pi.getAmount();
+        
+        if (currentCredit.compareTo(orderAmount) < 0) {
+            throw new RuntimeException("Insufficient credit. Available: " + currentCredit + ", Required: " + orderAmount);
+        }
+        
+        distributor.setCreditAmount(currentCredit.subtract(orderAmount));
+        paymentService.getDistributorRepository().save(distributor);
+        
+        // Also create a ledger entry for audit trail
+        paymentService.updateDistributorBalance(distributorId, orderAmount.negate(), "DEBIT", "Payment for Order #" + orderId + " (using credit)");
+        
+        // Get updated credit amount and ledger balance
+        BigDecimal updatedCredit = distributor.getCreditAmount();
+        BigDecimal updatedLedgerBalance = paymentService.getCurrentLedgerBalance(distributorId);
+        
+        // Create response
+        OrderApprovalResponse response = new OrderApprovalResponse();
+        response.setOrderId(orderId);
+        response.setDistributorId(distributorId);
+        response.setOrderAmount(pi.getAmount());
+        response.setLedgerBalance(updatedCredit);
+        response.setStatus("APPROVED_USING_CREDIT");
+        response.setMessage("PI approved using available credit");
+        
+        return ResponseEntity.ok(response);
     }
     
     @GetMapping("/pending-payment-approvals")

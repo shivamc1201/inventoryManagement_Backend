@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8"/>
     <style>
+        /* A4 Paper Styling with Fixed Size */
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
         /* A4 Paper Styling */
         body {
             background-color: #f0f0f0;
@@ -13,7 +18,7 @@
         }
         .page {
             width: 210mm;
-            min-height: 297mm;
+            height: 297mm;
             padding: 10mm;
             background: white;
             box-shadow: 0 0 10px rgba(0,0,0,0.2);
@@ -21,6 +26,7 @@
             font-family: 'Arial', sans-serif;
             font-size: 11px;
             color: #000;
+            overflow: hidden;
         }
         table {
             width: 100%;
@@ -49,6 +55,10 @@
         .bank-details-table td { border: none !important; padding: 1px !important; font-size: 10px; }
 
         @media print {
+            @page {
+                size: A4;
+                margin: 10mm;
+            }
             body { background: none; padding: 0; }
             .page { box-shadow: none; margin: 0; width: 100%; }
         }

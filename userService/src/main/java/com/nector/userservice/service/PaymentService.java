@@ -9,7 +9,6 @@ import com.nector.userservice.model.DistributorLedger;
 import com.nector.userservice.model.Cart;
 import com.nector.userservice.repository.*;
 import com.nector.userservice.interceptors.salesMapping.repository.SalesMappingRepository;
-import com.nector.userservice.interceptors.salesMapping.model.MappingStatus;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.ordertracking.service.OrderTrackingService;
 import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
@@ -316,13 +315,6 @@ public class PaymentService {
             .toList();
     }
     
-    private void updateProformaInvoiceStatus(Long cartId, ProformaInvoice.PaymentStatus status) {
-        proformaInvoiceRepository.findByCartId(cartId).ifPresent(pi -> {
-            pi.setPaymentStatus(status);
-            proformaInvoiceRepository.save(pi);
-        });
-    }
-    
     private java.math.BigDecimal getDistributorBalance(Long distributorId) {
         return distributorLedgerRepository.getDistributorBalance(distributorId);
     }
@@ -477,6 +469,14 @@ public class PaymentService {
 
     public DistributorRepository getDistributorRepository() {
         return distributorRepository;
+    }
+
+    public ProformaInvoiceRepository getProformaInvoiceRepository() {
+        return proformaInvoiceRepository;
+    }
+
+    public CartRepository getCartRepository() {
+        return cartRepository;
     }
 
     private Long getDistributorIdFromAccountNumber(String accountNumber) {
@@ -680,6 +680,32 @@ public class PaymentService {
         } catch (Exception e) {
             System.err.println("Error updating order tracking step: " + e.getMessage());
         }
+    }
+
+    public BigDecimal getOrderAmount(Long orderId) {
+        Cart cart = cartRepository.findById(orderId)
+            .orElseThrow(() -> new RuntimeException("Cart not found: " + orderId));
+        
+        return cart.getCartItems().stream()
+            .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public BigDecimal getCurrentLedgerBalance(Long distributorId) {
+        return distributorLedgerRepository.getDistributorBalance(distributorId);
+    }
+
+    /**
+     * Updates the payment status of a Proforma Invoice
+     * @param orderId The cart/order ID
+     * @param paymentStatus The new payment status
+     */
+    private void updateProformaInvoiceStatus(Long orderId, ProformaInvoice.PaymentStatus paymentStatus) {
+        ProformaInvoice pi = proformaInvoiceRepository.findByCartId(orderId)
+            .orElseThrow(() -> new RuntimeException("Proforma Invoice not found for order: " + orderId));
+        
+        pi.setPaymentStatus(paymentStatus);
+        proformaInvoiceRepository.save(pi);
     }
 
 

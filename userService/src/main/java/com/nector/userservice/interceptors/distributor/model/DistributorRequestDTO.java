@@ -96,4 +96,7 @@ public class DistributorRequestDTO {
     @Schema(description = "PIN code", example = "800001")
     private String pinCode;
 
+    @Schema(description = "Key person", example = "John Doe")
+    private String keyperson;
+
 }

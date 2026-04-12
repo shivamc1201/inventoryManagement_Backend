@@ -35,6 +35,7 @@ public class DistributorMapper {
         distributor.setDistrict(dto.getDistrict());
         distributor.setState(dto.getState());
         distributor.setPinCode(dto.getPinCode());
+        distributor.setKeyperson(dto.getKeyperson());
 
 
         return distributor;
@@ -72,6 +73,7 @@ public class DistributorMapper {
         dto.setDistrict(entity.getDistrict());
         dto.setState(entity.getState());
         dto.setPinCode(entity.getPinCode());
+        dto.setKeyperson(entity.getKeyperson());
         return dto;
     }
     
@@ -98,5 +100,6 @@ public class DistributorMapper {
         entity.setDistrict(dto.getDistrict());
         entity.setState(dto.getState());
         entity.setPinCode(dto.getPinCode());
+        entity.setKeyperson(dto.getKeyperson());
     }
 }

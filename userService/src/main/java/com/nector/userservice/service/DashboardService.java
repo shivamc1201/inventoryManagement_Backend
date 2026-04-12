@@ -67,7 +67,7 @@ public class DashboardService {
     private LocalDate getStartDate(LocalDate now, String period) {
         log.debug("Entering getStartDate() with period: {}", period);
 
-        LocalDate startDate = switch (period.toLowerCase()) {
+        LocalDate startDate = switch (period != null ? period.toLowerCase() : "all") {
             case "week" -> now.minusWeeks(1);
             case "month" -> now.minusMonths(1);
             case "3months" -> now.minusMonths(3);
@@ -92,7 +92,12 @@ public class DashboardService {
                 .collect(Collectors.groupingBy(
                         order -> {
                             var salesPerson = salesPersonRepository.findById(order.getSalespersonId()).orElse(null);
-                            return salesPerson != null ? salesPerson.getZone() : "Unknown";
+                            if (salesPerson == null) {
+                                return "Unknown";
+                            }
+                            // Handle null zone by providing a default value
+                            String zone = salesPerson.getZone();
+                            return zone != null && !zone.trim().isEmpty() ? zone : "Unassigned";
                         },
                         Collectors.mapping(
                                 order -> order.getTotalCartAmount() != null ? order.getTotalCartAmount() : BigDecimal.ZERO,
@@ -107,7 +112,8 @@ public class DashboardService {
         // Since carts table doesn't have product category, we'll return a placeholder
         // In a real implementation, this would come from order_items or products table
         Map<String, BigDecimal> categorySales = new HashMap<>();
-        categorySales.put("General", orderRepository.getTotalAmountBetweenDates(startDate, endDate));
+        BigDecimal totalAmount = orderRepository.getTotalAmountBetweenDates(startDate, endDate);
+        categorySales.put("General", totalAmount != null ? totalAmount : BigDecimal.ZERO);
         return categorySales;
     }
 }

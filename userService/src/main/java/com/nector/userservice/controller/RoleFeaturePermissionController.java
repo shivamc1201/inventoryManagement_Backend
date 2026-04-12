@@ -1,13 +1,18 @@
 package com.nector.userservice.controller;
 
 import com.nector.userservice.common.features.Features;
+import com.nector.userservice.dto.PermissionRequest;
 import com.nector.userservice.model.RoleFeaturePermission;
 import com.nector.userservice.repository.RoleFeaturePermissionRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,6 +37,27 @@ public class RoleFeaturePermissionController {
     public ResponseEntity<List<RoleFeaturePermission>> getAllPermissions() {
         List<RoleFeaturePermission> permissions = permissionRepository.findAll();
         return ResponseEntity.ok(permissions);
+    }
+    
+    /**
+     * Get all available features for frontend selection
+     */
+    @GetMapping("/features")
+    @Operation(summary = "Get all available features", description = "Retrieves all available features with their IDs and display names for frontend selection")
+    @ApiResponse(responseCode = "200", description = "Features retrieved successfully")
+    public ResponseEntity<List<Map<String, Object>>> getAllFeatures() {
+        List<Map<String, Object>> features = new ArrayList<>();
+        
+        for (Features feature : Features.values()) {
+            Map<String, Object> featureMap = new HashMap<>();
+            featureMap.put("id", com.nector.userservice.common.RoleFeatureMapping.getFeatureId(feature));
+            featureMap.put("name", feature.name());
+            featureMap.put("displayName", feature.getDisplayName());
+            featureMap.put("path", feature.getPath());
+            features.add(featureMap);
+        }
+        
+        return ResponseEntity.ok(features);
     }
     
     /**
@@ -72,10 +98,13 @@ public class RoleFeaturePermissionController {
      * Create or update role-feature permission
      */
     @PutMapping("/role/{roleId}/feature/{featureId}")
+    @Operation(summary = "Create or update permission", description = "Creates or updates role-feature permission with specific CRUD permissions")
+    @ApiResponse(responseCode = "200", description = "Permission updated successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid request body")
     public ResponseEntity<RoleFeaturePermission> createOrUpdatePermission(
             @PathVariable Integer roleId,
             @PathVariable Integer featureId,
-            @RequestBody Map<String, Boolean> permissions) {
+            @RequestBody PermissionRequest permissionRequest) {
         
         try {
             // Convert featureId to Features enum
@@ -87,19 +116,21 @@ public class RoleFeaturePermissionController {
             RoleFeaturePermission permission;
             if (existingOpt.isPresent()) {
                 permission = existingOpt.get();
-                permission.setCanCreate(permissions.getOrDefault("canCreate", false));
-                permission.setCanRead(permissions.getOrDefault("canRead", false));
-                permission.setCanUpdate(permissions.getOrDefault("canUpdate", false));
-                permission.setCanDelete(permissions.getOrDefault("canDelete", false));
             } else {
                 permission = new RoleFeaturePermission(roleId, featureId, feature);
-                permission.setCanCreate(permissions.getOrDefault("canCreate", false));
-                permission.setCanRead(permissions.getOrDefault("canRead", false));
-                permission.setCanUpdate(permissions.getOrDefault("canUpdate", false));
-                permission.setCanDelete(permissions.getOrDefault("canDelete", false));
             }
             
+            // Set permissions from the request DTO
+            permission.setCanCreate(permissionRequest.getCanCreate() != null ? permissionRequest.getCanCreate() : false);
+            permission.setCanRead(permissionRequest.getCanRead() != null ? permissionRequest.getCanRead() : false);
+            permission.setCanUpdate(permissionRequest.getCanUpdate() != null ? permissionRequest.getCanUpdate() : false);
+            permission.setCanDelete(permissionRequest.getCanDelete() != null ? permissionRequest.getCanDelete() : false);
+            
             RoleFeaturePermission saved = permissionRepository.save(permission);
+            log.info("Permission updated successfully for roleId: {}, featureId: {}, create: {}, read: {}, update: {}, delete: {}", 
+                    roleId, featureId, permission.getCanCreate(), permission.getCanRead(), 
+                    permission.getCanUpdate(), permission.getCanDelete());
+            
             return ResponseEntity.ok(saved);
             
         } catch (Exception e) {
@@ -144,15 +175,18 @@ public class RoleFeaturePermissionController {
      * Bulk update permissions for a role
      */
     @PutMapping("/role/{roleId}/bulk")
+    @Operation(summary = "Bulk update permissions", description = "Updates multiple permissions for a role in a single request")
+    @ApiResponse(responseCode = "200", description = "Permissions updated successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid request body")
     public ResponseEntity<List<RoleFeaturePermission>> bulkUpdatePermissions(
             @PathVariable Integer roleId,
-            @RequestBody Map<Integer, Map<String, Boolean>> featurePermissions) {
+            @RequestBody Map<Integer, PermissionRequest> featurePermissions) {
         
         try {
             List<RoleFeaturePermission> updatedPermissions = featurePermissions.entrySet().stream()
                 .map(entry -> {
                     Integer featureId = entry.getKey();
-                    Map<String, Boolean> perms = entry.getValue();
+                    PermissionRequest perms = entry.getValue();
                     
                     Features feature = findFeatureById(featureId);
                     
@@ -166,15 +200,17 @@ public class RoleFeaturePermissionController {
                         permission = new RoleFeaturePermission(roleId, featureId, feature);
                     }
                     
-                    permission.setCanCreate(perms.getOrDefault("canCreate", false));
-                    permission.setCanRead(perms.getOrDefault("canRead", false));
-                    permission.setCanUpdate(perms.getOrDefault("canUpdate", false));
-                    permission.setCanDelete(perms.getOrDefault("canDelete", false));
+                    // Set permissions from the request DTO
+                    permission.setCanCreate(perms.getCanCreate() != null ? perms.getCanCreate() : false);
+                    permission.setCanRead(perms.getCanRead() != null ? perms.getCanRead() : false);
+                    permission.setCanUpdate(perms.getCanUpdate() != null ? perms.getCanUpdate() : false);
+                    permission.setCanDelete(perms.getCanDelete() != null ? perms.getCanDelete() : false);
                     
                     return permissionRepository.save(permission);
                 })
                 .collect(Collectors.toList());
             
+            log.info("Bulk permissions updated successfully for roleId: {}, total features: {}", roleId, updatedPermissions.size());
             return ResponseEntity.ok(updatedPermissions);
             
         } catch (Exception e) {

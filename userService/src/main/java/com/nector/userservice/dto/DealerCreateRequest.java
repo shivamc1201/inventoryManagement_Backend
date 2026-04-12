@@ -24,5 +24,4 @@ public class DealerCreateRequest {
 
     private BigDecimal openingBalance;
 
-    private Long salespersonId;
 }

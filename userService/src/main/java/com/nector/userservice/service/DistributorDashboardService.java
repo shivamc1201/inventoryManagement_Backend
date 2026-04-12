@@ -1,6 +1,7 @@
 package com.nector.userservice.service;
 
 import com.nector.userservice.dto.OrderDashboardResponse;
+import com.nector.userservice.enums.OrderStatus;
 import com.nector.userservice.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,14 +30,13 @@ public class DistributorDashboardService {
         BigDecimal totalAmount;
 
         if (distributorId != null) {
-            // Filter by specific distributor - prioritize distributorId over date filtering
-            // Get all orders for this distributor regardless of date when distributorId is provided
-            totalOrders = orderRepository.countOrdersByDistributor(distributorId);
-            totalAmount = orderRepository.getTotalAmountByDistributor(distributorId);
+            // Filter by specific distributor - only count GDN_GENERATED orders for this distributor
+            totalOrders = orderRepository.countOrdersByDistributorAndStatus(distributorId, OrderStatus.GDN_GENERATED);
+            totalAmount = orderRepository.getTotalAmountByDistributorAndStatus(distributorId, OrderStatus.GDN_GENERATED);
         } else {
-            // Get all orders with date filtering (only when no distributorId is specified)
-            totalOrders = orderRepository.countOrdersBetweenDates(startDate, now);
-            totalAmount = orderRepository.getTotalAmountBetweenDates(startDate, now);
+            // Get all GDN_GENERATED orders with date filtering (only when no distributorId is specified)
+            totalOrders = orderRepository.countOrdersByStatusBetweenDates(OrderStatus.GDN_GENERATED, startDate, now);
+            totalAmount = orderRepository.getTotalAmountByStatusBetweenDates(OrderStatus.GDN_GENERATED, startDate, now);
         }
         
         // Handle null values

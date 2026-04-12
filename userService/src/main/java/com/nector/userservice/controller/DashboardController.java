@@ -2,6 +2,7 @@ package com.nector.userservice.controller;
 
 import com.nector.userservice.dto.DashboardResponse;
 import com.nector.userservice.dto.OrderDashboardResponse;
+import com.nector.userservice.enums.OrderStatus;
 import com.nector.userservice.model.User;
 import com.nector.userservice.repository.OrderRepository;
 import com.nector.userservice.service.DashboardService;
@@ -33,7 +34,7 @@ public class DashboardController {
     @Operation(summary = "Get dashboard analytics", description = "Retrieves dashboard analytics data for specified time period")
     @ApiResponse(responseCode = "200", description = "Analytics data retrieved successfully")
     public ResponseEntity<DashboardResponse> getDashboardAnalytics(
-            @RequestParam(defaultValue = "month") String period) {
+            @RequestParam(required = false) String period) {
         DashboardResponse response = dashboardService.getDashboardData(period);
         return ResponseEntity.ok(response);
     }
@@ -46,13 +47,15 @@ public class DashboardController {
         User user = userService.getUserByUsername(username);
         return ResponseEntity.ok(user);
     }
+
     @GetMapping("/orders")
     @Operation(summary = "Get order dashboard analytics", description = "Retrieves order analytics data for specified time period")
     @ApiResponse(responseCode = "200", description = "Order analytics data retrieved successfully")
     public ResponseEntity<OrderDashboardResponse> getOrderDashboard(
-            @RequestParam(defaultValue = "month") String period,
+            @RequestParam(required = false) String period,
             @RequestParam(required = false) Long salespersonId) {
 
+        if (period == null) period = "month";
         LocalDate now = LocalDate.now();
         LocalDate startDate = getStartDateForOrders(now, period);
 
@@ -60,13 +63,13 @@ public class DashboardController {
         BigDecimal totalAmount;
 
         if (salespersonId != null) {
-            // Filter by specific salesperson
-            totalOrders = orderRepository.countOrdersBySalespersonBetweenDates(salespersonId, startDate, now);
-            totalAmount = orderRepository.getTotalAmountBySalespersonBetweenDates(salespersonId, startDate, now);
+            // Filter by specific salesperson - only count GDN_GENERATED orders
+            totalOrders = orderRepository.countOrdersBySalespersonAndStatusBetweenDates(salespersonId, OrderStatus.GDN_GENERATED, startDate, now);
+            totalAmount = orderRepository.getTotalAmountBySalespersonAndStatusBetweenDates(salespersonId, OrderStatus.GDN_GENERATED, startDate, now);
         } else {
-            // Get all orders
-            totalOrders = orderRepository.countOrdersBetweenDates(startDate, now);
-            totalAmount = orderRepository.getTotalAmountBetweenDates(startDate, now);
+            // Get all GDN_GENERATED orders
+            totalOrders = orderRepository.countOrdersByStatusBetweenDates(OrderStatus.GDN_GENERATED, startDate, now);
+            totalAmount = orderRepository.getTotalAmountByStatusBetweenDates(OrderStatus.GDN_GENERATED, startDate, now);
         }
 
         // Handle null values
@@ -83,6 +86,7 @@ public class DashboardController {
             case "week" -> now.minusWeeks(1);
             case "month" -> now.minusMonths(1);
             case "year" -> now.minusYears(1);
+            case "all" -> LocalDate.of(2000, 1, 1); // All-time data
             default -> now.minusMonths(1); // Default: month
         };
     }

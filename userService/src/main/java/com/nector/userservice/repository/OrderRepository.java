@@ -109,4 +109,60 @@ public interface OrderRepository extends JpaRepository<OrderWithSalesPerson, Lon
             "o.distributorId = :distributorId")
     BigDecimal getTotalAmountByDistributor(@Param("distributorId") Long distributorId);
 
+    @Query("SELECT COUNT(o) FROM OrderWithSalesPerson o WHERE " +
+            "o.status = :status AND " +
+            "o.createdAt BETWEEN :dateFrom AND :dateTo")
+    Long countOrdersByStatusBetweenDates(
+            @Param("status") OrderStatus status,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
+
+    @Query("SELECT COALESCE(SUM(o.totalCartAmount), 0) FROM OrderWithSalesPerson o WHERE " +
+            "o.status = :status AND " +
+            "o.createdAt BETWEEN :dateFrom AND :dateTo")
+    BigDecimal getTotalAmountByStatusBetweenDates(
+            @Param("status") OrderStatus status,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
+
+    @Query("SELECT COUNT(o) FROM OrderWithSalesPerson o WHERE " +
+            "o.status = :status AND " +
+            "o.distributorId = :distributorId")
+    Long countOrdersByDistributorAndStatus(
+            @Param("distributorId") Long distributorId,
+            @Param("status") OrderStatus status
+    );
+
+    @Query("SELECT COALESCE(SUM(o.totalCartAmount), 0) FROM OrderWithSalesPerson o WHERE " +
+            "o.status = :status AND " +
+            "o.distributorId = :distributorId")
+    BigDecimal getTotalAmountByDistributorAndStatus(
+            @Param("distributorId") Long distributorId,
+            @Param("status") OrderStatus status
+    );
+
+    @Query("SELECT COUNT(o) FROM OrderWithSalesPerson o WHERE " +
+            "o.salespersonId = :salespersonId AND " +
+            "o.status = :status AND " +
+            "o.createdAt BETWEEN :dateFrom AND :dateTo")
+    Long countOrdersBySalespersonAndStatusBetweenDates(
+            @Param("salespersonId") Long salespersonId,
+            @Param("status") OrderStatus status,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
+
+    @Query("SELECT COALESCE(SUM(o.totalCartAmount), 0) FROM OrderWithSalesPerson o WHERE " +
+            "o.salespersonId = :salespersonId AND " +
+            "o.status = :status AND " +
+            "o.createdAt BETWEEN :dateFrom AND :dateTo")
+    BigDecimal getTotalAmountBySalespersonAndStatusBetweenDates(
+            @Param("salespersonId") Long salespersonId,
+            @Param("status") OrderStatus status,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
+
 }

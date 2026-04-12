@@ -104,6 +104,9 @@ public class Distributor {
     @Column(name = "pin_code", length = 10)
     private String pinCode;
 
+    @Column(name = "keyperson", length = 100)
+    private String keyperson;
+
     @PrePersist
     protected void onCreate() {
         createdOn = LocalDateTime.now();

@@ -117,6 +117,11 @@ public class AccountsController {
         BigDecimal currentCredit = distributor.getCreditAmount();
         BigDecimal orderAmount = pi.getAmount();
         
+        // Check if credit is available or null
+        if (currentCredit == null) {
+            throw new RuntimeException("Credit not available for distributor: " + distributorId);
+        }
+        
         if (currentCredit.compareTo(orderAmount) < 0) {
             throw new RuntimeException("Insufficient credit. Available: " + currentCredit + ", Required: " + orderAmount);
         }

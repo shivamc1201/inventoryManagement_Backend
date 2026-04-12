@@ -1,549 +1,333 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-
     <meta charset="UTF-8"/>
 
     <style>
 
+        *{ box-sizing:border-box; }
+
         body{
-        background:#efefef;
-        padding:20px;
-        display:flex;
-        justify-content:center;
-        font-family:Arial, Helvetica, sans-serif;
+            background:#efefef;
+            padding:20px;
+            display:flex;
+            justify-content:center;
+            font-family:Arial, Helvetica, sans-serif;
+            font-size:10px;
+            margin:0;
         }
 
         .page{
-        width:210mm;
-        height:297mm;
-        background:white;
-        padding:10mm;
-        box-shadow:0 0 6px rgba(0,0,0,.15);
+            width:210mm;
+            height:297mm;
+            background:white;
+            padding:15mm;
+            box-shadow:0 0 6px rgba(0,0,0,.15);
         }
 
-        table{
-        width:100%;
-        border-collapse:collapse;
-        font-size:12px;
-        }
-
-        .bold{
-        font-weight:bold;
-        }
-
-        .center{
-        text-align:center;
-        }
-
-        .right{
-        text-align:right;
-        }
-
-        .details-grid td{
-        padding:4px 2px;
-        vertical-align:bottom;
-        }
-
-        .field{
-        display:flex;
-        align-items:flex-end;
-        width:100%;
-        }
-
-        .line{
-        border-bottom:1px dotted black;
-        flex:1;
-        margin-left:8px;
-        height:14px;
-        }
-
+        /* HEADER */
         .header-title{
-        font-size:20px;
-        font-weight:bold;
+            font-size:16px;
+            font-weight:bold;
         }
 
         .header-address{
-        font-size:11px;
-        margin-top:2px;
+            font-size:9px;
         }
 
-        .gdn{
-        text-align:center;
-        font-weight:bold;
-        font-size:14px;
-        margin:15px 0 10px;
+        .center{text-align:center;}
+        .right{text-align:right;}
+        .bold{font-weight:bold;}
+
+        /* TITLE */
+        .gdn-title{
+            text-align:center;
+            font-weight:bold;
+            font-size:12px;
+            margin:10px 0 15px;
         }
 
+        /* ROW STYLE */
+        .row-line{
+            display:flex;
+            align-items:flex-end;
+            justify-content:space-between;
+            margin-bottom:6px;
+        }
+
+        .left-group, .right-group{
+            display:flex;
+            align-items:flex-end;
+            gap:5px;
+        }
+
+        .label{
+            font-weight:bold;
+            white-space:nowrap;
+        }
+
+        .value{
+            display:inline-block;
+            border-bottom:1px dotted black;
+            min-width:150px;
+            height:14px;
+            line-height:14px;
+            padding-left:4px;
+        }
+
+        /* FULL WIDTH LINE */
+        .full-width{
+            width:100%;
+        }
+
+        /* TABLE */
+        table{
+            width:100%;
+            border-collapse:collapse;
+        }
+
+        /* ITEMS TABLE */
         .items{
-        margin-top:15px;
-        border:1px solid black;
-        table-layout:fixed;
+            margin-top:15px;
+            border:1px solid black;
+            table-layout:fixed;
+            height:250px;
         }
 
         .items th{
-        border:1px solid black;
-        padding:6px;
-        font-size:11px;
+            border:1px solid black;
+            padding:6px;
+            font-size:11px;
         }
 
         .items td{
-        border-left:1px solid black;
-        border-right:1px solid black;
+            border-left:1px solid black;
+            border-right:1px solid black;
+            padding:4px;
+            height:20px;
         }
 
-        .big-space td{
-        height:470px;
+        .empty-row td{
+            height:100%;
         }
 
+        /* REMARK */
         .remark{
-        border:1px solid black;
-        border-top:none;
-        padding:8px;
+            border:1px solid black;
+            border-top:none;
+            padding:6px;
+            height:40px;
+            display:flex;
+            align-items:flex-start;
+            gap:5px;
         }
 
+        /* SIGNATURE */
         .signature{
-        margin-top:30px;
+            margin-top:20px;
         }
 
+        .signature .row-line{
+            justify-content:space-between;
+        }
+
+        /* PRINT */
         @media print{
-
-        body{
-        background:white;
-        padding:0;
+            body{
+                background:white;
+                padding:0;
+                margin:0;
+            }
+            .page{
+                box-shadow:none;
+            }
         }
 
-        .page{
-        box-shadow:none;
-        }
-
-        }
-
-        /* A4 Paper Styling with Fixed Size */
         @page {
             size: A4;
-            margin: 10mm;
+            margin: 15mm;
         }
-    </style>
 
+    </style>
 </head>
 
 <body>
 
 <div class="page">
-
+    <!-- HEADER -->
     <table>
-
         <tr>
 
+            <!-- LOGO -->
             <td width="20%">
-                <img th:src="${logoPath}" width="80">
+                <img src="logo.png" width="90" style="display:block;"/>
             </td>
 
+            <!-- COMPANY NAME -->
             <td width="60%" class="center">
-
                 <div class="header-title">
                     Nectar Origin Private Limited
                 </div>
-
                 <div class="header-address">
                     360 K Shiv Parwati Nagar, Block Road No-2, Ward 16,
                     Kahalgaon, Bhagalpur Bihar
                 </div>
-
             </td>
 
+            <!-- RIGHT TEXT -->
             <td width="20%" class="right" style="font-size:10px;">
                 CHALLAN / ACCOUNT / SITE / VENDOR
             </td>
 
         </tr>
-
     </table>
 
-
-    <div class="gdn">
+    <!-- TITLE -->
+    <div class="gdn-title">
         GOOD DELIVERY NOTE
     </div>
 
-
-    <table class="details-grid">
-
-        <tr>
-
-            <td width="60%">
-
-                <div class="field">
-
-<span class="bold">
-Delivery Note No :
-</span>
-
-                    <span class="line"
-                          th:text="${gdnNumber}">
-</span>
-
-                </div>
-
-            </td>
-
-            <td width="40%">
-
-                <div class="field">
-
-<span class="bold">
-Date :
-</span>
-
-                    <span class="line"
-                          th:text="${gdnDate}">
-</span>
-
-                </div>
-
-            </td>
-
-        </tr>
-
-
-        <tr>
-
-            <td colspan="2">
-
-                <div class="field">
-
-<span class="bold">
-Dispatch From :
-</span>
-
-                    <span class="line"
-                          th:text="${dispatchFromAddress}">
-</span>
-
-                </div>
-
-            </td>
-
-        </tr>
-
-
-        <tr>
-
-            <td colspan="2">
-
-                <div class="field">
-
-<span class="bold">
-Shipping Address :
-</span>
-
-                    <span class="line"
-                          th:text="${shippingAddress}">
-</span>
-
-                </div>
-
-            </td>
-
-        </tr>
-
-
-        <tr>
-
-            <td colspan="2">
-
-                <div class="field">
-
-<span class="bold">
-Distributor Name :
-</span>
-
-                    <span class="line"
-                          th:text="${distributorName}">
-</span>
-
-                </div>
-
-            </td>
-
-        </tr>
-
-
-        <tr>
-
-            <td colspan="2">
-
-                <div class="field">
-
-<span class="bold">
-Distributor Address :
-</span>
-
-                    <span class="line"
-                          th:text="${distributorAddress}">
-</span>
-
-                </div>
-
-            </td>
-
-        </tr>
-
-
-        <tr>
-
-            <td>
-
-                <div class="field">
-
-<span class="bold">
-Delivery Method :
-</span>
-
-                    <span class="line"
-                          th:text="${deliveryMethod}">
-</span>
-
-                </div>
-
-            </td>
-
-
-            <td>
-
-                <div class="field">
-
-<span class="bold">
-Vehicle No :
-</span>
-
-                    <span class="line"
-                          th:text="${vehicleNo}">
-</span>
-
-                </div>
-
-            </td>
-
-        </tr>
-
-
-        <tr>
-
-            <td>
-
-                <div class="field">
-
-<span class="bold">
-Transport Name :
-</span>
-
-                    <span class="line"
-                          th:text="${transportName}">
-</span>
-
-                </div>
-
-            </td>
-
-
-            <td>
-
-                <div class="field">
-
-<span class="bold">
-Driver Name :
-</span>
-
-                    <span class="line"
-                          th:text="${driverName}">
-</span>
-
-                </div>
-
-            </td>
-
-        </tr>
-
-
-        <tr>
-
-            <td>
-
-                <div class="field">
-
-<span class="bold">
-Total No. of Package :
-</span>
-
-                    <span class="line"
-                          th:text="${totalPackages}">
-</span>
-
-                </div>
-
-            </td>
-
-
-            <td>
-
-                <div class="field">
-
-<span class="bold">
-Mobile No :
-</span>
-
-                    <span class="line"
-                          th:text="${driverMobile}">
-</span>
-
-                </div>
-
-            </td>
-
-        </tr>
-
-
-        <tr>
-
-            <td></td>
-
-            <td>
-
-                <div class="field">
-
-<span class="bold">
-Total Weight :
-</span>
-
-                    <span class="line"
-                          th:text="${totalWeight}">
-</span>
-
-                </div>
-
-            </td>
-
-        </tr>
-
-    </table>
-
-
-
-    <table class="items">
-
-        <tr>
-
-            <th width="8%">
-                SrNo
-            </th>
-
-            <th width="20%">
-                Unit Type
-            </th>
-
-            <th width="52%">
-                Item Description
-            </th>
-
-            <th width="20%">
-                No of Units Dispatch
-            </th>
-
-        </tr>
-
-
-        <tr th:each="item,iter:${items}">
-
-            <td class="center"
-                th:text="${iter.index+1}">
-            </td>
-
-            <td class="center"
-                th:text="${item.unit}">
-            </td>
-
-            <td th:text="${item.description}">
-            </td>
-
-            <td class="center"
-                th:text="${item.quantity}">
-            </td>
-
-        </tr>
-
-
-        <tr class="big-space">
-
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-
-        </tr>
-
-    </table>
-
-
-
-    <div class="remark">
-
-        <div class="field">
-
-<span class="bold">
-Remark :
-</span>
-
-            <span class="line"
-                  th:text="${remark}">
-</span>
-
+    <!-- DETAILS -->
+
+    <!-- Row 1 -->
+    <div class="row-line">
+        <div class="left-group">
+            <span class="label">Delivery Note No :</span>
+            <span class="value" th:text="${gdnNumber}"></span>
         </div>
 
+        <div class="right-group">
+            <span class="label">Date :</span>
+            <span class="value" th:text="${gdnDate}"></span>
+        </div>
     </div>
 
+    <!-- Full width rows -->
+    <div class="row-line">
+        <span class="label">Dispatch From :</span>
+        <span class="value full-width" th:text="${dispatchFromAddress}"></span>
+    </div>
 
+    <div class="row-line">
+        <span class="label">Shipping Address :</span>
+        <span class="value full-width" th:text="${shippingAddress}"></span>
+    </div>
 
-    <table class="signature">
+    <div class="row-line">
+        <span class="label">Distributor Name :</span>
+        <span class="value full-width" th:text="${distributorName}"></span>
+    </div>
 
+    <div class="row-line">
+        <span class="label">Distributor Address :</span>
+        <span class="value full-width" th:text="${distributorAddress}"></span>
+    </div>
+
+    <!-- Split rows -->
+    <div class="row-line">
+        <div class="left-group">
+            <span class="label">Delivery Method :</span>
+            <span class="value" th:text="${deliveryMethod}"></span>
+        </div>
+
+        <div class="right-group">
+            <span class="label">Vehicle No :</span>
+            <span class="value" th:text="${vehicleNo}"></span>
+        </div>
+    </div>
+
+    <div class="row-line">
+        <div class="left-group">
+            <span class="label">Transport Name :</span>
+            <span class="value" th:text="${transportName}"></span>
+        </div>
+
+        <div class="right-group">
+            <span class="label">Driver Name :</span>
+            <span class="value" th:text="${driverName}"></span>
+        </div>
+    </div>
+
+    <div class="row-line">
+        <div class="left-group">
+            <span class="label">Total No. of Package :</span>
+            <span class="value" th:text="${totalPackages}"></span>
+        </div>
+
+        <div class="right-group">
+            <span class="label">Mobile No :</span>
+            <span class="value" th:text="${driverMobile}"></span>
+        </div>
+    </div>
+
+    <div class="row-line">
+        <span class="label">Total Weight :</span>
+        <span class="value" th:text="${totalWeight}"></span>
+    </div>
+
+    <!-- ITEMS -->
+    <table class="items">
         <tr>
-
-            <td width="50%">
-
-                <div class="field">
-
-<span class="bold">
-Name of Person Receiving :
-</span>
-
-                    <span class="line"></span>
-
-                </div>
-
-            </td>
-
-
-            <td width="50%">
-
-                <div class="field">
-
-<span class="bold">
-Signature of Person Receiving :
-</span>
-
-                    <span class="line"></span>
-
-                </div>
-
-            </td>
-
+            <th width="10%">Sr.No</th>
+            <th width="15%">Unit Type</th>
+            <th width="55%">Item Description</th>
+            <th width="15%">No of Units Dispatch</th>
         </tr>
 
+        <tr th:each="item,iter:${items}">
+            <td class="center" th:text="${iter.index+1}"></td>
+            <td class="center" th:text="${item.unit}"></td>
+            <td th:text="${item.description}"></td>
+            <td class="center" th:text="${item.quantity}"></td>
+        </tr>
+
+        <tr class="empty-row">
+            <td></td><td></td><td></td><td></td>
+        </tr>
     </table>
 
+    <!-- REMARK -->
+    <div class="remark">
+        <span class="label">Remark :</span>
+        <span class="value full-width" th:text="${remark}"></span>
+    </div>
+
+    <!-- SIGNATURE -->
+    <table class="signature">
+        <tr>
+            <td width="50%">
+                <div class="row-line">
+                    <span class="label">Name of Person Receiving :</span>
+                    <span class="value" style="width:150px"></span>
+                </div>
+            </td>
+
+            <td width="50%">
+                <div class="row-line">
+                    <span class="label">Signature of Person Receiving :</span>
+                    <span class="value" style="width:150px"></span>
+                </div>
+            </td>
+        </tr>
+
+        <tr>
+            <td>
+                <div class="row-line">
+                    <span class="label">Name of Person Delivering :</span>
+                    <span class="value" style="width:150px"></span>
+                </div>
+            </td>
+
+            <td>
+                <div class="row-line">
+                    <span class="label">Signature of Person Delivering :</span>
+                    <span class="value" style="width:150px"></span>
+                </div>
+            </td>
+        </tr>
+    </table>
 
 </div>
 
 </body>
-
 </html>

@@ -267,8 +267,8 @@ public class ProformaInvoiceService {
 
         // Calculate totals
         double subtotal = items.stream().mapToDouble(InvoiceItem::getAmount).sum();
-        double cgst = subtotal * 0.09; // 9%
-        double sgst = subtotal * 0.09; // 9%
+        double cgst = 0.0; // No tax for proforma invoice
+        double sgst = 0.0; // No tax for proforma invoice
         double grandTotal = subtotal + cgst + sgst;
 
         invoice.setSubtotal(subtotal);
@@ -278,6 +278,7 @@ public class ProformaInvoiceService {
         invoice.setGrandTotal(grandTotal);
         invoice.setAmountInWords(convertToWords(grandTotal));
 
+        double totalTax = cgst + sgst;
         invoice.setTaxInWords("NIL");
         invoice.setTotalAltQty("");
         invoice.setDeliveryNote("");

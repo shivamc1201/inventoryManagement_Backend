@@ -2,6 +2,7 @@ package com.nector.userservice.dto.cart;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -19,4 +20,7 @@ public class CartResponse {
     private String distributorAddress;
     private java.math.BigDecimal totalCartAmount;
     private String dismissReason;
+
+//    private BigDecimal totalWeight;
+    private BigDecimal volumeInTons;
 }

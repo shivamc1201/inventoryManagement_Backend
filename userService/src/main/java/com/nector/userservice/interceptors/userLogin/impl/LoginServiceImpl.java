@@ -1,6 +1,7 @@
 package com.nector.userservice.interceptors.userLogin.impl;
 
 import com.nector.userservice.common.BaseLoginResponse;
+import com.nector.userservice.common.RoleFeatureMapping;
 import com.nector.userservice.common.RoleType;
 import com.nector.userservice.common.UserStatus;
 import com.nector.userservice.common.features.Features;
@@ -11,7 +12,11 @@ import com.nector.userservice.interceptors.distributor.model.DistributorStatus;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.interceptors.userLogin.model.LoginRequest;
 import com.nector.userservice.interceptors.userLogin.model.LoginResponse;
+import com.nector.userservice.interceptors.userLogin.model.UnifiedLoginResponse;
+import com.nector.userservice.interceptors.userLogin.model.FeaturePermissionDTO;
 import com.nector.userservice.interceptors.userLogin.service.LoginService;
+import com.nector.userservice.model.RoleFeaturePermission;
+import com.nector.userservice.repository.RoleFeaturePermissionRepository;
 import com.nector.userservice.model.Role;
 import com.nector.userservice.model.User;
 // import com.nector.userservice.model.UserSession;
@@ -41,6 +46,7 @@ public class LoginServiceImpl implements LoginService {
     private final JwtService jwtService;
     private final DistributorRepository distributorRepository;
     private final SalesPersonRepository salesPersonRepository;
+    private final RoleFeaturePermissionRepository roleFeaturePermissionRepository;
     
 
     @Override
@@ -335,6 +341,85 @@ public class LoginServiceImpl implements LoginService {
     }
 
 
+
+    @Override
+    public UnifiedLoginResponse authenticateWithPermissions(LoginRequest request) {
+        log.info("Unified login attempt for {}", request.getUsername());
+
+        // First authenticate the user normally
+        BaseLoginResponse baseResponse = authenticate(request);
+        
+        if (!(baseResponse instanceof LoginResponse)) {
+            throw new RuntimeException("Unified login only supports regular users");
+        }
+        
+        LoginResponse loginResponse = (LoginResponse) baseResponse;
+        
+        // Get the user's role ID using the same logic as RoleFeaturePermissionController
+        User user = userRepository.findByUsernameWithRolesAndPermissions(request.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        List<FeaturePermissionDTO> rolePermissions = getUserPermissions(user);
+        
+        return new UnifiedLoginResponse(
+                loginResponse.getToken(),
+                loginResponse.getType(),
+                loginResponse.getUsername(),
+                loginResponse.getMessage(),
+                loginResponse.getRoleType(),
+                loginResponse.getUserId(),
+                loginResponse.getFeatures(),
+                loginResponse.getFeatureNames(),
+                loginResponse.getLoginStatus(),
+                rolePermissions
+        );
+    }
+
+    /**
+     * Get user permissions based on their role(s) - same logic as RoleFeaturePermissionController
+     */
+    private List<FeaturePermissionDTO> getUserPermissions(User user) {
+        List<FeaturePermissionDTO> allPermissions = new ArrayList<>();
+        
+        // Get permissions from primary roleType
+        if (user.getRoleType() != null) {
+            Integer roleId = RoleFeatureMapping.getRoleId(user.getRoleType());
+            List<FeaturePermissionDTO> roleTypePermissions = getPermissionsByRoleId(roleId);
+            allPermissions.addAll(roleTypePermissions);
+        }
+        
+        // Get permissions from additional roles (many-to-many)
+        if (!user.getRoles().isEmpty()) {
+            for (var role : user.getRoles()) {
+                Integer roleId = RoleFeatureMapping.getRoleId(role.getRoleType());
+                List<FeaturePermissionDTO> rolePermissions = getPermissionsByRoleId(roleId);
+                allPermissions.addAll(rolePermissions);
+            }
+        }
+        
+        // Remove duplicates based on roleId and featureId
+        return allPermissions.stream()
+                .distinct()
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Get permissions by role ID and convert to DTO - same logic as RoleFeaturePermissionController
+     */
+    private List<FeaturePermissionDTO> getPermissionsByRoleId(Integer roleId) {
+        return roleFeaturePermissionRepository.findByRoleId(roleId)
+                .stream()
+                .map(perm -> new FeaturePermissionDTO(
+                        perm.getRoleId(),
+                        perm.getFeatureId(),
+                        perm.getFeature().name(),
+                        perm.getCanCreate(),
+                        perm.getCanRead(),
+                        perm.getCanUpdate(),
+                        perm.getCanDelete()
+                ))
+                .collect(Collectors.toList());
+    }
 
     @Override
     public LoginResponse authenticateSecondUser(LoginRequest request) {

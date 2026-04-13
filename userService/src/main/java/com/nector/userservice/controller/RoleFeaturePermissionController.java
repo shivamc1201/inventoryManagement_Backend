@@ -1,9 +1,13 @@
 package com.nector.userservice.controller;
 
 import com.nector.userservice.common.features.Features;
+import com.nector.userservice.common.RoleFeatureMapping;
 import com.nector.userservice.dto.PermissionRequest;
+import com.nector.userservice.interceptors.userLogin.model.FeaturePermissionDTO;
 import com.nector.userservice.model.RoleFeaturePermission;
+import com.nector.userservice.model.User;
 import com.nector.userservice.repository.RoleFeaturePermissionRepository;
+import com.nector.userservice.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +33,7 @@ import java.util.stream.Collectors;
 public class RoleFeaturePermissionController {
     
     private final RoleFeaturePermissionRepository permissionRepository;
+    private final UserRepository userRepository;
     
     /**
      * Get all role-feature permissions
@@ -58,6 +63,36 @@ public class RoleFeaturePermissionController {
         }
         
         return ResponseEntity.ok(features);
+    }
+    
+    /**
+     * Get permissions by user ID
+     */
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<FeaturePermissionDTO>> getPermissionsByUser(@PathVariable Long userId) {
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        User user = userOpt.get();
+        List<FeaturePermissionDTO> permissions = getUserPermissions(user);
+        return ResponseEntity.ok(permissions);
+    }
+    
+    /**
+     * Get permissions by username
+     */
+    @GetMapping("/username/{username}")
+    public ResponseEntity<List<FeaturePermissionDTO>> getPermissionsByUsername(@PathVariable String username) {
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        User user = userOpt.get();
+        List<FeaturePermissionDTO> permissions = getUserPermissions(user);
+        return ResponseEntity.ok(permissions);
     }
     
     /**
@@ -135,6 +170,41 @@ public class RoleFeaturePermissionController {
             
         } catch (Exception e) {
             log.error("Error creating/updating permission for roleId: {}, featureId: {}", roleId, featureId, e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    /**
+     * Create or update user-feature permission
+     */
+    @PutMapping("/user/{userId}/feature/{featureId}")
+    @Operation(summary = "Create or update user permission", description = "Creates or updates user-feature permission based on user's role")
+    @ApiResponse(responseCode = "200", description = "User permission updated successfully")
+    @ApiResponse(responseCode = "404", description = "User not found")
+    @ApiResponse(responseCode = "400", description = "Invalid request body")
+    public ResponseEntity<RoleFeaturePermission> createOrUpdateUserPermission(
+            @PathVariable Long userId,
+            @PathVariable Integer featureId,
+            @RequestBody PermissionRequest permissionRequest) {
+        
+        try {
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            User user = userOpt.get();
+            Integer roleId = getUserRoleId(user);
+            
+            if (roleId == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            // Delegate to the existing role-based method
+            return createOrUpdatePermission(roleId, featureId, permissionRequest);
+            
+        } catch (Exception e) {
+            log.error("Error creating/updating user permission for userId: {}, featureId: {}", userId, featureId, e);
             return ResponseEntity.badRequest().build();
         }
     }
@@ -247,5 +317,63 @@ public class RoleFeaturePermissionController {
             case 23 -> Features.INVENTORY_TRANSACTIONS_SALE_INVOICE;
             default -> throw new IllegalArgumentException("Unknown feature ID: " + featureId);
         };
+    }
+    
+    /**
+     * Get user permissions based on their role(s)
+     */
+    private List<FeaturePermissionDTO> getUserPermissions(User user) {
+        List<FeaturePermissionDTO> allPermissions = new ArrayList<>();
+        
+        // Get permissions from primary roleType
+        if (user.getRoleType() != null) {
+            Integer roleId = RoleFeatureMapping.getRoleId(user.getRoleType());
+            List<FeaturePermissionDTO> roleTypePermissions = getPermissionsByRoleId(roleId);
+            allPermissions.addAll(roleTypePermissions);
+        }
+        
+        // Get permissions from additional roles (many-to-many)
+        if (!user.getRoles().isEmpty()) {
+            for (var role : user.getRoles()) {
+                Integer roleId = RoleFeatureMapping.getRoleId(role.getRoleType());
+                List<FeaturePermissionDTO> rolePermissions = getPermissionsByRoleId(roleId);
+                allPermissions.addAll(rolePermissions);
+            }
+        }
+        
+        // Remove duplicates based on roleId and featureId
+        return allPermissions.stream()
+                .distinct()
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Get permissions by role ID and convert to DTO
+     */
+    private List<FeaturePermissionDTO> getPermissionsByRoleId(Integer roleId) {
+        return permissionRepository.findByRoleId(roleId)
+                .stream()
+                .map(perm -> new FeaturePermissionDTO(
+                        perm.getRoleId(),
+                        perm.getFeatureId(),
+                        perm.getFeature().name(),
+                        perm.getCanCreate(),
+                        perm.getCanRead(),
+                        perm.getCanUpdate(),
+                        perm.getCanDelete()
+                ))
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Get user's role ID (from primary roleType or first additional role)
+     */
+    private Integer getUserRoleId(User user) {
+        if (user.getRoleType() != null) {
+            return RoleFeatureMapping.getRoleId(user.getRoleType());
+        } else if (!user.getRoles().isEmpty()) {
+            return RoleFeatureMapping.getRoleId(user.getRoles().iterator().next().getRoleType());
+        }
+        return null;
     }
 }

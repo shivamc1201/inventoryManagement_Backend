@@ -6,6 +6,7 @@ import com.nector.userservice.dto.invoice.ProformaInvoice;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.model.Cart;
 import com.nector.userservice.model.CartItem;
+import com.nector.userservice.model.FinishedProduct;
 import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.repository.ProformaInvoiceRepository;
 import lombok.RequiredArgsConstructor;
@@ -253,7 +254,9 @@ public class ProformaInvoiceService {
                     item.setSrNo(i + 1);
                     item.setDescription(cartItem.getItem().getName());
                     item.setHsnCode("1234"); // Default HSN
-                    item.setAltQty(""); // Alternative quantity
+                    // Set altQty with calculated volume
+                    java.math.BigDecimal itemVolume = calculateItemVolume(cartItem);
+                    item.setAltQty(itemVolume.toString());
                     item.setQuantity(cartItem.getQuantity());
                     item.setRatePerUnit(cartItem.getPriceAtTime().doubleValue());
                     item.setUnit("Pcs");
@@ -504,6 +507,69 @@ public class ProformaInvoiceService {
             log.error("Failed to retrieve all Proforma Invoices: {}", e.getMessage());
             throw new RuntimeException("Failed to retrieve Proforma Invoices", e);
         }
+    }
+
+    private java.math.BigDecimal calculateItemVolume(CartItem cartItem) {
+        FinishedProduct product = cartItem.getItem();
+        java.math.BigDecimal weight = product.getWeight();
+        int quantity = cartItem.getQuantity();
+        
+        log.debug("Calculating volume for product: {}, weight: {}, unit: {}, quantity: {}", 
+            product.getName(), weight, product.getUnit(), quantity);
+        
+        if (product.getUnit() == null || weight == null || weight.equals(java.math.BigDecimal.ZERO)) {
+            log.warn("Product {} has null weight or unit, returning volume 0", product.getName());
+            // Try to extract weight from product name as fallback (e.g., "50 Kg" from "MANKA MAHISHI 50 Kg")
+            return extractWeightFromProductName(product.getName(), quantity);
+        }
+        
+        switch (product.getUnit()) {
+            case KG:
+                // Convert KG to volume in tons (1 ton = 1000 kg)
+                java.math.BigDecimal weightInKg = weight.multiply(java.math.BigDecimal.valueOf(quantity));
+                return weightInKg.divide(java.math.BigDecimal.valueOf(1000), 6, java.math.BigDecimal.ROUND_HALF_UP);
+                
+            case LITER:
+                // Convert Liters to volume in tons (assuming density of 1 kg/liter for water)
+                java.math.BigDecimal volumeInLiters = weight.multiply(java.math.BigDecimal.valueOf(quantity));
+                return volumeInLiters.divide(java.math.BigDecimal.valueOf(1000), 6, java.math.BigDecimal.ROUND_HALF_UP);
+                
+            case DOZEN:
+                // For dozen, calculate weight per dozen and convert to volume in tons
+                java.math.BigDecimal weightPerPiece = weight.divide(java.math.BigDecimal.valueOf(12), 6, java.math.BigDecimal.ROUND_HALF_UP);
+                java.math.BigDecimal totalWeight = weightPerPiece.multiply(java.math.BigDecimal.valueOf(quantity));
+                return totalWeight.divide(java.math.BigDecimal.valueOf(1000), 6, java.math.BigDecimal.ROUND_HALF_UP);
+                
+            case PIECES:
+                // For pieces, calculate total weight and convert to volume in tons
+                java.math.BigDecimal totalWeightPieces = weight.multiply(java.math.BigDecimal.valueOf(quantity));
+                return totalWeightPieces.divide(java.math.BigDecimal.valueOf(1000), 6, java.math.BigDecimal.ROUND_HALF_UP);
+                
+            default:
+                // Fallback to simple calculation
+                java.math.BigDecimal fallbackWeight = weight.multiply(java.math.BigDecimal.valueOf(quantity));
+                return fallbackWeight.divide(java.math.BigDecimal.valueOf(1000), 6, java.math.BigDecimal.ROUND_HALF_UP);
+        }
+    }
+
+    private java.math.BigDecimal extractWeightFromProductName(String productName, int quantity) {
+        try {
+            // Extract weight from product name (e.g., "50 Kg" from "MANKA MAHISHI 50 Kg")
+            String[] words = productName.split(" ");
+            for (int i = 0; i < words.length - 1; i++) {
+                if (words[i].matches("\\d+(\\.\\d+)?") && 
+                    (words[i + 1].equalsIgnoreCase("Kg") || words[i + 1].equalsIgnoreCase("KG"))) {
+                    java.math.BigDecimal extractedWeight = new java.math.BigDecimal(words[i]);
+                    java.math.BigDecimal totalWeight = extractedWeight.multiply(java.math.BigDecimal.valueOf(quantity));
+                    return totalWeight.divide(java.math.BigDecimal.valueOf(1000), 6, java.math.BigDecimal.ROUND_HALF_UP);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to extract weight from product name: {} - {}", productName, e.getMessage());
+        }
+        
+        // Fallback to zero if extraction fails
+        return java.math.BigDecimal.ZERO;
     }
 
 }

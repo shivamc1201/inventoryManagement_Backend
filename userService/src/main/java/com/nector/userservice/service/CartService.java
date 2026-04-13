@@ -93,7 +93,8 @@ public class CartService {
                     cartItem.setItem(finishedProduct);
                     cartItem.setQuantity(request.getQuantity());
                     cartItem.setPriceAtTime(finishedProduct.getPrice());
-                    log.info("Setting cart item price: FinishedProduct price={}, CartItem priceAtTime={}", 
+                    cartItem.setUnitType(finishedProduct.getUnitName());
+                    log.info("Setting cart item price: FinishedProduct price={}, CartItem priceAtTime={}",
                             finishedProduct.getPrice(), cartItem.getPriceAtTime());
                     cartItemRepository.save(cartItem);
                     cart.getCartItems().add(cartItem);
@@ -257,6 +258,11 @@ public class CartService {
                 .map(CartItemResponse::getTotalPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         response.setTotalCartAmount(totalAmount);
+        
+        // Calculate total weight and convert to volume in tons (assuming 1 ton = 1000 kg)
+        BigDecimal totalWeight = cart.calculateTotalWeight();
+        BigDecimal volumeInTons = totalWeight.divide(BigDecimal.valueOf(1000), 6, BigDecimal.ROUND_HALF_UP);
+        response.setVolumeInTons(volumeInTons);
 
         return response;
     }
@@ -535,6 +541,7 @@ public class CartService {
                 cartItem.setItem(finishedProduct);
                 cartItem.setQuantity(request.getQuantity());
                 cartItem.setPriceAtTime(finishedProduct.getPrice());
+                cartItem.setUnitType(finishedProduct.getUnitName());
                 log.info("Setting cart item price (edit): FinishedProduct price={}, CartItem priceAtTime={}", 
                         finishedProduct.getPrice(), cartItem.getPriceAtTime());
                 cartItemRepository.save(cartItem);
@@ -557,13 +564,83 @@ public class CartService {
         response.setPriceAtTime(cartItem.getPriceAtTime());
         response.setTotalPrice(cartItem.getPriceAtTime().multiply(BigDecimal.valueOf(cartItem.getQuantity())));
         
-        log.info("Mapping cart item to response: Item={}, DB priceAtTime={}, Response priceAtTime={}, TotalPrice={}", 
-                cartItem.getItem().getName(), cartItem.getPriceAtTime(), response.getPriceAtTime(), response.getTotalPrice());
+        // Calculate total volume for this cart item
+        BigDecimal itemVolume = calculateItemVolume(cartItem);
+        response.setTotalVolume(itemVolume);
+        
+        log.info("Mapping cart item to response: Item={}, DB priceAtTime={}, Response priceAtTime={}, TotalPrice={}, TotalVolume={}", 
+                cartItem.getItem().getName(), cartItem.getPriceAtTime(), response.getPriceAtTime(), response.getTotalPrice(), response.getTotalVolume());
         
         return response;
     }
 
+    private BigDecimal calculateItemVolume(CartItem cartItem) {
+        FinishedProduct product = cartItem.getItem();
+        BigDecimal weight = product.getWeight();
+        int quantity = cartItem.getQuantity();
+        
+        log.debug("Calculating volume for product: {}, weight: {}, unit: {}, quantity: {}", 
+            product.getName(), weight, product.getUnit(), quantity);
+        
+        if (product.getUnit() == null || weight == null || weight.equals(BigDecimal.ZERO)) {
+            log.warn("Product {} has null weight or unit, returning volume 0", product.getName());
+            // Try to extract weight from product name as fallback (e.g., "50 Kg" from "MANKA MAHISHI 50 Kg")
+            return extractWeightFromProductName(product.getName(), quantity);
+        }
+        
+        switch (product.getUnit()) {
+            case KG:
+                // Convert KG to volume in tons (1 ton = 1000 kg)
+                BigDecimal weightInKg = weight.multiply(BigDecimal.valueOf(quantity));
+                return weightInKg.divide(BigDecimal.valueOf(1000), 6, BigDecimal.ROUND_HALF_UP);
+                
+            case LITER:
+                // Convert Liters to volume in tons (assuming density of 1 kg/liter for water)
+                BigDecimal volumeInLiters = weight.multiply(BigDecimal.valueOf(quantity));
+                return volumeInLiters.divide(BigDecimal.valueOf(1000), 6, BigDecimal.ROUND_HALF_UP);
+                
+            case DOZEN:
+                // For dozen, calculate weight per dozen and convert to volume in tons
+                BigDecimal weightPerPiece = weight.divide(BigDecimal.valueOf(12), 6, BigDecimal.ROUND_HALF_UP);
+                BigDecimal totalWeight = weightPerPiece.multiply(BigDecimal.valueOf(quantity));
+                return totalWeight.divide(BigDecimal.valueOf(1000), 6, BigDecimal.ROUND_HALF_UP);
+                
+            case PIECES:
+                // For pieces, calculate total weight and convert to volume in tons
+                BigDecimal totalWeightPieces = weight.multiply(BigDecimal.valueOf(quantity));
+                return totalWeightPieces.divide(BigDecimal.valueOf(1000), 6, BigDecimal.ROUND_HALF_UP);
+                
+            default:
+                // Fallback to simple calculation
+                BigDecimal fallbackWeight = weight.multiply(BigDecimal.valueOf(quantity));
+                return fallbackWeight.divide(BigDecimal.valueOf(1000), 6, BigDecimal.ROUND_HALF_UP);
+        }
+    }
 
+    private BigDecimal extractWeightFromProductName(String productName, int quantity) {
+        try {
+            // Extract weight from product name (e.g., "50 Kg" from "MANKA MAHISHI 50 Kg")
+            String[] words = productName.split(" ");
+            for (int i = 0; i < words.length - 1; i++) {
+                if (words[i].matches("\\d+(\\.\\d+)?") && 
+                    (words[i + 1].equalsIgnoreCase("Kg") || words[i + 1].equalsIgnoreCase("Kg"))) {
+                    
+                    BigDecimal weightPerUnit = new BigDecimal(words[i]);
+                    BigDecimal totalWeight = weightPerUnit.multiply(BigDecimal.valueOf(quantity));
+                    BigDecimal volumeInTons = totalWeight.divide(BigDecimal.valueOf(1000), 6, BigDecimal.ROUND_HALF_UP);
+                    
+                    log.info("Extracted weight {} from product name {}, total volume: {} tons", 
+                        weightPerUnit, productName, volumeInTons);
+                    return volumeInTons;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to extract weight from product name: {}", productName, e);
+        }
+        
+        log.warn("Could not extract weight from product name: {}, returning 0", productName);
+        return BigDecimal.ZERO;
+    }
 
     public byte[] downloadProformaInvoice(Long cartId) {
         log.info("Downloading proforma invoice for cart ID: {}", cartId);
@@ -601,6 +678,11 @@ public class CartService {
                     item.setRatePerUnit(cartItem.getPriceAtTime().doubleValue());
                     item.setUnit("Pcs");
                     item.setAmount(cartItem.getPriceAtTime().doubleValue() * cartItem.getQuantity());
+                    
+                    // Set altQty with totalVolume from cart item
+                    BigDecimal itemVolume = calculateItemVolume(cartItem);
+                    item.setAltQty(itemVolume.toString());
+                    
                     return item;
                 })
                 .toList();
@@ -714,6 +796,11 @@ public class CartService {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             response.setTotalCartAmount(totalAmount);
         }
+        
+        // Calculate total weight and convert to volume in tons (assuming 1 ton = 1000 kg)
+        BigDecimal totalWeight = cart.calculateTotalWeight();
+        BigDecimal volumeInTons = totalWeight.divide(BigDecimal.valueOf(1000), 6, BigDecimal.ROUND_HALF_UP);
+        response.setVolumeInTons(volumeInTons);
 
         return response;
     }

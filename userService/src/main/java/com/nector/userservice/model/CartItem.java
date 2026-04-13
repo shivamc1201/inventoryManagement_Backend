@@ -34,4 +34,7 @@ public class CartItem {
     
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal priceAtTime;
+
+    @Column(length = 50)
+    private String unitType;
 }

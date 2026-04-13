@@ -2,12 +2,14 @@ package com.nector.userservice.controller;
 
 import com.nector.userservice.dto.DashboardResponse;
 import com.nector.userservice.dto.OrderDashboardResponse;
+import com.nector.userservice.dto.VolumeAnalyticsResponse;
 import com.nector.userservice.enums.OrderStatus;
 import com.nector.userservice.model.User;
 import com.nector.userservice.repository.OrderRepository;
 import com.nector.userservice.service.DashboardService;
 import com.nector.userservice.service.DistributorDashboardService;
 import com.nector.userservice.service.UserService;
+import com.nector.userservice.service.VolumeAnalyticsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,6 +31,7 @@ public class DashboardController {
     private final UserService userService;
     private final OrderRepository orderRepository;
     private final DistributorDashboardService distributorDashboardService;
+    private final VolumeAnalyticsService volumeAnalyticsService;
     
     @GetMapping("/analytics")
     @Operation(summary = "Get dashboard analytics", description = "Retrieves dashboard analytics data for specified time period")
@@ -38,6 +41,17 @@ public class DashboardController {
         DashboardResponse response = dashboardService.getDashboardData(period);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/volume-analytics")
+    @Operation(summary = "Get volume analytics", description = "Retrieves volume-based analytics data for specified time period")
+    @ApiResponse(responseCode = "200", description = "Volume analytics data retrieved successfully")
+    public ResponseEntity<VolumeAnalyticsResponse> getVolumeAnalytics(
+            @RequestParam(required = false) String period) {
+        VolumeAnalyticsResponse response = volumeAnalyticsService.getVolumeAnalyticsData(period);
+        return ResponseEntity.ok(response);
+    }
+
+    
 
     @PostMapping("/userprofile")
     @Operation(summary = "Get user profile", description = "Retrieves user profile data for the logged-in user")
@@ -104,3 +118,4 @@ public class DashboardController {
     }
 
 }
+

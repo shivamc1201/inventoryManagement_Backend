@@ -31,7 +31,7 @@ public class LoginController {
     @ApiResponse(responseCode = "400", description = "Invalid credentials")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         try {
-            UnifiedLoginResponse response = loginService.authenticateWithPermissions(request);
+            BaseLoginResponse response = loginService.authenticateWithPermissions(request);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

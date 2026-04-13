@@ -9,7 +9,6 @@ import com.nector.userservice.interceptors.userLogin.model.UnifiedLoginResponse;
 public interface LoginService {
     BaseLoginResponse authenticate(LoginRequest request);
     LoginResponse authenticateSecondUser(LoginRequest request);
-    UnifiedLoginResponse authenticateWithPermissions(LoginRequest request);
-
+    BaseLoginResponse authenticateWithPermissions(LoginRequest request);
     UserDetailsDTO getUserDetailsByUsername(String username);
 }

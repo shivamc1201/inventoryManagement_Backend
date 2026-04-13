@@ -172,7 +172,7 @@ public class LoginServiceImpl implements LoginService {
         user.setLastLoginTime(LocalDateTime.now());
         userRepository.save(user);
 
-        RoleType roleType = user.getRoleType() != null && user.getRoleType().name().contains("SALES") 
+        RoleType roleType = user.getRoleType() != null && user.getRoleType().name().contains("SALES")
                 ? user.getRoleType()
                 : user.getRoles().stream()
                     .map(Role::getRoleType)
@@ -214,7 +214,7 @@ public class LoginServiceImpl implements LoginService {
         userRepository.save(user);
 
         Set<Features> features;
-        boolean isAdmin = user.getRoleType() == RoleType.ADMIN || 
+        boolean isAdmin = user.getRoleType() == RoleType.ADMIN ||
                           user.getRoleType() == RoleType.SUPER_ADMIN ||
                           user.getRoleType() == RoleType.DISPATCH ||
                           user.getRoles().stream()
@@ -305,7 +305,7 @@ public class LoginServiceImpl implements LoginService {
                 RoleType.SALES_EXECUTIVE
         );
 
-        return salesRoles.contains(user.getRoleType()) || 
+        return salesRoles.contains(user.getRoleType()) ||
                user.getRoles().stream()
                 .map(Role::getRoleType)
                 .anyMatch(salesRoles::contains);
@@ -343,8 +343,31 @@ public class LoginServiceImpl implements LoginService {
 
 
     @Override
-    public UnifiedLoginResponse authenticateWithPermissions(LoginRequest request) {
+    public BaseLoginResponse authenticateWithPermissions(LoginRequest request) {
         log.info("Unified login attempt for {}", request.getUsername());
+
+
+        // =========================================================
+        // 1️⃣ DISTRIBUTOR LOGIN FIRST
+        // =========================================================
+        Optional<Distributor> distOpt =
+                distributorRepository.findByUsername(request.getUsername());
+
+        if (distOpt.isPresent()) {
+            log.info("Distributor login detected for {}", request.getUsername());
+            return authenticateDistributor(distOpt.get(), request);
+        }
+
+        // =========================================================
+        // 2️⃣ SALESPERSON LOGIN CHECK
+        // =========================================================
+        Optional<SalesPerson> salesPersonOpt =
+                salesPersonRepository.findByUsername(request.getUsername());
+
+        if (salesPersonOpt.isPresent()) {
+            log.info("Salesperson login detected for {}", request.getUsername());
+            return authenticateSalesPersonFromTable(salesPersonOpt.get(), request);
+        }
 
         // First authenticate the user normally
         BaseLoginResponse baseResponse = authenticate(request);

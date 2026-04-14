@@ -22,4 +22,5 @@ public interface DistributorService {
 
 AddressResponse getDistributorAddress(Long distributorId);
 
+    List<DistributorResponseDTO> getDistributorsBySalespersonId(Long salespersonId);
 }

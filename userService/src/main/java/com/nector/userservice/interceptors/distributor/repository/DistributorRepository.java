@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -20,4 +21,6 @@ public interface DistributorRepository extends JpaRepository<Distributor, Long> 
     
     @Query("SELECT COUNT(d) FROM Distributor d WHERE MONTH(d.createdOn) = :month AND YEAR(d.createdOn) = :year")
     long countByMonthAndYear(@Param("month") int month, @Param("year") int year);
+
+    List<Distributor> findBySalespersonId(Long salespersonId);
 }

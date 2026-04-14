@@ -402,4 +402,15 @@ public class DistributorServiceImpl implements DistributorService {
         // Format: DIS+MM+YYYY+SR.NO
         return String.format("DIS%02d%d%s", month, year, sequence);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DistributorResponseDTO> getDistributorsBySalespersonId(Long salespersonId) {
+        log.info("Fetching distributors for salesperson ID: {}", salespersonId);
+
+        List<Distributor> distributors = distributorRepository.findBySalespersonId(salespersonId);
+        return distributors.stream()
+                .map(distributorMapper::toResponseDTO)
+                .collect(Collectors.toList());
+    }
 }

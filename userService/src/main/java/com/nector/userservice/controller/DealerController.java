@@ -126,4 +126,14 @@ public class DealerController {
                     .body(new ApiResponse<>(false, "Failed to retrieve distributors", null));
         }
     }
+
+    @GetMapping("/by-salesperson/{salespersonId}")
+    @Operation(summary = "Get dealers by salesperson ID", description = "Retrieve all dealers for a specific salesperson")
+    public ResponseEntity<List<DealerResponse>> getDealersBySalespersonId(
+            @Parameter(description = "Salesperson ID") 
+            @PathVariable Long salespersonId) {
+        
+        List<DealerResponse> dealers = dealerService.getDealersBySalespersonId(salespersonId);
+        return ResponseEntity.ok(dealers);
+    }
 }

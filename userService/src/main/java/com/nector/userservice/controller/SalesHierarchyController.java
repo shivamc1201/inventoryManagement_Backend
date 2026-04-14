@@ -9,6 +9,7 @@ import com.nector.userservice.enums.OrderStatus;
 import com.nector.userservice.enums.SalesRole;
 import com.nector.userservice.service.OrderService;
 import com.nector.userservice.service.SalesPersonService;
+import com.nector.userservice.service.SalesHierarchyFilterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -38,6 +39,7 @@ public class SalesHierarchyController {
 
     private final SalesPersonService salesPersonService;
     private final OrderService orderService;
+    private final SalesHierarchyFilterService hierarchyFilterService;
 
     @Operation(summary = "Get all salespersons", description = "Retrieve all salespersons in the hierarchy")
     @ApiResponses(value = {
@@ -242,5 +244,91 @@ public class SalesHierarchyController {
         
         List<OrderResponse> orders = orderService.getOrdersByHierarchy(salespersonId, status, dateFrom, dateTo);
         return ResponseEntity.ok(orders);
+    }
+
+    // ==================== DYNAMIC HIERARCHY FILTERING ====================
+
+    @Operation(summary = "Get sales hierarchy based on current user", description = "Get filtered sales hierarchy based on logged-in user's role and position. NSM sees all, RSM/ASM see their subordinates, Sales Executive sees only themselves")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved filtered hierarchy"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "404", description = "Salesperson not found"),
+        @ApiResponse(responseCode = "500", description = "Server error")
+    })
+    @GetMapping("/my-hierarchy")
+    public ResponseEntity<List<SalesPersonResponse>> getMySalesHierarchy(
+            @Parameter(description = "Current salesperson ID (from authentication context)") 
+            @RequestParam Long salespersonId) {
+        
+        log.info("Getting filtered sales hierarchy for current user ID: {}", salespersonId);
+        
+        List<SalesPersonResponse> hierarchy = hierarchyFilterService.getFilteredSalesHierarchy(salespersonId);
+        return ResponseEntity.ok(hierarchy);
+    }
+
+    @Operation(summary = "Get sales hierarchy by perspective", description = "Get sales hierarchy from any salesperson's perspective (for admin/NSM use)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved hierarchy from perspective"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "404", description = "Salesperson not found"),
+        @ApiResponse(responseCode = "500", description = "Server error")
+    })
+    @GetMapping("/perspective/{perspectiveSalespersonId}")
+    public ResponseEntity<List<SalesPersonResponse>> getSalesHierarchyByPerspective(
+            @Parameter(description = "Salesperson ID to view hierarchy from") @PathVariable Long perspectiveSalespersonId) {
+        
+        log.info("Getting sales hierarchy from perspective of salesperson ID: {}", perspectiveSalespersonId);
+        
+        List<SalesPersonResponse> hierarchy = hierarchyFilterService.getSalesHierarchyByPerspective(perspectiveSalespersonId);
+        return ResponseEntity.ok(hierarchy);
+    }
+
+    @Operation(summary = "Get manageable salespersons", description = "Get salespersons that current user can manage/edit (for creating/updating subordinates)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved manageable salespersons"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "404", description = "Salesperson not found"),
+        @ApiResponse(responseCode = "500", description = "Server error")
+    })
+    @GetMapping("/manageable")
+    public ResponseEntity<List<SalesPersonResponse>> getManageableSalespersons(
+            @Parameter(description = "Current salesperson ID (from authentication context)") 
+            @RequestParam Long salespersonId) {
+        
+        log.info("Getting manageable salespersons for current user ID: {}", salespersonId);
+        
+        List<SalesPersonResponse> manageable = hierarchyFilterService.getManageableSalespersons(salespersonId);
+        return ResponseEntity.ok(manageable);
+    }
+
+    @Operation(summary = "Get hierarchy summary", description = "Get summary of sales hierarchy with counts by role for current user")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved hierarchy summary"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "404", description = "Salesperson not found"),
+        @ApiResponse(responseCode = "500", description = "Server error")
+    })
+    @GetMapping("/summary")
+    public ResponseEntity<Map<String, Object>> getHierarchySummary(
+            @Parameter(description = "Current salesperson ID (from authentication context)") 
+            @RequestParam Long salespersonId) {
+        
+        log.info("Getting hierarchy summary for current user ID: {}", salespersonId);
+        
+        List<SalesPersonResponse> hierarchy = hierarchyFilterService.getFilteredSalesHierarchy(salespersonId);
+        
+        // Create summary with counts by role
+        Map<String, Long> roleCounts = hierarchy.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        sp -> sp.getRole().name(),
+                        java.util.stream.Collectors.counting()
+                ));
+        
+        Map<String, Object> summary = new java.util.HashMap<>();
+        summary.put("totalCount", hierarchy.size());
+        summary.put("roleCounts", roleCounts);
+        summary.put("salespersons", hierarchy);
+        
+        return ResponseEntity.ok(summary);
     }
 }

@@ -95,6 +95,25 @@ public class DealerService {
     }
 
     @Transactional(readOnly = true)
+    public List<DealerResponse> getDealersBySalespersonId(Long salespersonId) {
+        log.info("Fetching all dealers for salesperson: {}", salespersonId);
+
+        // Validate salesperson exists and is active
+        SalesPerson salesPerson = salesPersonRepository.findById(salespersonId)
+                .orElseThrow(() -> new BusinessException("Salesperson not found"));
+        
+        if (!salesPerson.getActive()) {
+            throw new BusinessException("Salesperson is not active");
+        }
+
+        List<Dealer> dealers = dealerRepository.findBySalespersonIdAndIsActiveTrue(salespersonId);
+
+        return dealers.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public DealerResponse getDealerById(Long id, Long distributorId) {
         log.info("Fetching dealer by ID: {} for distributor: {}", id, distributorId);
 

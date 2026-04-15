@@ -337,7 +337,7 @@ public class LoginServiceImpl implements LoginService {
     }
 
     private Set<String> getSalesPersonFeatureNames(RoleType roleType) {
-        return Set.of("DASHBOARD", "ORDER_DETAILS", "SALES", "REPORTS", "ANALYTICS");
+        return Set.of("DASHBOARD", "ORDER_DETAILS", "SALES", "REPORTS", "ANALYTICS","COMPLAINT");
     }
 
 

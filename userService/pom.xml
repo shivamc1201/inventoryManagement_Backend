@@ -193,6 +193,12 @@
             <artifactId>spring-aspects</artifactId>
         </dependency>
 
+        <!-- Spring Mock for MultipartFile in production -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+        </dependency>
+
 <!--        <dependency>-->
 <!--            <groupId>com.guardsquare</groupId>-->
 <!--            <artifactId>proguard-base</artifactId>-->

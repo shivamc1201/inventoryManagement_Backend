@@ -76,4 +76,7 @@ public class FinishedProduct {
     
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+    
+    @Column(length = 500)
+    private String imageUrl;
 }

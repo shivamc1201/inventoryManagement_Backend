@@ -6,11 +6,13 @@ import com.nector.userservice.exception.FinishedProductNotFoundException;
 import com.nector.userservice.exception.InsufficientStockException;
 import com.nector.userservice.model.FinishedProduct;
 import com.nector.userservice.repository.FinishedProductRepository;
+import com.nector.userservice.cloudinary.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,9 +23,10 @@ import java.util.stream.Collectors;
 public class FinishedProductService {
     
     private final FinishedProductRepository finishedProductRepository;
+    private final CloudinaryService cloudinaryService;
     
     @Transactional
-    public FinishedProductResponse createFinishedProduct(FinishedProductRequest request) {
+    public FinishedProductResponse createFinishedProduct(FinishedProductRequest request, MultipartFile image) {
         log.info("Creating finished product with SKU: {}", request.getSku());
         
         if (finishedProductRepository.existsBySku(request.getSku())) {
@@ -37,6 +40,14 @@ public class FinishedProductService {
         product.setPrice(request.getPrice());
         product.setQuantity(request.getQuantity());
         product.setMinimumThreshold(request.getMinimumThreshold());
+
+        // Handle image upload if provided
+        if (image != null && !image.isEmpty()) {
+            log.info("Uploading image for finished product with SKU: {}", request.getSku());
+            String imageUrl = cloudinaryService.uploadImage(image);
+            product.setImageUrl(imageUrl);
+            log.info("Image uploaded successfully for finished product with SKU: {}", request.getSku());
+        }
         
         FinishedProduct savedProduct = finishedProductRepository.save(product);
         log.info("Finished product created successfully with ID: {}", savedProduct.getId());
@@ -45,7 +56,7 @@ public class FinishedProductService {
     }
     
     @Transactional
-    public FinishedProductResponse updateFinishedProduct(Long id, FinishedProductRequest request) {
+    public FinishedProductResponse updateFinishedProduct(Long id, FinishedProductRequest request, MultipartFile image) {
         log.info("Updating finished product with ID: {}", id);
         
         FinishedProduct product = finishedProductRepository.findById(id)
@@ -56,6 +67,14 @@ public class FinishedProductService {
         product.setPrice(request.getPrice());
         product.setQuantity(request.getQuantity());
         product.setMinimumThreshold(request.getMinimumThreshold());
+
+        // Handle image upload if provided
+        if (image != null && !image.isEmpty()) {
+            log.info("Uploading new image for finished product with ID: {}", id);
+            String imageUrl = cloudinaryService.uploadImage(image);
+            product.setImageUrl(imageUrl);
+            log.info("New image uploaded successfully for finished product with ID: {}", id);
+        }
         
         FinishedProduct updatedProduct = finishedProductRepository.save(product);
         log.info("Finished product updated successfully with ID: {}", updatedProduct.getId());
@@ -206,6 +225,7 @@ public class FinishedProductService {
         response.setMinimumThreshold(product.getMinimumThreshold());
         response.setActive(product.getActive());
         response.setLowStock(product.getQuantity() <= product.getMinimumThreshold());
+        response.setImageUrl(product.getImageUrl());
         response.setCreatedAt(product.getCreatedAt());
         response.setUpdatedAt(product.getUpdatedAt());
         return response;

@@ -2,14 +2,15 @@ package com.nector.userservice.interceptors.products.service;
 
 import com.nector.userservice.interceptors.products.model.FinishedProductRequest;
 import com.nector.userservice.interceptors.products.model.FinishedProductResponse;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 public interface FinishedProductService {
     
-    FinishedProductResponse createFinishedProduct(FinishedProductRequest request);
+    FinishedProductResponse createFinishedProduct(FinishedProductRequest request, MultipartFile image);
     
-    FinishedProductResponse updateFinishedProduct(Long id, FinishedProductRequest request);
+    FinishedProductResponse updateFinishedProduct(Long id, FinishedProductRequest request,MultipartFile image);
     
     void deleteFinishedProduct(Long id);
     

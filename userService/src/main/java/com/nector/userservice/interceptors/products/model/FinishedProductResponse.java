@@ -20,6 +20,7 @@ public class FinishedProductResponse {
     private Integer minimumThreshold;
     private Boolean active;
     private Boolean lowStock;
+    private String imageUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

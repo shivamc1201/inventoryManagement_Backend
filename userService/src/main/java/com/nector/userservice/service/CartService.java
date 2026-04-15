@@ -5,6 +5,7 @@ import com.nector.userservice.dto.cart.CartItemResponse;
 import com.nector.userservice.dto.cart.CartResponse;
 
 import com.nector.userservice.dto.cart.PlaceOrderRequest;
+import com.nector.userservice.exception.ActiveOrderExistsException;
 import com.nector.userservice.exception.CartItemNotFoundException;
 import com.nector.userservice.exception.CartNotFoundException;
 import com.nector.userservice.exception.DistributorNotFoundException;
@@ -311,9 +312,9 @@ public class CartService {
         Cart cart = cartRepository.findById(cartId)
                 .orElseThrow(() -> new CartNotFoundException("Cart with ID " + cartId + " not found"));
 
-        // Check if cart is placed before approval
+        // Check if cart is active before placing
         if (cart.getStatus() != Cart.CartStatus.PLACED) {
-            throw new InvalidCartStatusException("Cannot approve cart with status: " + cart.getStatus());
+            throw new InvalidCartStatusException("Cannot place cart with status: " + cart.getStatus());
         }
 
         // Populate denormalized fields
@@ -459,6 +460,22 @@ public class CartService {
     @Transactional
     public CartResponse placeOrder(Long distributorId, PlaceOrderRequest request) {
         log.info("Placing order for cart {} for distributor {}", request.getCartId(), distributorId);
+
+        // Check if distributor has any active orders that prevent new orders
+        List<Cart.CartStatus> activeOrderStatuses = List.of(
+            Cart.CartStatus.CHECKED_OUT,
+            Cart.CartStatus.APPROVED,
+            Cart.CartStatus.PAYMENT_APPROVED,
+            Cart.CartStatus.GDN_GENERATED,
+            Cart.CartStatus.PLACED
+        );
+        
+        List<Cart> activeOrders = cartRepository.findByDistributorIdAndStatusIn(distributorId, activeOrderStatuses);
+        if (!activeOrders.isEmpty()) {
+            Cart activeOrder = activeOrders.get(0);
+            throw new ActiveOrderExistsException("Distributor already has an active order with status: " + 
+                activeOrder.getStatus() + ". Cannot place new order until existing order is completed or dismissed.");
+        }
 
         Cart cart = cartRepository.findById(request.getCartId())
                 .orElseThrow(() -> new CartNotFoundException("Cart with ID " + request.getCartId() + " not found"));

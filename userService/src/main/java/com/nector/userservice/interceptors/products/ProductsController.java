@@ -9,15 +9,20 @@ import com.nector.userservice.interceptors.products.service.MachinePartService;
 import com.nector.userservice.interceptors.products.service.RawProductService;
 import com.nector.userservice.model.MachinePart;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.List;
@@ -33,28 +38,36 @@ public class ProductsController {
     private final FinishedProductService finishedProductService;
     private final RawProductService rawProductService;
     private final MachinePartService machinePartService;
-    
+
     // === FINISHED PRODUCTS ===
-    
-    @PostMapping("/finished-products")
-    @Operation(summary = "Create finished product", description = "Creates a new finished product")
-    public ResponseEntity<FinishedProductResponse> createFinishedProduct(@Valid @RequestBody FinishedProductRequest request) {
-        FinishedProductResponse response = finishedProductService.createFinishedProduct(request);
+
+    @PostMapping(value = "/finished-products-create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Create finished products", description = "Create finished products")
+    public ResponseEntity<FinishedProductResponse> createFinishedProduct(
+            @Parameter(description = "Finished product request",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE))
+            @RequestPart("request") FinishedProductRequest request,
+            @RequestPart(value = "image", required = false) MultipartFile image) {
+        FinishedProductResponse response = finishedProductService.createFinishedProduct(request, image);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
-    
+
+    @PutMapping(value = "/finished-products-update/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Update finished products", description = "Update finished products")
+    public ResponseEntity<FinishedProductResponse> updateFinishedProduct(
+            @PathVariable Long id,
+            @Parameter(description = "Finished product request",content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE))
+            @RequestPart("request") FinishedProductRequest request,
+            @RequestPart(value = "image", required = false) MultipartFile image) {
+
+        FinishedProductResponse response = finishedProductService.updateFinishedProduct(id, request, image);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/finished-products")
     @Operation(summary = "Get all finished products", description = "Retrieves all finished products")
     public ResponseEntity<List<FinishedProductResponse>> getAllFinishedProducts() {
         List<FinishedProductResponse> response = finishedProductService.getAllActiveFinishedProducts();
-        return ResponseEntity.ok(response);
-    }
-    @PutMapping("/finished-products/{id}/status")
-    @Operation(summary = "Update finished product status", description = "Updates the status of a finished product (active/inactive)")
-    public ResponseEntity<FinishedProductResponse> updateFinishedProductStatus(
-            @PathVariable Long id,
-            @RequestBody @Valid StatusUpdateRequest request) {
-        FinishedProductResponse response = finishedProductService.updateProductStatus(id, request.getStatus());
         return ResponseEntity.ok(response);
     }
 
@@ -69,13 +82,6 @@ public class ProductsController {
     @Operation(summary = "Get finished product by ID", description = "Retrieves a finished product by its ID")
     public ResponseEntity<FinishedProductResponse> getFinishedProductById(@PathVariable Long id) {
         FinishedProductResponse response = finishedProductService.getFinishedProductById(id);
-        return ResponseEntity.ok(response);
-    }
-    
-    @PutMapping("/finished-products/{id}")
-    @Operation(summary = "Update finished product", description = "Updates an existing finished product")
-    public ResponseEntity<FinishedProductResponse> updateFinishedProduct(@PathVariable Long id, @Valid @RequestBody FinishedProductRequest request) {
-        FinishedProductResponse response = finishedProductService.updateFinishedProduct(id, request);
         return ResponseEntity.ok(response);
     }
     

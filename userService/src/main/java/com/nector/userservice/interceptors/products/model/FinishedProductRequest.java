@@ -3,6 +3,7 @@ package com.nector.userservice.interceptors.products.model;
 import com.nector.userservice.enums.Unit;
 import jakarta.validation.constraints.*;
 import lombok.Data;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 
@@ -41,4 +42,5 @@ public class FinishedProductRequest {
     private Integer minimumThreshold;
     
     private Boolean active;
+
 }

@@ -34,4 +34,7 @@ public class ItemConfirmationEntity {
     private OrderConfirmationRequest.ItemCondition condition;
     
     private String itemRemarks;
+    
+    @Column(nullable = false)
+    private String sku;
 }

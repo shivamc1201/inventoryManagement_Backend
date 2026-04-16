@@ -11,14 +11,16 @@ import java.time.LocalDate;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class DealerSaleRequest {
+public class DealerOrderRequest {
 
     private Long dealerId;
+
+    private String sku;
 
     @Size(max = 200, message = "Item name cannot exceed 200 characters")
     private String itemName;
 
-    private String sku;
+    private Integer quantity;
 
     private BigDecimal amount;
 

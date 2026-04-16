@@ -12,11 +12,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "dealer_sales")
+@Table(name = "dealer_orders")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class DealerSale {
+public class DealerOrder {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,18 +28,21 @@ public class DealerSale {
     @Column(name = "distributor_id")
     private Long distributorId;
 
+    @Column(name = "sku")
+    private String sku;
+
     @Size(max = 200, message = "Item name cannot exceed 200 characters")
     @Column(name = "item_name")
     private String itemName;
+
+    @Column
+    private Integer quantity;
 
     @Column(precision = 12, scale = 2)
     private BigDecimal amount;
 
     @Column
     private LocalDate date;
-
-    @Column
-    private String sku;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

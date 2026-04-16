@@ -194,6 +194,7 @@ public class DistributorServiceImpl implements DistributorService {
                     ItemConfirmationEntity entity = new ItemConfirmationEntity();
                     entity.setOrderConfirmation(confirmation);
                     entity.setItemId(item.getItemId());
+                    entity.setSku(item.getSku());
                     entity.setDispatchedQuantity(item.getDispatchedQuantity());
                     entity.setReceivedQuantity(item.getReceivedQuantity());
                     entity.setCondition(item.getCondition());

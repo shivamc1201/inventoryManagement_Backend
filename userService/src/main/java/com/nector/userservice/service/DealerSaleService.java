@@ -17,6 +17,9 @@ import com.nector.userservice.repository.DealerLedgerTransactionRepository;
 import com.nector.userservice.repository.DealerOrderRepository;
 import com.nector.userservice.repository.DealerRepository;
 import com.nector.userservice.repository.DealerSaleRepository;
+import com.nector.userservice.interceptors.distributor.model.OrderConfirmation;
+import com.nector.userservice.interceptors.distributor.model.OrderConfirmationRequest;
+import com.nector.userservice.interceptors.distributor.repository.OrderConfirmationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,6 +41,7 @@ public class DealerSaleService {
     private final DealerOrderRepository dealerOrderRepository;
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
+    private final OrderConfirmationRepository orderConfirmationRepository;
 
     @Transactional
     public DealerSale createDealerSale(DealerSaleRequest request, Long distributorId) {
@@ -86,34 +90,38 @@ public class DealerSaleService {
         Dealer dealer = dealerRepository.findByIdAndDistributorId(request.getDealerId(), distributorId)
                 .orElseThrow(() -> new BusinessException("Dealer not found or access denied"));
 
-        // Check distributor's active cart for stock availability
-        Cart cart = cartRepository.findActiveCartByDistributorId(distributorId)
-                .orElseThrow(() -> new BusinessException("Distributor has no active cart. Cannot process order."));
+        // Check distributor's received complete orders for stock availability
+        List<OrderConfirmation> distributorOrders = orderConfirmationRepository
+                .findByDistributorIdOrderByConfirmedAtDesc(distributorId);
 
-        // Find cart item by SKU
-        CartItem cartItem = cart.getCartItems().stream()
-                .filter(ci -> ci.getItem() != null && request.getSku().equalsIgnoreCase(ci.getItem().getSku()))
-                .findFirst()
-                .orElseThrow(() -> new BusinessException(
-                        "Product with SKU '" + request.getSku() + "' not found in distributor's cart. Distributor must order from company first."));
+        List<OrderConfirmation> receivedCompleteOrders = distributorOrders.stream()
+                .filter(order -> order.getStatus() == OrderConfirmationRequest.ConfirmationStatus.RECEIVED_COMPLETE)
+                .toList();
+
+        if (receivedCompleteOrders.isEmpty()) {
+            throw new BusinessException("Distributor has no received complete orders. Cannot process dealer order.");
+        }
+
+        // Calculate available stock from received complete orders for the requested SKU
+        int availableStock = receivedCompleteOrders.stream()
+                .flatMap(order -> order.getItemConfirmations().stream())
+                .filter(item -> request.getSku().equalsIgnoreCase(item.getSku()))
+                .mapToInt(item -> item.getReceivedQuantity() != null ? item.getReceivedQuantity() : 0)
+                .sum();
+
+        if (availableStock <= 0) {
+            throw new BusinessException(
+                    "Product with SKU '" + request.getSku() + "' not found in distributor's received stock. Distributor must receive stock from company first.");
+        }
 
         // Check if sufficient quantity available
-        if (cartItem.getQuantity() < request.getQuantity()) {
+        if (availableStock < request.getQuantity()) {
             throw new BusinessException(
-                    "Insufficient stock for SKU '" + request.getSku() + "'. Available: " + cartItem.getQuantity() + ", Requested: " + request.getQuantity());
+                    "Insufficient stock for SKU '" + request.getSku() + "'. Available: " + availableStock + ", Requested: " + request.getQuantity());
         }
 
-        // Deduct quantity from cart
-        int remainingQuantity = cartItem.getQuantity() - request.getQuantity();
-        cartItem.setQuantity(remainingQuantity);
-        cartItemRepository.save(cartItem);
-        log.info("Deducted {} from cart item with SKU '{}'. Remaining quantity: {}", request.getQuantity(), request.getSku(), remainingQuantity);
-
-        // Remove cart item if quantity becomes 0
-        if (remainingQuantity == 0) {
-            cartItemRepository.delete(cartItem);
-            log.info("Removed cart item with SKU '{}' as quantity became 0", request.getSku());
-        }
+        log.info("Distributor {} has available stock for SKU '{}': {} units from {} received complete orders",
+                distributorId, request.getSku(), availableStock, receivedCompleteOrders.size());
 
         // Create the order
         DealerOrder order = new DealerOrder();

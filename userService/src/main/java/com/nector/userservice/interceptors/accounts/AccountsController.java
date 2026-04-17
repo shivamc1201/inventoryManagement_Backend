@@ -6,6 +6,7 @@ import com.nector.userservice.model.DistributorLedger;
 import com.nector.userservice.model.PaymentApproval;
 import com.nector.userservice.model.ProformaInvoice;
 import com.nector.userservice.model.Cart;
+import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.interceptors.accounts.model.PaymentHistoryResponse;
 import com.nector.userservice.interceptors.accounts.model.PaymentHistoryWithRunningBalanceResponse;
 import com.nector.userservice.service.PaymentService;
@@ -28,8 +29,9 @@ import com.lowagie.text.pdf.*;
 @RequiredArgsConstructor
 @Tag(name = "Accounts", description = "APIs for Accounts Team management")
 public class AccountsController {
-    
+
     private final PaymentService paymentService;
+    private final CartRepository cartRepository;
     
     @PostMapping("/process-payment")
     @Operation(summary = "Process payment", description = "Processes payment and updates distributor ledger")
@@ -243,6 +245,14 @@ public class AccountsController {
     public ResponseEntity<List<PaymentApproval>> getAllPendingPayments() {
         List<PaymentApproval> pendingPayments = paymentService.getAllPendingPayments();
         return ResponseEntity.ok(pendingPayments);
+    }
+
+    @GetMapping("/payment-approved-orders")
+    @Operation(summary = "Get all payment approved orders", description = "Retrieves all carts/orders with PAYMENT_APPROVED status")
+    @ApiResponse(responseCode = "200", description = "Payment approved orders retrieved successfully")
+    public ResponseEntity<List<Cart>> getPaymentApprovedOrders() {
+        List<Cart> approvedOrders = cartRepository.findByStatus(Cart.CartStatus.PAYMENT_APPROVED);
+        return ResponseEntity.ok(approvedOrders);
     }
 
     private void populateDistributorNames(List<PaymentApproval> payments) {

@@ -466,7 +466,6 @@ public class CartService {
             Cart.CartStatus.CHECKED_OUT,
             Cart.CartStatus.APPROVED,
             Cart.CartStatus.PAYMENT_APPROVED,
-            Cart.CartStatus.GDN_GENERATED,
             Cart.CartStatus.PLACED
         );
         

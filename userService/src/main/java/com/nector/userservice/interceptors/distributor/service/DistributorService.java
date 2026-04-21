@@ -1,6 +1,7 @@
 package com.nector.userservice.interceptors.distributor.service;
 
 import com.nector.userservice.dto.cart.CartResponse;
+import com.nector.userservice.interceptors.distributor.dto.DistributorStockResponse;
 import com.nector.userservice.interceptors.distributor.model.*;
 import com.nector.userservice.interceptors.userLogin.model.LoginRequest;
 import jakarta.validation.Valid;
@@ -23,4 +24,6 @@ public interface DistributorService {
 AddressResponse getDistributorAddress(Long distributorId);
 
     List<DistributorResponseDTO> getDistributorsBySalespersonId(Long salespersonId);
+
+    DistributorStockResponse getDistributorStock(Long distributorId);
 }

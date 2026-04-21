@@ -4,6 +4,7 @@ import com.nector.userservice.common.UserStatus;
 import com.nector.userservice.common.features.Features;
 import com.nector.userservice.dto.cart.CartItemResponse;
 import com.nector.userservice.dto.cart.CartResponse;
+import com.nector.userservice.interceptors.distributor.dto.DistributorStockResponse;
 import com.nector.userservice.exception.ResourceNotFoundException;
 import com.nector.userservice.interceptors.distributor.model.*;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
@@ -15,6 +16,7 @@ import com.nector.userservice.interceptors.userLogin.model.LoginResponse;
 import com.nector.userservice.ledger.dto.CreateLedgerAccountRequest;
 import com.nector.userservice.ledger.service.LedgerAccountService;
 import com.nector.userservice.model.Cart;
+import com.nector.userservice.model.CartItem;
 import com.nector.userservice.model.User;
 import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.repository.ItemRepository;
@@ -413,5 +415,76 @@ public class DistributorServiceImpl implements DistributorService {
         return distributors.stream()
                 .map(distributorMapper::toResponseDTO)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DistributorStockResponse getDistributorStock(Long distributorId) {
+        log.info("Calculating stock for distributor: {}", distributorId);
+
+        // Validate distributor exists
+        Distributor distributor = distributorRepository.findById(distributorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Distributor not found with ID: " + distributorId));
+
+        // Get all carts for this distributor with PLACED status (delivered orders)
+        List<Cart> placedCarts = cartRepository.findAllByDistributorIdAndStatus(distributorId, Cart.CartStatus.GDN_GENERATED);
+
+        // Aggregate stock by item
+        Map<Long, DistributorStockResponse.StockItem> stockMap = new HashMap<>();
+
+        for (Cart cart : placedCarts) {
+            if (cart.getCartItems() != null) {
+                for (CartItem cartItem : cart.getCartItems()) {
+                    if (cartItem.getItem() == null) continue;
+
+                    Long itemId = cartItem.getItem().getId();
+                    DistributorStockResponse.StockItem stockItem = stockMap.get(itemId);
+
+                    if (stockItem == null) {
+                        stockItem = new DistributorStockResponse.StockItem();
+                        stockItem.setItemId(itemId);
+                        stockItem.setItemName(cartItem.getItem().getName());
+                        stockItem.setItemSku(cartItem.getItem().getSku());
+                        stockItem.setUnitPrice(cartItem.getPriceAtTime());
+                        stockItem.setUnitType(cartItem.getUnitType());
+                        stockItem.setTotalQuantity(0);
+                        stockItem.setTotalValue(BigDecimal.ZERO);
+                        stockMap.put(itemId, stockItem);
+                    }
+
+                    // Add quantity to existing stock
+                    int newQuantity = stockItem.getTotalQuantity() + cartItem.getQuantity();
+                    stockItem.setTotalQuantity(newQuantity);
+
+                    // Calculate total value
+                    BigDecimal itemValue = cartItem.getPriceAtTime().multiply(BigDecimal.valueOf(cartItem.getQuantity()));
+                    stockItem.setTotalValue(stockItem.getTotalValue().add(itemValue));
+                }
+            }
+        }
+
+        // Build response
+        DistributorStockResponse response = new DistributorStockResponse();
+        response.setDistributorId(distributorId);
+        response.setDistributorName(distributor.getFirstName() + " " + distributor.getLastName());
+        response.setTotalUniqueItems(stockMap.size());
+        response.setStockItems(new ArrayList<>(stockMap.values()));
+
+        // Calculate totals
+        int totalQuantity = stockMap.values().stream()
+                .mapToInt(DistributorStockResponse.StockItem::getTotalQuantity)
+                .sum();
+        response.setTotalQuantity(totalQuantity);
+
+        BigDecimal totalStockValue = stockMap.values().stream()
+                .map(DistributorStockResponse.StockItem::getTotalValue)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        response.setTotalStockValue(totalStockValue);
+        response.setLastUpdated(LocalDateTime.now());
+
+        log.info("Stock calculated for distributor {}: {} unique items, {} total quantity",
+                distributorId, response.getTotalUniqueItems(), response.getTotalQuantity());
+
+        return response;
     }
 }

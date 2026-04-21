@@ -4,6 +4,7 @@ import com.nector.userservice.dto.ApiResponse;
 import com.nector.userservice.dto.cart.CartResponse;
 import com.nector.userservice.exception.CartNotFoundException;
 import com.nector.userservice.interceptors.distributor.model.*;
+import com.nector.userservice.interceptors.distributor.dto.DistributorStockResponse;
 import com.nector.userservice.interceptors.distributor.service.DistributorService;
 import com.nector.userservice.interceptors.userLogin.model.LoginRequest;
 import com.nector.userservice.interceptors.userLogin.model.LoginResponse;
@@ -229,5 +230,18 @@ public class DistributorController {
         }
     }
 
+    @GetMapping("/{distributorId}/stock")
+    @Operation(summary = "Get distributor current stock", description = "Get current stock for a distributor by aggregating quantities from delivered orders (PLACED carts)")
+    public ResponseEntity<ApiResponse<DistributorStockResponse>> getDistributorStock(@PathVariable Long distributorId) {
+        log.info("Fetching stock for distributor: {}", distributorId);
+        try {
+            DistributorStockResponse response = distributorService.getDistributorStock(distributorId);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Distributor stock retrieved successfully", response));
+        } catch (Exception e) {
+            log.error("Error retrieving stock for distributor {}: {}", distributorId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, "Failed to retrieve distributor stock", null));
+        }
+    }
 
 }

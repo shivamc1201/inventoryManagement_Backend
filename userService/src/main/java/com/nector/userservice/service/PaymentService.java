@@ -344,6 +344,7 @@ public class PaymentService {
         payment.setTransactionType(transactionType);
         payment.setDescription(description);
         payment.setStatus("PAYMENT_ADDED");
+        payment.setCreatedAt(LocalDateTime.now());
         PaymentApproval savedPayment = paymentApprovalRepository.save(payment);
         return savedPayment.getId();
     }

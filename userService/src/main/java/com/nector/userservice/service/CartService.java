@@ -66,7 +66,9 @@ public class CartService {
         Cart cart = getOrCreateActiveCart(distributorId);
         
         // Initialize order tracking for this cart if it doesn't exist
+        long trackingStart = System.currentTimeMillis();
         initializeOrderTrackingForCart(cart, distributorId);
+        log.info("[TIMING] initializeOrderTrackingForCart took {} ms", System.currentTimeMillis() - trackingStart);
 
         for (AddToCartRequest request : requests) {
             log.info("Processing item {} for distributor {}", request.getItemId(), distributorId);
@@ -396,13 +398,38 @@ public class CartService {
                 }
             }
         } catch (Exception e) {
-            log.error("Failed to update Order Tracking Step 3 for cart {}: {}", 
+            log.error("Failed to update Order Tracking Step 3 for cart {}: {}",
                 updatedCart.getId(), e.getMessage());
             // Continue without failing the approval
         }
 
         // Generate Proforma Invoice after approval
         proformaInvoiceService.generateProformaInvoice(cartId);
+
+        // Update order tracking Step 4: PI Generated - set to "completed"
+        try {
+            String orderNumber = "ORD-" + updatedCart.getId() + "-" +
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+            com.nector.userservice.ordertracking.entity.OrderTracking order =
+                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+
+            if (order != null) {
+                UpdateStepRequest step4Request = new UpdateStepRequest();
+                step4Request.setStatus("completed");
+                step4Request.setRemarks("Proforma Invoice generated successfully");
+                step4Request.setDate(java.time.LocalDate.now().toString());
+                step4Request.setHasDownload(true);
+                step4Request.setDownloadLabel("Download Proforma Invoice");
+
+                orderTrackingService.updateStepBySequence(order.getId(), 4, step4Request);
+                log.info("Order tracking Step 4 set to completed for cart {}", updatedCart.getId());
+            }
+        } catch (Exception e) {
+            log.error("Failed to update Order Tracking Step 4 for cart {}: {}",
+                updatedCart.getId(), e.getMessage());
+            // Continue without failing the approval
+        }
 
         // Use the new method that prioritizes denormalized data
         return mapToResponseWithDenormalizedData(updatedCart);
@@ -509,6 +536,7 @@ public class CartService {
 
             // Check if OrderTracking already exists for this cart/order
             if (orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber) == null) {
+                long createTrackingStart = System.currentTimeMillis();
                 orderTrackingService.createFromCart(
                     updatedCart.getId(), 
                     distributorName, 
@@ -516,7 +544,8 @@ public class CartService {
                     orderNumber,
                     totalAmount
                 );
-                
+                log.info("[TIMING] orderTrackingService.createFromCart took {} ms", 
+                    System.currentTimeMillis() - createTrackingStart);
                 log.info("OrderTracking record created for cart {}", updatedCart.getId());
             } else {
                 log.info("OrderTracking record already exists for cart {}, skipping creation", updatedCart.getId());

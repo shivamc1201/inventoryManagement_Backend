@@ -119,8 +119,8 @@ public class PaymentService {
             // Ensure order tracking exists before updating steps
             ensureOrderTrackingExists(orderId);
             
-            // Update order tracking Step 4: PI Generated
-            updatePIGenerationStep(orderId);
+//            // Update order tracking Step 4: PI Generated
+//            updatePIGenerationStep(orderId);
             
             // Update order tracking Step 5: Awaiting Payment Confirmation
             updateAwaitingPaymentStep(orderId);

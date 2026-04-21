@@ -197,7 +197,8 @@ public class OrderTrackingService {
     @Transactional
     public OrderTrackingDTO createFromCart(Long cartId, String distributorName, Long distributorId, 
                                           String orderNumber, java.math.BigDecimal totalAmount) {
-        log.info("Creating OrderTracking from cart {} for distributor {}", cartId, distributorId);
+        long startTime = System.currentTimeMillis();
+        log.info("[TIMING] Creating OrderTracking from cart {} for distributor {}", cartId, distributorId);
         
         OrderTracking order = OrderTracking.builder()
             .orderNumber(orderNumber)
@@ -207,8 +208,16 @@ public class OrderTrackingService {
             .totalAmount(totalAmount)
             .build();
 
+        long stepsStart = System.currentTimeMillis();
         order.setSteps(buildDefaultSteps(order));
-        return toDTO(orderRepo.save(order));
+        log.info("[TIMING] buildDefaultSteps took {} ms", System.currentTimeMillis() - stepsStart);
+
+        long saveStart = System.currentTimeMillis();
+        OrderTracking savedOrder = orderRepo.save(order);
+        log.info("[TIMING] orderRepo.save() took {} ms", System.currentTimeMillis() - saveStart);
+        
+        log.info("[TIMING] Total createFromCart took {} ms", System.currentTimeMillis() - startTime);
+        return toDTO(savedOrder);
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
@@ -273,6 +282,7 @@ public class OrderTrackingService {
      * Step 11 gets hasAction = true.
      */
     private List<OrderTrackingStep> buildDefaultSteps(OrderTracking order) {
+        long startTime = System.currentTimeMillis();
         record StepDef(String label, boolean hasDownload, String downloadLabel, boolean hasAction) {}
 
         var defs = List.of(
@@ -289,7 +299,7 @@ public class OrderTrackingService {
             new StepDef("Order Received",                         false, null,                        true)
         );
 
-        return java.util.stream.IntStream.range(0, defs.size()).mapToObj(i -> {
+        List<OrderTrackingStep> steps = java.util.stream.IntStream.range(0, defs.size()).mapToObj(i -> {
             StepDef d = defs.get(i);
             var stepBuilder = OrderTrackingStep.builder()
                 .order(order)
@@ -301,24 +311,29 @@ public class OrderTrackingService {
                 .hasDownload(d.hasDownload())
                 .downloadLabel(d.downloadLabel())
                 .hasAction(d.hasAction())
-                .distributorId(order.getDistributorId()); // Set distributor_id for all steps
+                .distributorId(order.getDistributorId());
             
-            // Add assigned person information for Step 1 (Order Placed)
             if (i == 0) {
                 stepBuilder
                     .assignedPersonId(order.getDistributorId())
                     .assignedPersonName(order.getDistributorName())
                     .assignedPersonRole("DISTRIBUTOR");
                     
-                // Get distributor details
+                long distLookupStart = System.currentTimeMillis();
                 distributorRepository.findById(order.getDistributorId()).ifPresent(distributor -> {
                     stepBuilder
                         .assignedPersonEmail(distributor.getContactEmail())
                         .assignedPersonPhone(distributor.getPhoneNumber());
                 });
+                log.info("[TIMING] Distributor lookup for step 1 took {} ms", 
+                    System.currentTimeMillis() - distLookupStart);
             }
             
             return stepBuilder.build();
         }).collect(Collectors.toList());
+        
+        log.info("[TIMING] buildDefaultSteps total took {} ms for order {}", 
+            System.currentTimeMillis() - startTime, order.getOrderNumber());
+        return steps;
     }
 }

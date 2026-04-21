@@ -314,27 +314,15 @@ public class GdnService {
         cart.setStatus(Cart.CartStatus.GDN_GENERATED);
         cartRepository.save(cart);
 
-        // Update Order Tracking Steps 7, 8, 9, 10
+        // Update Order Tracking Steps 8, 9, 10
         try {
-            String orderNumber = "ORD-" + orderId + "-" + 
+            String orderNumber = "ORD-" + orderId + "-" +
                 java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-            
-            com.nector.userservice.ordertracking.entity.OrderTracking order = 
+
+            com.nector.userservice.ordertracking.entity.OrderTracking order =
                 orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
-            
+
             if (order != null) {
-                // Step 7: Awaiting Confirmation from Logistics -> Completed
-                UpdateStepRequest step7Request = new UpdateStepRequest();
-                step7Request.setStatus("completed");
-                step7Request.setRemarks("Logistics confirmation received - GDN generation started");
-                step7Request.setDate(java.time.LocalDate.now().toString());
-                
-                // Add assigned person (logistics team) information
-                setCurrentUserDetails(step7Request);
-                step7Request.setAssignedPersonRole("LOGISTICS_MANAGER");
-                
-                orderTrackingService.updateStepBySequence(order.getId(), 7, step7Request);
-                
                 // Step 8: Approved from Logistics -> Completed
                 UpdateStepRequest step8Request = new UpdateStepRequest();
                 step8Request.setStatus("completed");
@@ -373,11 +361,11 @@ public class GdnService {
                 step10Request.setAssignedPersonRole("LOGISTICS_MANAGER");
                 
                 orderTrackingService.updateStepBySequence(order.getId(), 10, step10Request);
-                
-                log.info("Order tracking Steps 7, 8, 9, 10 updated for order {}", orderId);
+
+                log.info("Order tracking Steps 8, 9, 10 updated for order {}", orderId);
             }
         } catch (Exception e) {
-            log.error("Failed to update Order Tracking Steps 7-10 for order {}: {}", 
+            log.error("Failed to update Order Tracking Steps 8-10 for order {}: {}",
                 orderId, e.getMessage());
             // Continue without failing the GDN generation
         }
@@ -412,10 +400,37 @@ public class GdnService {
             "Some items have insufficient stock. Adjust quantities before GDN generation.");
         
         saveInventoryVerification(orderId, cart.getId(), items, canProceed);
-        
+
+        // Step 7: Awaiting Confirmation from Logistics -> Completed
+        try {
+            String orderNumber = "ORD-" + orderId + "-" +
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+            com.nector.userservice.ordertracking.entity.OrderTracking order =
+                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+
+            if (order != null) {
+                UpdateStepRequest step7Request = new UpdateStepRequest();
+                step7Request.setStatus("completed");
+                step7Request.setRemarks("Logistics confirmation received - Inventory verified for GDN generation");
+                step7Request.setDate(java.time.LocalDate.now().toString());
+
+                // Add assigned person (logistics team) information
+                setCurrentUserDetails(step7Request);
+                step7Request.setAssignedPersonRole("LOGISTICS_MANAGER");
+
+                orderTrackingService.updateStepBySequence(order.getId(), 7, step7Request);
+                log.info("Order tracking Step 7 completed for order {}", orderId);
+            }
+        } catch (Exception e) {
+            log.error("Failed to update Order Tracking Step 7 for order {}: {}",
+                orderId, e.getMessage());
+            // Continue without failing the verification
+        }
+
         return response;
     }
-    
+
     public GdnResponse getGdnByOrderId(Long orderId) {
         Gdn gdn = gdnRepository.findByOrderId(orderId)
             .orElseThrow(() -> new RuntimeException("GDN not found for order: " + orderId));

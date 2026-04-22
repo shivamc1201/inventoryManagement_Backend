@@ -11,6 +11,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import static com.nector.userservice.enums.OrderStatus.GDN_GENERATED;
+
 @Repository
 public interface OrderRepository extends JpaRepository<OrderWithSalesPerson, Long> {
 
@@ -21,6 +23,45 @@ public interface OrderRepository extends JpaRepository<OrderWithSalesPerson, Lon
     List<OrderWithSalesPerson> findByDistributorId(Long distributorId);
 
     List<OrderWithSalesPerson> findByCreatedAtBetween(LocalDate dateFrom, LocalDate dateTo);
+
+    List<OrderWithSalesPerson> findBySalespersonIdAndCreatedAtBetween(Long salespersonId, LocalDate dateFrom, LocalDate dateTo);
+
+    List<OrderWithSalesPerson> findByDistributorIdAndCreatedAtBetween(Long distributorId, LocalDate dateFrom, LocalDate dateTo);
+
+    // Volume analytics methods - only count GDN_GENERATED orders
+    @Query("SELECT COUNT(o) FROM OrderWithSalesPerson o WHERE o.status = GDN_GENERATED AND o.createdAt BETWEEN :dateFrom AND :dateTo")
+    Long countGdnOrdersBetweenDates(@Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
+
+    @Query("SELECT COUNT(o) FROM OrderWithSalesPerson o WHERE o.status = GDN_GENERATED AND o.salespersonId = :salespersonId AND o.createdAt BETWEEN :dateFrom AND :dateTo")
+    Long countGdnOrdersBySalespersonBetweenDates(
+            @Param("salespersonId") Long salespersonId,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
+
+    @Query("SELECT COUNT(o) FROM OrderWithSalesPerson o WHERE o.status = GDN_GENERATED AND o.distributorId = :distributorId AND o.createdAt BETWEEN :dateFrom AND :dateTo")
+    Long countGdnOrdersByDistributorBetweenDates(
+            @Param("distributorId") Long distributorId,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
+
+    @Query("SELECT o FROM OrderWithSalesPerson o WHERE o.status = GDN_GENERATED AND o.createdAt BETWEEN :dateFrom AND :dateTo")
+    List<OrderWithSalesPerson> findGdnOrdersByCreatedAtBetween(@Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
+
+    @Query("SELECT o FROM OrderWithSalesPerson o WHERE o.status = GDN_GENERATED AND o.salespersonId = :salespersonId AND o.createdAt BETWEEN :dateFrom AND :dateTo")
+    List<OrderWithSalesPerson> findGdnOrdersBySalespersonAndCreatedAtBetween(
+            @Param("salespersonId") Long salespersonId,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
+
+    @Query("SELECT o FROM OrderWithSalesPerson o WHERE o.status = GDN_GENERATED AND o.distributorId = :distributorId AND o.createdAt BETWEEN :dateFrom AND :dateTo")
+    List<OrderWithSalesPerson> findGdnOrdersByDistributorAndCreatedAtBetween(
+            @Param("distributorId") Long distributorId,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
 
     @Query("SELECT o FROM OrderWithSalesPerson o WHERE " +
            "(:status IS NULL OR o.status = :status) AND " +

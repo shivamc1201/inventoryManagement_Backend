@@ -43,11 +43,13 @@ public class DashboardController {
     }
 
     @GetMapping("/volume-analytics")
-    @Operation(summary = "Get volume analytics", description = "Retrieves volume-based analytics data for specified time period")
+    @Operation(summary = "Get volume analytics", description = "Retrieves volume-based analytics data for specified time period. Optional salespersonId and distributorId for filtering.")
     @ApiResponse(responseCode = "200", description = "Volume analytics data retrieved successfully")
     public ResponseEntity<VolumeAnalyticsResponse> getVolumeAnalytics(
-            @RequestParam(required = false) String period) {
-        VolumeAnalyticsResponse response = volumeAnalyticsService.getVolumeAnalyticsData(period);
+            @RequestParam(required = false) String period,
+            @RequestParam(required = false) Long salespersonId,
+            @RequestParam(required = false) Long distributorId) {
+        VolumeAnalyticsResponse response = volumeAnalyticsService.getVolumeAnalyticsData(period, salespersonId, distributorId);
         return ResponseEntity.ok(response);
     }
 

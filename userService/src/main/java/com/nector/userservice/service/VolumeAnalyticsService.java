@@ -23,19 +23,20 @@ public class VolumeAnalyticsService {
     private final SalesPersonRepository salesPersonRepository;
 
     @Transactional(readOnly = true)
-    public VolumeAnalyticsResponse getVolumeAnalyticsData(String period) {
-        log.info("Entering getVolumeAnalyticsData() with period: {}", period);
+    public VolumeAnalyticsResponse getVolumeAnalyticsData(String period, Long salespersonId, Long distributorId) {
+        log.info("Entering getVolumeAnalyticsData() with period: {}, salespersonId: {}, distributorId: {}",
+                period, salespersonId, distributorId);
 
         if (period == null) period = "month";
         LocalDate now = LocalDate.now();
         LocalDate startDate = getStartDate(now, period);
 
-        VolumeAnalyticsResponse.VolumeMetrics monthToDate = getVolumeMetrics(startDate, now);
-        VolumeAnalyticsResponse.VolumeMetrics weekToDate = getVolumeMetrics(now.minusWeeks(1), now);
-        VolumeAnalyticsResponse.VolumeMetrics yearToDate = getVolumeMetrics(now.withDayOfYear(1), now);
+        VolumeAnalyticsResponse.VolumeMetrics monthToDate = getVolumeMetrics(startDate, now, salespersonId, distributorId);
+        VolumeAnalyticsResponse.VolumeMetrics weekToDate = getVolumeMetrics(now.minusWeeks(1), now, salespersonId, distributorId);
+        VolumeAnalyticsResponse.VolumeMetrics yearToDate = getVolumeMetrics(now.withDayOfYear(1), now, salespersonId, distributorId);
 
-        Map<String, Long> regionVolume = getVolumeByRegion(startDate, now);
-        Map<String, Long> categoryVolume = getVolumeByCategory(startDate, now);
+        Map<String, Long> regionVolume = getVolumeByRegion(startDate, now, salespersonId, distributorId);
+        Map<String, Long> categoryVolume = getVolumeByCategory(startDate, now, salespersonId, distributorId);
 
         VolumeAnalyticsResponse response = new VolumeAnalyticsResponse();
         response.setYearToDate(yearToDate);
@@ -48,11 +49,24 @@ public class VolumeAnalyticsService {
         return response;
     }
 
-    private VolumeAnalyticsResponse.VolumeMetrics getVolumeMetrics(LocalDate start, LocalDate end) {
-        log.debug("Entering getVolumeMetrics() from {} to {}", start, end);
+    private VolumeAnalyticsResponse.VolumeMetrics getVolumeMetrics(LocalDate start, LocalDate end, Long salespersonId, Long distributorId) {
+        log.debug("Entering getVolumeMetrics() from {} to {}, salespersonId: {}, distributorId: {}",
+                start, end, salespersonId, distributorId);
 
-        Long totalTransactions = orderRepository.countOrdersBetweenDates(start, end);
-        Long totalQuantity = getTotalQuantityBetweenDates(start, end);
+        Long totalTransactions;
+        Long totalQuantity;
+
+        // Only count GDN_GENERATED orders for volume analytics
+        if (salespersonId != null) {
+            totalTransactions = orderRepository.countGdnOrdersBySalespersonBetweenDates(salespersonId, start, end);
+            totalQuantity = getTotalQuantityBySalesperson(start, end, salespersonId);
+        } else if (distributorId != null) {
+            totalTransactions = orderRepository.countGdnOrdersByDistributorBetweenDates(distributorId, start, end);
+            totalQuantity = getTotalQuantityByDistributor(start, end, distributorId);
+        } else {
+            totalTransactions = orderRepository.countGdnOrdersBetweenDates(start, end);
+            totalQuantity = getTotalQuantityBetweenDates(start, end);
+        }
 
         // Handle null values
         totalTransactions = totalTransactions != null ? totalTransactions : 0L;
@@ -80,11 +94,20 @@ public class VolumeAnalyticsService {
         return startDate;
     }
 
-    private Map<String, Long> getVolumeByRegion(LocalDate startDate, LocalDate endDate) {
-        log.debug("Getting volume by region from {} to {}", startDate, endDate);
+    private Map<String, Long> getVolumeByRegion(LocalDate startDate, LocalDate endDate, Long salespersonId, Long distributorId) {
+        log.debug("Getting volume by region from {} to {}, salespersonId: {}, distributorId: {}",
+                startDate, endDate, salespersonId, distributorId);
 
-        // Get all orders in the date range and group by salesperson region
-        var orders = orderRepository.findByCreatedAtBetween(startDate, endDate);
+        // Only include GDN_GENERATED orders for volume by region
+        List<com.nector.userservice.model.OrderWithSalesPerson> orders;
+
+        if (salespersonId != null) {
+            orders = orderRepository.findGdnOrdersBySalespersonAndCreatedAtBetween(salespersonId, startDate, endDate);
+        } else if (distributorId != null) {
+            orders = orderRepository.findGdnOrdersByDistributorAndCreatedAtBetween(distributorId, startDate, endDate);
+        } else {
+            orders = orderRepository.findGdnOrdersByCreatedAtBetween(startDate, endDate);
+        }
 
         return orders.stream()
                 .filter(order -> order.getSalespersonId() != null)
@@ -102,25 +125,52 @@ public class VolumeAnalyticsService {
                 ));
     }
 
-    private Map<String, Long> getVolumeByCategory(LocalDate startDate, LocalDate endDate) {
-        log.debug("Getting volume by category from {} to {}", startDate, endDate);
+    private Map<String, Long> getVolumeByCategory(LocalDate startDate, LocalDate endDate, Long salespersonId, Long distributorId) {
+        log.debug("Getting volume by category from {} to {}, salespersonId: {}, distributorId: {}",
+                startDate, endDate, salespersonId, distributorId);
 
         // Since carts table doesn't have product category, we'll return a placeholder
         // In a real implementation, this would come from order_items or products table
         Map<String, Long> categoryVolume = new HashMap<>();
-        Long totalTransactions = orderRepository.countOrdersBetweenDates(startDate, endDate);
+        Long totalTransactions;
+
+        // Only count GDN_GENERATED orders for category volume
+        if (salespersonId != null) {
+            totalTransactions = orderRepository.countGdnOrdersBySalespersonBetweenDates(salespersonId, startDate, endDate);
+        } else if (distributorId != null) {
+            totalTransactions = orderRepository.countGdnOrdersByDistributorBetweenDates(distributorId, startDate, endDate);
+        } else {
+            totalTransactions = orderRepository.countGdnOrdersBetweenDates(startDate, endDate);
+        }
+
         categoryVolume.put("General", totalTransactions != null ? totalTransactions : 0L);
         return categoryVolume;
     }
 
     private Long getTotalQuantityBetweenDates(LocalDate start, LocalDate end) {
         log.debug("Getting total quantity between {} and {}", start, end);
-        
-        // Get all orders and sum their quantities
-        var orders = orderRepository.findByCreatedAtBetween(start, end);
-        
+
+        // Only count GDN_GENERATED orders
+        var orders = orderRepository.findGdnOrdersByCreatedAtBetween(start, end);
+
         // For now, we'll count each order as 1 unit
         // In a real implementation, this would sum actual product quantities from order_items
+        return (long) orders.size();
+    }
+
+    private Long getTotalQuantityBySalesperson(LocalDate start, LocalDate end, Long salespersonId) {
+        log.debug("Getting total quantity for salesperson {} between {} and {}", salespersonId, start, end);
+
+        // Only count GDN_GENERATED orders
+        var orders = orderRepository.findGdnOrdersBySalespersonAndCreatedAtBetween(salespersonId, start, end);
+        return (long) orders.size();
+    }
+
+    private Long getTotalQuantityByDistributor(LocalDate start, LocalDate end, Long distributorId) {
+        log.debug("Getting total quantity for distributor {} between {} and {}", distributorId, start, end);
+
+        // Only count GDN_GENERATED orders
+        var orders = orderRepository.findGdnOrdersByDistributorAndCreatedAtBetween(distributorId, start, end);
         return (long) orders.size();
     }
 }

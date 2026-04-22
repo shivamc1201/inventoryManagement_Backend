@@ -25,6 +25,7 @@ import com.nector.userservice.ordertracking.service.OrderTrackingService;
 import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,43 +49,48 @@ public class CartService {
     private final SalesPersonRepository salesPersonRepository;
     private final SalesHierarchyValidationService salesHierarchyValidationService;
     private final OrderTrackingService orderTrackingService;
-
-
-    // TODO the dispatch team wil, check the real  quantity of the orders  while checking GDN
-
     private final HtmlToPdfService htmlToPdfService;
+
+    // Self-injection to enable @Async method calls through Spring proxy
+    private CartService self;
+
+    // Setter injection for self-reference to enable async proxy calls
+    // @Lazy breaks the circular dependency
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setSelf(@org.springframework.context.annotation.Lazy CartService cartService) {
+        this.self = cartService;
+    }
 
 
     @Transactional
     public CartResponse addItemsToCart(Long distributorId, List<AddToCartRequest> requests) {
-        log.info("Adding {} items to cart for distributor {}", requests.size(), distributorId);
-
-        if (!distributorRepository.existsById(distributorId)) {
-            throw new DistributorNotFoundException(distributorId);
+        long cartStart = System.currentTimeMillis();
+        Cart cart = getOrCreateActiveCart(distributorId);
+        long trackingStart = System.currentTimeMillis();
+        if (self != null) {
+            self.initializeOrderTrackingForCartAsync(cart, distributorId);
+        } else {
+            initializeOrderTrackingForCart(cart, distributorId);
         }
 
-        Cart cart = getOrCreateActiveCart(distributorId);
-        
-        // Initialize order tracking for this cart if it doesn't exist
-        long trackingStart = System.currentTimeMillis();
-        initializeOrderTrackingForCart(cart, distributorId);
-        log.info("[TIMING] initializeOrderTrackingForCart took {} ms", System.currentTimeMillis() - trackingStart);
-
+        long itemsLoopStart = System.currentTimeMillis();
+        int itemCount = 0;
         for (AddToCartRequest request : requests) {
-            log.info("Processing item {} for distributor {}", request.getItemId(), distributorId);
+            long itemStart = System.currentTimeMillis();
+            itemCount++;
             try {
+                long dbStart = System.currentTimeMillis();
                 FinishedProduct finishedProduct = finishedProductRepository.findBySku(request.getItemId())
                         .filter(FinishedProduct::getActive)
                         .orElseThrow(() -> new ItemNotFoundException("Item with SKU '" + request.getItemId() + "' not found or inactive"));
-
-                // Verify the finished product exists in database
+                long existsStart = System.currentTimeMillis();
                 if (!finishedProductRepository.existsById(finishedProduct.getId())) {
                     throw new ItemNotFoundException("Item with ID " + finishedProduct.getId() + " does not exist");
                 }
-
+                long cartItemStart = System.currentTimeMillis();
                 Optional<CartItem> existingCartItem =
                         cartItemRepository.findByCartIdAndItemId(cart.getId(), finishedProduct.getId());
-
+                long saveStart = System.currentTimeMillis();
                 if (existingCartItem.isPresent()) {
                     CartItem cartItem = existingCartItem.get();
                     int newQuantity = cartItem.getQuantity() + request.getQuantity();
@@ -107,11 +113,12 @@ public class CartService {
                 throw e;
             }
         }
-
+        long saveCartStart = System.currentTimeMillis();
         cart.setStatus(Cart.CartStatus.ACTIVE);
         Cart updatedCart = cartRepository.save(cart);
-        log.info("All items added to cart successfully for distributor {}", distributorId);
-        return mapToResponse(updatedCart);
+        long mapStart = System.currentTimeMillis();
+        CartResponse response = mapToResponse(updatedCart);
+        return response;
     }
 
 
@@ -313,16 +320,14 @@ public class CartService {
     public CartResponse approveCart(Long cartId) {
         Cart cart = cartRepository.findById(cartId)
                 .orElseThrow(() -> new CartNotFoundException("Cart with ID " + cartId + " not found"));
-
-        // Check if cart is active before placing
+        // Check if cart is placed before approving
         if (cart.getStatus() != Cart.CartStatus.PLACED) {
-            throw new InvalidCartStatusException("Cannot place cart with status: " + cart.getStatus());
+            throw new InvalidCartStatusException("Cannot approve cart with status: " + cart.getStatus());
         }
-
         // Populate denormalized fields
+        long denormStart = System.currentTimeMillis();
         distributorRepository.findById(cart.getDistributorId()).ifPresent(distributor -> {
             cart.setDistributorName(distributor.getFirstName());
-
             if (distributor.getSalespersonId() != null) {
                 cart.setSalespersonId(distributor.getSalespersonId());
                 salesPersonRepository.findById(distributor.getSalespersonId()).ifPresent(salesperson -> {
@@ -330,65 +335,102 @@ public class CartService {
                 });
             }
         });
-
         // Calculate and set total cart amount
+        long calcStart = System.currentTimeMillis();
         BigDecimal totalAmount = cart.getCartItems().stream()
                 .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         cart.setTotalCartAmount(totalAmount);
-
         cart.setStatus(Cart.CartStatus.APPROVED);
+        long saveStart = System.currentTimeMillis();
         Cart updatedCart = cartRepository.save(cart);
+        // Update Order Tracking Steps async to not block the response
+        if (self != null) {
+            self.updateOrderTrackingAsync(updatedCart);
+        } else {
+            updateOrderTrackingSync(updatedCart);
+        }
+        // Generate Proforma Invoice async to not block the response
+        if (self != null) {
+            self.generateProformaInvoiceAsync(cartId, updatedCart.getId());
+        } else {
+            generateProformaInvoiceSync(cartId, updatedCart.getId());
+        }
+        // Use fast response mapper - avoid extra DB lookups
+        long mapStart = System.currentTimeMillis();
+        CartResponse response = mapToResponseFast(updatedCart);
+        return response;
+    }
 
+    /**
+     * Async wrapper to update order tracking without blocking the API response
+     */
+    @Async
+    public void updateOrderTrackingAsync(Cart updatedCart) {
+        long asyncStart = System.currentTimeMillis();
+        try {
+            updateOrderTrackingSync(updatedCart);
+            log.info("[TIMING-ASYNC] Order tracking update completed in {} ms for cart {}",
+                    System.currentTimeMillis() - asyncStart, updatedCart.getId());
+        } catch (Exception e) {
+            log.error("[TIMING-ASYNC] Order tracking update failed after {} ms for cart {}: {}",
+                    System.currentTimeMillis() - asyncStart, updatedCart.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Synchronous order tracking update - used as fallback or called async
+     */
+    private void updateOrderTrackingSync(Cart updatedCart) {
         // Update Order Tracking Step 3: Approved from Sales
         try {
-            String orderNumber = "ORD-" + updatedCart.getId() + "-" + 
+            String orderNumber = "ORD-" + updatedCart.getId() + "-" +
                 java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-            
-            com.nector.userservice.ordertracking.entity.OrderTracking order = 
+
+            com.nector.userservice.ordertracking.entity.OrderTracking order =
                 orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
-            
+
             if (order != null) {
                 UpdateStepRequest request = new UpdateStepRequest();
                 request.setStatus("completed");
                 request.setRemarks("Order approved by sales team");
                 request.setDate(java.time.LocalDate.now().toString());
-                
+
                 // Add assigned person (salesperson) information
                 if (updatedCart.getSalespersonId() != null) {
                     request.setAssignedPersonId(updatedCart.getSalespersonId());
                     request.setAssignedPersonName(updatedCart.getSalespersonName());
                     request.setAssignedPersonRole("SALES_EXECUTIVE");
-                    
+
                     // Get salesperson details
                     salesPersonRepository.findById(updatedCart.getSalespersonId()).ifPresent(salesperson -> {
                         request.setAssignedPersonPhone(salesperson.getPhone());
                         request.setAssignedPersonEmail(salesperson.getEmail());
                     });
                 }
-                
+
                 orderTrackingService.updateStepBySequence(order.getId(), 3, request);
                 log.info("Order tracking Step 3 updated for cart {}", updatedCart.getId());
-                
+
                 // Also explicitly complete Step 2 (Pending Approval from Sales) if it was IN_PROGRESS
                 UpdateStepRequest step2Request = new UpdateStepRequest();
                 step2Request.setStatus("completed");
                 step2Request.setRemarks("Sales approval completed");
                 step2Request.setDate(java.time.LocalDate.now().toString());
-                
+
                 // Add assigned person (salesperson) information
                 if (updatedCart.getSalespersonId() != null) {
                     step2Request.setAssignedPersonId(updatedCart.getSalespersonId());
                     step2Request.setAssignedPersonName(updatedCart.getSalespersonName());
                     step2Request.setAssignedPersonRole("SALES_EXECUTIVE");
-                    
+
                     // Get salesperson details
                     salesPersonRepository.findById(updatedCart.getSalespersonId()).ifPresent(salesperson -> {
                         step2Request.setAssignedPersonPhone(salesperson.getPhone());
                         step2Request.setAssignedPersonEmail(salesperson.getEmail());
                     });
                 }
-                
+
                 try {
                     orderTrackingService.updateStepBySequence(order.getId(), 2, step2Request);
                     log.info("Order tracking Step 2 also completed for cart {}", updatedCart.getId());
@@ -402,13 +444,35 @@ public class CartService {
                 updatedCart.getId(), e.getMessage());
             // Continue without failing the approval
         }
+    }
 
+    /**
+     * Async wrapper to generate proforma invoice without blocking the API response
+     */
+    @Async
+    public void generateProformaInvoiceAsync(Long cartId, Long updatedCartId) {
+        long asyncStart = System.currentTimeMillis();
+        try {
+            generateProformaInvoiceSync(cartId, updatedCartId);
+            log.info("[TIMING-ASYNC] Proforma invoice generation completed in {} ms for cart {}",
+                    System.currentTimeMillis() - asyncStart, cartId);
+        } catch (Exception e) {
+            log.error("[TIMING-ASYNC] Proforma invoice generation failed after {} ms for cart {}: {}",
+                    System.currentTimeMillis() - asyncStart, cartId, e.getMessage());
+        }
+    }
+
+    /**
+     * Synchronous proforma invoice generation - used as fallback or called async
+     * Also updates order tracking Step 4
+     */
+    private void generateProformaInvoiceSync(Long cartId, Long updatedCartId) {
         // Generate Proforma Invoice after approval
         proformaInvoiceService.generateProformaInvoice(cartId);
 
         // Update order tracking Step 4: PI Generated - set to "completed"
         try {
-            String orderNumber = "ORD-" + updatedCart.getId() + "-" +
+            String orderNumber = "ORD-" + updatedCartId + "-" +
                 java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
 
             com.nector.userservice.ordertracking.entity.OrderTracking order =
@@ -423,16 +487,13 @@ public class CartService {
                 step4Request.setDownloadLabel("Download Proforma Invoice");
 
                 orderTrackingService.updateStepBySequence(order.getId(), 4, step4Request);
-                log.info("Order tracking Step 4 set to completed for cart {}", updatedCart.getId());
+                log.info("Order tracking Step 4 set to completed for cart {}", updatedCartId);
             }
         } catch (Exception e) {
             log.error("Failed to update Order Tracking Step 4 for cart {}: {}",
-                updatedCart.getId(), e.getMessage());
+                updatedCartId, e.getMessage());
             // Continue without failing the approval
         }
-
-        // Use the new method that prioritizes denormalized data
-        return mapToResponseWithDenormalizedData(updatedCart);
     }
 
 
@@ -486,78 +547,138 @@ public class CartService {
 
     @Transactional
     public CartResponse placeOrder(Long distributorId, PlaceOrderRequest request) {
-        log.info("Placing order for cart {} for distributor {}", request.getCartId(), distributorId);
-
         // Check if distributor has any active orders that prevent new orders
+        long validationStart = System.currentTimeMillis();
         List<Cart.CartStatus> activeOrderStatuses = List.of(
             Cart.CartStatus.CHECKED_OUT,
             Cart.CartStatus.APPROVED,
             Cart.CartStatus.PAYMENT_APPROVED,
             Cart.CartStatus.PLACED
         );
-        
         List<Cart> activeOrders = cartRepository.findByDistributorIdAndStatusIn(distributorId, activeOrderStatuses);
         if (!activeOrders.isEmpty()) {
             Cart activeOrder = activeOrders.get(0);
             throw new ActiveOrderExistsException("Distributor already has an active order with status: " + 
                 activeOrder.getStatus() + ". Cannot place new order until existing order is completed or dismissed.");
         }
-
         Cart cart = cartRepository.findById(request.getCartId())
                 .orElseThrow(() -> new CartNotFoundException("Cart with ID " + request.getCartId() + " not found"));
-
         // Verify cart belongs to the distributor
         if (!cart.getDistributorId().equals(distributorId)) {
             throw new CartNotFoundException("Cart does not belong to distributor " + distributorId);
         }
-
         // Check if cart is active before placing order
         if (cart.getStatus() != Cart.CartStatus.ACTIVE) {
             throw new InvalidCartStatusException("Cannot place order for cart with status: " + cart.getStatus());
         }
-
         // Save the address and update status
+        long cartSaveStart = System.currentTimeMillis();
         cart.setAddress(request.getAddress());
         cart.setStatus(Cart.CartStatus.PLACED);
         Cart updatedCart = cartRepository.save(cart);
+        if (self != null) {
+            self.createOrderTrackingAsync(updatedCart);
+        } else {
+            // Fallback to sync if self not available
+            createOrderTrackingSync(updatedCart);
+        }
+        // Use lightweight response mapper - avoid extra DB lookups
+        long mapStart = System.currentTimeMillis();
+        CartResponse response = mapToResponseFast(updatedCart);
+        return response;
+    }
 
-        // Create OrderTracking record for workflow management only if it doesn't exist
+    /**
+     * Async method to create OrderTracking record - runs in background
+     */
+    @Async
+    public void createOrderTrackingAsync(Cart cart) {
+        long asyncStart = System.currentTimeMillis();
         try {
-            String distributorName = updatedCart.getDistributorName() != null ? 
-                updatedCart.getDistributorName() : "Unknown Distributor";
-            String orderNumber = "ORD-" + updatedCart.getId() + "-" + 
+            createOrderTrackingSync(cart);
+            log.info("[TIMING-ASYNC] OrderTracking creation completed in {} ms for cart {}",
+                    System.currentTimeMillis() - asyncStart, cart.getId());
+        } catch (Exception e) {
+            log.error("[TIMING-ASYNC] OrderTracking creation failed after {} ms for cart {}: {}",
+                    System.currentTimeMillis() - asyncStart, cart.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Synchronous OrderTracking creation - used as fallback or called async
+     */
+    private void createOrderTrackingSync(Cart cart) {
+        try {
+            String distributorName = cart.getDistributorName() != null ? 
+                cart.getDistributorName() : "Unknown Distributor";
+            String orderNumber = "ORD-" + cart.getId() + "-" + 
                 java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
             
-            BigDecimal totalAmount = updatedCart.getTotalCartAmount() != null ? 
-                updatedCart.getTotalCartAmount() : 
-                updatedCart.getCartItems().stream()
+            BigDecimal totalAmount = cart.getTotalCartAmount() != null ? 
+                cart.getTotalCartAmount() : 
+                cart.getCartItems().stream()
                     .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             // Check if OrderTracking already exists for this cart/order
             if (orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber) == null) {
-                long createTrackingStart = System.currentTimeMillis();
                 orderTrackingService.createFromCart(
-                    updatedCart.getId(), 
+                    cart.getId(), 
                     distributorName, 
-                    updatedCart.getDistributorId(),
+                    cart.getDistributorId(),
                     orderNumber,
                     totalAmount
                 );
-                log.info("[TIMING] orderTrackingService.createFromCart took {} ms", 
-                    System.currentTimeMillis() - createTrackingStart);
-                log.info("OrderTracking record created for cart {}", updatedCart.getId());
+                log.info("OrderTracking record created for cart {}", cart.getId());
             } else {
-                log.info("OrderTracking record already exists for cart {}, skipping creation", updatedCart.getId());
+                log.info("OrderTracking record already exists for cart {}, skipping creation", cart.getId());
             }
         } catch (Exception e) {
             log.error("Failed to create OrderTracking record for cart {}: {}", 
-                updatedCart.getId(), e.getMessage());
-            // Continue without failing the order placement
+                cart.getId(), e.getMessage());
         }
+    }
 
-        log.info("Order placed successfully for cart {} for distributor {}", request.getCartId(), distributorId);
-        return mapToResponse(updatedCart);
+    /**
+     * Fast response mapper - uses denormalized data from cart, avoids extra DB lookups
+     * Skips distributor/salesperson lookups - uses data already stored in cart entity
+     */
+    private CartResponse mapToResponseFast(Cart cart) {
+        CartResponse response = new CartResponse();
+        response.setId(cart.getId());
+        response.setStatus(cart.getStatus().name());
+        response.setCreatedAt(cart.getCreatedAt());
+        response.setUpdatedAt(cart.getUpdatedAt());
+        response.setDismissReason(cart.getDismissReason());
+
+        // Use denormalized data from cart - no DB lookups
+        if (cart.getDistributorId() != null) {
+            response.setDistributorId(cart.getDistributorId());
+            response.setDistributorName(cart.getDistributorName());
+        }
+        
+        // Use denormalized salesperson data from cart
+        response.setSalespersonId(cart.getSalespersonId());
+        response.setSalespersonName(cart.getSalespersonName());
+
+        // Map cart items efficiently
+        List<CartItemResponse> cartItemResponses = cart.getCartItems().stream()
+                .map(this::mapCartItemToResponse)
+                .collect(Collectors.toList());
+        response.setCartItems(cartItemResponses);
+
+        // Calculate total from pre-mapped items (avoid recalculating from DB)
+        BigDecimal totalAmount = cartItemResponses.stream()
+                .map(CartItemResponse::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        response.setTotalCartAmount(totalAmount);
+        
+        // Calculate volume using cart's total weight method
+        BigDecimal totalWeight = cart.calculateTotalWeight();
+        BigDecimal volumeInTons = totalWeight.divide(BigDecimal.valueOf(1000), 6, BigDecimal.ROUND_HALF_UP);
+        response.setVolumeInTons(volumeInTons);
+
+        return response;
     }
 
 
@@ -866,6 +987,23 @@ public class CartService {
         return carts.stream()
                 .map(this::mapToResponseWithDenormalizedData)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Async wrapper to initialize order tracking without blocking the API response
+     * This runs in a separate thread pool
+     */
+    @Async
+    public void initializeOrderTrackingForCartAsync(Cart cart, Long distributorId) {
+        long asyncStart = System.currentTimeMillis();
+        try {
+            initializeOrderTrackingForCart(cart, distributorId);
+            log.info("[TIMING-ASYNC] Order tracking initialization completed in {} ms", 
+                    System.currentTimeMillis() - asyncStart);
+        } catch (Exception e) {
+            log.error("[TIMING-ASYNC] Async order tracking initialization failed after {} ms: {}", 
+                    System.currentTimeMillis() - asyncStart, e.getMessage());
+        }
     }
 
     /**

@@ -3,161 +3,226 @@
 <head>
     <meta charset="UTF-8"/>
     <style>
-        /* A4 Paper Styling with Fixed Size */
-        @page {
-            size: A4;
-            margin: 10mm;
-        }
-        
+        @page { size: A4; margin: 10mm; }
+
         body {
-            background-color: #f0f0f0;
             margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-        }
-        .page {
-            width: 210mm;
-            height: 297mm;
-            padding: 10mm;
-            background: white;
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
-            box-sizing: border-box;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-family: 'Arial', sans-serif;
+            padding: 0;
+            font-family: Arial, sans-serif;
             font-size: 11px;
             color: #000;
-            overflow: hidden;
+            background: #fff;
         }
-        .main-border-table { border: 1.5px solid black; }
-        .main-border-table td { border: 1px solid black; padding: 3px 5px; vertical-align: top; }
-        .bold { font-weight: bold; }
-        .center { text-align: center; }
-        .right { text-align: right; }
-        .italic { font-style: italic; }
 
-        /* Product Table Header */
-        .items-header td {
-            border-top: 1.5px solid black !important;
-            border-bottom: 1.5px solid black !important;
+        .outer {
+            width: 190mm;
+            margin: 0 auto;
+        }
+
+        .title {
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .orig-copy {
+            text-align: right;
+            font-size: 9px;
+            margin-bottom: 3px;
+        }
+
+        /* ---- Main invoice table ---- */
+        .inv {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1.5px solid #000;
+            font-size: 10px;
+        }
+        .inv td {
+            border: 1px solid #000;
+            padding: 4px 5px;
+            vertical-align: top;
+        }
+
+
+        .bold  { font-weight: bold; }
+        .right { text-align: right; }
+        .center{ text-align: center; }
+        .italic{ font-style: italic; }
+
+        .lbl { font-size: 9px; color: #444; }
+
+        /* company logo table */
+        .logo-tbl { width: 100%; border-collapse: collapse; }
+        .logo-tbl td { border: none !important; padding: 0; vertical-align: top; }
+
+        /* items section */
+        .items-hdr td {
+            border: 1px solid #000;
+            border-top: 1.5px solid #000 !important;
+            border-bottom: 1.5px solid #000 !important;
             font-weight: bold;
             text-align: center;
+            padding: 5px 3px;
+            background: #fff;
         }
+        .items-hdr td:first-child { border-left: 1.5px solid #000 !important; }
+        .items-hdr td:last-child  { border-right: 1.5px solid #000 !important; }
 
-        /* Continuous Vertical Lines */
-        .product-row td { border-bottom: none !important; border-top: none !important; }
-        .filler-row { height: 320px; }
-        .filler-row td { border-top: none !important; border-bottom: none !important; }
+        .item-row td {
+            border-top: none;
+            border-left: 1px solid #000;
+            border-right: 1px solid #000;
+            border-bottom: 1px solid #000;
+            padding: 3px 3px;
+            vertical-align: top;
+        }
+        .item-row td:first-child { border-left: 1.5px solid #000; }
+        .item-row td:last-child  { border-right: 1.5px solid #000; }
 
-        /* Bank Section */
-        .bank-details-table td { border: none !important; padding: 1px !important; font-size: 10px; }
+        .filler-row td {
+            border-top: none;
+            border-left: 1px solid #000;
+            border-right: 1px solid #000;
+            border-bottom: none;
+            height: 50px;
+            padding: 0;
+        }
+        .filler-row td:first-child { border-left: 1.5px solid #000; }
+        .filler-row td:last-child  { border-right: 1.5px solid #000; }
 
-        .label-small { font-size: 9px; color: #333; }
+        .total-row td {
+            border-top: 1.5px solid #000 !important;
+            border-left: 1px solid #000;
+            border-right: 1px solid #000;
+            border-bottom: 1px solid #000;
+            padding: 4px 3px;
+            font-weight: bold;
+        }
+        .total-row td:first-child { border-left: 1.5px solid #000; }
+        .total-row td:last-child  { border-right: 1.5px solid #000; border-bottom: 1px solid #000; }
+
+        /* bank section inner table */
+        .bank-inner { width: 100%; border-collapse: collapse; }
+        .bank-inner td { border: none; padding: 1px 2px; font-size: 10px; vertical-align: top; }
 
         @media print {
-            @page {
-                size: A4;
-                margin: 10mm;
+            @page { size: A4; margin: 10mm; }
+            html { width: 210mm; }
+            body {
+                background: none;
+                margin: 0;
+                padding: 0;
+                width: 210mm;
             }
-            /* A4 Paper Styling with Fixed Size */
-        @page {
-            size: A4;
-            margin: 10mm;
-        }
-        
-        body { background: none; padding: 0; }
-            .page { box-shadow: none; margin: 0; width: 100%; }
+            .outer {
+                width: 190mm;
+                margin: 0 auto;
+            }
         }
     </style>
 </head>
 <body>
-
-<div class="page">
-    <div style="text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 2px;">PROFORMA INVOICE</div>
-    <div style="text-align: right; font-size: 9px; margin-bottom: 5px;">Original Copy</div>
-
-    <table class="main-border-table">
+<div class="outer">
+    <table style="width:100%; border-collapse:collapse; margin-bottom:2px;">
         <tr>
-            <td colspan="3" width="55%">
-                <div style="display: flex; align-items: flex-start;">
-                    <img src="logo.png" width="75" style="margin-right: 15px;"/>
-                    <div>
-                        <div class="bold italic" style="font-size: 18px;">Nectar Origin Private Limited</div>
-                        <div style="font-size: 10px;">
-                            360 K, Shiv Parwati Nagar, Block Road<br/>
-                            No -2, Ward No 16, Kahalgaon, Bhagalpur<br/>
-                            Bihar<br/>
-                            <span class="bold">GSTIN/UIN: 10AAFCN3882K1ZE</span><br/>
-                            CIN: U74999BR2016PTC032690<br/>
-                            Contact No : 06429-450126<br/>
-                            Email : nectarorigin@gmail.com
-                        </div>
-                    </div>
-                </div>
+            <td style="border:none; padding:0; text-align:center; font-weight:bold; font-size:14px; color:#000;">PROFORMA INVOICE</td>
+            <td style="border:none; padding:0; text-align:right; font-size:9px; color:#000; width:80px; white-space:nowrap;">Original Copy</td>
+        </tr>
+    </table>
+
+    <table class="inv">
+        <tr>
+            <td colspan="3" style="width:55%;">
+                <table class="logo-tbl">
+                    <tr>
+                        <td style="width:70px; padding-right:8px;">
+                            <img src="logo.png" width="65" height="68" alt="Logo"/>
+                        </td>
+                        <td>
+                            <div style="font-size:15px; font-weight:bold; font-style:italic;">Nectar Origin Private Limited</div>
+                            <div style="font-size:10px; line-height:1.35;">
+                                360 K, Shiv Parwati Nagar, Block Road<br/>
+                                No -2, Ward No 16, Kahalgaon, Bhagalpur<br/>
+                                Bihar<br/>
+                                <span style="font-weight:bold;">GSTIN/UIN: 10AAFCN3882K1ZE</span><br/>
+                                CIN: U74999BR2016PTC032690<br/>
+                                Contact No : 06429-450126<br/>
+                                Email : nectarorigin@gmail.com
+                            </div>
+                        </td>
+                    </tr>
+                </table>
             </td>
-            <td colspan="2" width="22%">
-                <span class="label-small">PI No.</span><br/>
+            <td colspan="2" style="width:22%;">
+                <span class="lbl">PI No.</span><br/>
                 <span class="bold" th:text="${invoice.piNumber}"></span><br/><br/>
-                <span class="label-small">Delivery Note</span><br/>
+                <span class="lbl">Delivery Note</span><br/>
                 <span th:text="${invoice.deliveryNote}"></span>
             </td>
-            <td colspan="2" width="23%">
-                <span class="label-small">Dated</span><br/>
+            <td colspan="2" style="width:23%;">
+                <span class="lbl">Dated</span><br/>
                 <span class="bold" th:text="${invoice.piDate}"></span><br/><br/>
-                <span class="label-small">Mode/Terms of Payment</span><br/>
+                <span class="lbl">Mode/Terms of Payment</span><br/>
                 <span class="bold" th:text="${invoice.modeOfPayment}"></span>
             </td>
         </tr>
 
+        <!-- ===== ROW 2: Consignee + Buyer Order No / Dated ===== -->
         <tr>
             <td colspan="3" rowspan="2">
-                <span class="label-small">Consignee (Ship To)</span><br/>
+                <span class="lbl bold">Consignee (Ship To)</span><br/>
                 <div class="bold" th:text="${invoice.shipTo.name}"></div>
                 <div th:text="${invoice.shipTo.address}"></div>
                 <div>Pincode : <span th:text="${invoice.shipTo.pincode}"></span></div>
                 <div>GST IN/ UIN : <span class="bold" th:text="${invoice.shipTo.gstin}"></span></div>
-                <div>State : <span th:text="${invoice.shipTo.state}"></span> <span style="float:right;">Code : <span th:text="${invoice.shipTo.stateCode}"></span></span></div>
+                <div>State : <span th:text="${invoice.shipTo.state}"></span>
+                    <span style="float:right;">Code : <span th:text="${invoice.shipTo.stateCode}"></span></span>
+                </div>
                 <div>Contact : <span th:text="${invoice.shipTo.contact}"></span></div>
             </td>
-            <td colspan="2">Buyer Order No.<br/><span th:text="${invoice.orderNo}"></span></td>
-            <td colspan="2">Dated<br/><span th:text="${invoice.orderDate}"></span></td>
+            <td colspan="2"><span class="lbl">Buyer Order No.</span><br/><span th:text="${invoice.orderNo}"></span></td>
+            <td colspan="2"><span class="lbl">Dated</span><br/><span th:text="${invoice.orderDate}"></span></td>
         </tr>
         <tr>
-            <td colspan="2">Dispatch Doc No.<br/><span th:text="${invoice.dispatchDocNo}"></span></td>
-            <td colspan="2">Delivery Note Date<br/><span th:text="${invoice.deliveryNoteDate}"></span></td>
+            <td colspan="2"><span class="lbl">Dispatch Doc No.</span><br/><span th:text="${invoice.dispatchDocNo}"></span></td>
+            <td colspan="2"><span class="lbl">Delivery Note Date</span><br/><span th:text="${invoice.deliveryNoteDate}"></span></td>
         </tr>
 
+        <!-- ===== ROW 4: Bill To + Terms of Delivery ===== -->
         <tr>
             <td colspan="3">
-                <span class="label-small">Buyer (Bill To)</span><br/>
+                <span class="lbl bold">Buyer (Bill To)</span><br/>
                 <div class="bold" th:text="${invoice.billTo.name}"></div>
                 <div th:text="${invoice.billTo.address}"></div>
                 <div>Pincode : <span th:text="${invoice.billTo.pincode}"></span></div>
                 <div>GST IN/ UIN : <span class="bold" th:text="${invoice.billTo.gstin}"></span></div>
-                <div>State : <span th:text="${invoice.billTo.state}"></span> <span style="float:right;">Code : <span th:text="${invoice.billTo.stateCode}"></span></span></div>
+                <div>State : <span th:text="${invoice.billTo.state}"></span>
+                    <span style="float:right;">Code : <span th:text="${invoice.billTo.stateCode}"></span></span>
+                </div>
                 <div>Contact : <span th:text="${invoice.billTo.contact}"></span></div>
             </td>
             <td colspan="4">
-                <span class="label-small">Terms of Delivery</span><br/>
+                <span class="lbl">Terms of Delivery</span><br/>
                 <div class="bold">Credit / Partial Credit</div>
             </td>
         </tr>
 
-        <tr class="items-header">
+        <!-- ===== ITEMS HEADER ===== -->
+        <tr class="items-hdr">
             <td width="5%">SrNo</td>
-            <td width="30%">Description of Goods</td>
-            <td width="10%">HSN</td>
-            <td width="10%">Alt.Qty</td>
-            <td width="15%">Qty.</td>
-            <td width="10%">Rate</td>
+            <td width="28%">Description of Goods</td>
+            <td width="9%">HSN</td>
+            <td width="11%">Alt.Qty</td>
+            <td width="14%">Qty.</td>
+            <td width="11%">Rate</td>
             <td width="8%">Per</td>
-            <td width="12%">Amount</td>
+            <td width="14%">Amount</td>
         </tr>
 
-        <tr class="product-row" th:each="item, iter : ${invoice.items}">
+        <!-- ===== ITEMS ===== -->
+        <tr class="item-row" th:each="item, iter : ${invoice.items}">
             <td class="center" th:text="${iter.index + 1}"></td>
             <td class="bold" th:text="${item.description}"></td>
             <td class="center" th:text="${item.hsnCode}"></td>
@@ -168,11 +233,13 @@
             <td class="right bold" th:text="${item.amount}"></td>
         </tr>
 
+        <!-- filler -->
         <tr class="filler-row">
             <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
         </tr>
 
-        <tr class="bold">
+        <!-- ===== TOTAL ROW ===== -->
+        <tr class="total-row">
             <td colspan="3" class="right">Total</td>
             <td class="right" th:text="${invoice.totalAltQty}"></td>
             <td class="right" th:text="${invoice.totalQty}"></td>
@@ -181,19 +248,23 @@
             <td class="right" th:text="${invoice.grandTotal}"></td>
         </tr>
 
+        <!-- ===== AMOUNT IN WORDS ===== -->
         <tr>
-            <td colspan="8">
-                <span class="label-small">Amount Chargeable (in words)</span> <span style="float:right;" class="bold">E &amp; O.E</span><br/>
-                <div class="bold" th:text="${invoice.amountInWords}"></div>
+            <td colspan="8" style="padding:4px 6px;">
+                <span class="lbl">Amount Chargeable (in words)</span>
+                <span style="float:right;" class="bold">E &amp; O.E</span><br/>
+                <span class="bold" th:text="${invoice.amountInWords}"></span>
             </td>
         </tr>
 
+        <!-- ===== TAX + TOTALS ===== -->
         <tr>
-            <td colspan="4" rowspan="2" style="border-bottom:none;">
-                <span class="label-small">Tax Amount (in words) :</span> <span class="bold" th:text="${invoice.taxInWords}">NIL</span><br/><br/>
+            <td colspan="4" rowspan="2" style="vertical-align:top;">
+                <span class="lbl">Tax Amount (in words) :</span>
+                <span class="bold" th:text="${invoice.taxInWords}">NIL</span><br/><br/>
                 <div>Company's PAN : <span class="bold">AAFCN3882K</span></div>
-                <div class="bold" style="margin-top:5px;">Declaration:</div>
-                <div style="font-size: 9px; line-height: 1.1;">
+                <div class="bold" style="margin-top:4px;">Declaration:</div>
+                <div style="font-size:9px; line-height:1.2;">
                     We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
                 </div>
             </td>
@@ -205,24 +276,40 @@
             <td class="right bold" th:text="${invoice.grandTotal}"></td>
         </tr>
 
+        <!-- ===== BANK DETAILS ===== -->
         <tr>
-            <td colspan="8" style="padding: 0;">
-                <table style="width: 100%;">
+            <td colspan="8" style="padding:0; border-top:1px solid #000;">
+                <table style="width:100%; border-collapse:collapse;">
                     <tr>
-                        <td width="50%" style="border: none; padding: 5px;">
+                        <td style="width:50%; border:none; padding:6px; vertical-align:top;">
                         </td>
-                        <td width="50%" style="border-left: 1.5px solid black; padding: 5px;">
-                            <div class="bold">Company's Bank Details</div>
-                            <table class="bank-details-table">
-                                <tr><td width="35%">A/c Holder's Name</td><td>: <span class="bold">NECTAR ORIGIN PRIVATE LIMITED</span></td></tr>
-                                <tr><td>Bank Name</td><td>: <span class="bold">State Bank of India</span></td></tr>
-                                <tr><td>A/c No.</td><td>: <span class="bold">00000042894533595</span></td></tr>
-                                <tr><td>Branch &amp; IFS Code</td><td>: <span class="bold">COLGONG(02323) &amp; SBIN0002323</span></td></tr>
-                                <tr><td>SWIFT Code</td><td>: </td></tr>
+                        <td style="width:50%; border:none; border-left:1px solid #000; padding:6px; vertical-align:top;">
+                            <div class="bold" style="font-size:10px; margin-bottom:3px;">Company's Bank Details</div>
+                            <table class="bank-inner">
+                                <tr>
+                                    <td style="width:38%;">A/c Holder's Name</td>
+                                    <td>: <span class="bold">NECTAR ORIGIN PRIVATE LIMITED</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Bank Name</td>
+                                    <td>: <span class="bold">State Bank of India</span></td>
+                                </tr>
+                                <tr>
+                                    <td>A/c No.</td>
+                                    <td>: <span class="bold">00000042894533595</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Branch &amp; IFS Code</td>
+                                    <td>: <span class="bold">COLGONG(02323) &amp; SBIN0002323</span></td>
+                                </tr>
+                                <tr>
+                                    <td>SWIFT Code</td>
+                                    <td>: </td>
+                                </tr>
                             </table>
                             <br/>
-                            <div class="right">
-                                <span style="font-size: 10px;">for <span class="bold">Nectar Origin Private Limited</span></span>
+                            <div style="text-align:right; font-size:10px;">
+                                for <span class="bold">Nectar Origin Private Limited</span>
                                 <br/><br/><br/>
                                 <span class="bold">Authorised Signatory</span>
                             </div>
@@ -231,6 +318,7 @@
                 </table>
             </td>
         </tr>
+
     </table>
 </div>
 

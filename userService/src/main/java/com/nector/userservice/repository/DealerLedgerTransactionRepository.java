@@ -18,6 +18,8 @@ import java.util.Optional;
 @Repository
 public interface DealerLedgerTransactionRepository extends JpaRepository<DealerLedgerTransaction, String> {
 
+    long deleteByDistributorId(Long distributorId);
+
     // Tenant isolation methods
     Optional<DealerLedgerTransaction> findByIdAndDistributorId(String id, Long distributorId);
 

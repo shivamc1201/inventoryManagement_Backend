@@ -19,6 +19,8 @@ import com.nector.userservice.model.Cart;
 import com.nector.userservice.model.CartItem;
 import com.nector.userservice.model.User;
 import com.nector.userservice.repository.CartRepository;
+import com.nector.userservice.repository.DealerLedgerTransactionRepository;
+import com.nector.userservice.repository.DistributorLedgerRepository;
 import com.nector.userservice.repository.ItemRepository;
 import com.nector.userservice.service.InvoiceService;
 import com.nector.userservice.service.JwtService;
@@ -55,6 +57,8 @@ public class DistributorServiceImpl implements DistributorService {
     private final UserRepository userRepository;
     private final SalesPersonRepository salesPersonRepository;
     private final CartRepository cartRepository;
+    private final DealerLedgerTransactionRepository dealerLedgerTransactionRepository;
+    private final DistributorLedgerRepository distributorLedgerRepository;
     private final InvoiceService invoiceService;
     private final OrderTrackingService orderTrackingService;
     
@@ -168,6 +172,9 @@ public class DistributorServiceImpl implements DistributorService {
         if (!distributorRepository.existsById(id)) {
             throw new ResourceNotFoundException("Distributor not found with ID: " + id);
         }
+
+        dealerLedgerTransactionRepository.deleteByDistributorId(id);
+        distributorLedgerRepository.deleteByDistributorId(id);
         
         distributorRepository.deleteById(id);
         log.info("Distributor deleted successfully with ID: {}", id);

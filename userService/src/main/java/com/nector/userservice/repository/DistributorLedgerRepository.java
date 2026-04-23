@@ -9,6 +9,8 @@ import java.util.List;
 
 @Repository
 public interface DistributorLedgerRepository extends JpaRepository<DistributorLedger, Long> {
+
+    long deleteByDistributorId(Long distributorId);
     
     List<DistributorLedger> findByDistributorIdOrderByCreatedAtDesc(Long distributorId);
     

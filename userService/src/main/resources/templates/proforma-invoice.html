@@ -5,6 +5,10 @@
     <style>
         @page { size: A4; margin: 10mm; }
 
+        html {
+            width: 190mm;
+        }
+
         body {
             margin: 0;
             padding: 0;
@@ -12,11 +16,11 @@
             font-size: 11px;
             color: #000;
             background: #fff;
+            width: 190mm;
         }
 
         .outer {
-            width: 190mm;
-            margin: 0 auto;
+            width: 100%;
         }
 
         .title {
@@ -109,28 +113,23 @@
 
         @media print {
             @page { size: A4; margin: 10mm; }
-            html { width: 210mm; }
+            html { width: 190mm; }
             body {
                 background: none;
                 margin: 0;
                 padding: 0;
-                width: 210mm;
+                width: 190mm;
             }
             .outer {
-                width: 190mm;
-                margin: 0 auto;
+                width: 100%;
             }
         }
     </style>
 </head>
 <body>
 <div class="outer">
-    <table style="width:100%; border-collapse:collapse; margin-bottom:2px;">
-        <tr>
-            <td style="border:none; padding:0; text-align:center; font-weight:bold; font-size:14px; color:#000;">PROFORMA INVOICE</td>
-            <td style="border:none; padding:0; text-align:right; font-size:9px; color:#000; width:80px; white-space:nowrap;">Original Copy</td>
-        </tr>
-    </table>
+    <div style="text-align:center; font-weight:bold; font-size:14px; color:#000; margin-bottom:1px;">PROFORMA INVOICE</div>
+    <div style="text-align:center; font-size:9px; color:#000; margin-bottom:3px;">Original Copy</div>
 
     <table class="inv">
         <tr>
@@ -161,7 +160,7 @@
                 <span class="lbl">Delivery Note</span><br/>
                 <span th:text="${invoice.deliveryNote}"></span>
             </td>
-            <td colspan="2" style="width:23%;">
+            <td colspan="3" style="width:23%;">
                 <span class="lbl">Dated</span><br/>
                 <span class="bold" th:text="${invoice.piDate}"></span><br/><br/>
                 <span class="lbl">Mode/Terms of Payment</span><br/>
@@ -183,11 +182,11 @@
                 <div>Contact : <span th:text="${invoice.shipTo.contact}"></span></div>
             </td>
             <td colspan="2"><span class="lbl">Buyer Order No.</span><br/><span th:text="${invoice.orderNo}"></span></td>
-            <td colspan="2"><span class="lbl">Dated</span><br/><span th:text="${invoice.orderDate}"></span></td>
+            <td colspan="3"><span class="lbl">Dated</span><br/><span th:text="${invoice.orderDate}"></span></td>
         </tr>
         <tr>
             <td colspan="2"><span class="lbl">Dispatch Doc No.</span><br/><span th:text="${invoice.dispatchDocNo}"></span></td>
-            <td colspan="2"><span class="lbl">Delivery Note Date</span><br/><span th:text="${invoice.deliveryNoteDate}"></span></td>
+            <td colspan="3"><span class="lbl">Delivery Note Date</span><br/><span th:text="${invoice.deliveryNoteDate}"></span></td>
         </tr>
 
         <!-- ===== ROW 4: Bill To + Terms of Delivery ===== -->
@@ -203,7 +202,7 @@
                 </div>
                 <div>Contact : <span th:text="${invoice.billTo.contact}"></span></div>
             </td>
-            <td colspan="4">
+            <td colspan="5">
                 <span class="lbl">Terms of Delivery</span><br/>
                 <div class="bold">Credit / Partial Credit</div>
             </td>

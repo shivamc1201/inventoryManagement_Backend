@@ -30,8 +30,9 @@
         .side-note-cell { width: 15%; text-align: right; }
 
         .comp-name {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: bold;
+            font-style: italic;
             margin-bottom: 5px;
         }
         .comp-addr {
@@ -49,17 +50,18 @@
         .form-title {
             text-align: center;
             font-weight: bold;
-            font-size: 12px;
+            font-size: 13px;
             text-transform: uppercase;
             text-decoration: underline;
             margin: 12px 0;
+            letter-spacing: 1px;
         }
 
         /* FORM FIELDS */
         .field-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
         .field-table td {
             padding: 4px 0;
@@ -69,7 +71,7 @@
             font-weight: bold;
             white-space: nowrap;
             padding-right: 10px;
-            width: 140px;
+            width: 145px;
         }
         .field-value {
             text-transform: uppercase;
@@ -80,37 +82,49 @@
         .field-row-2col {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 6px;
         }
         .field-row-2col td {
             padding: 4px 0;
         }
         .field-row-2col .field-label {
-            width: 120px;
+            font-weight: bold;
+            white-space: nowrap;
+            width: 145px;
+            padding-right: 10px;
         }
         .field-row-2col .field-value {
             border-bottom: 1px dotted #000;
+            text-transform: uppercase;
+            padding-left: 5px;
         }
 
         /* Three-column layout */
         .field-row-3col {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 6px;
         }
         .field-row-3col td {
             padding: 4px 0;
         }
         .field-row-3col .field-label {
-            width: 80px;
+            font-weight: bold;
+            white-space: nowrap;
+            width: 90px;
+            padding-right: 6px;
         }
         .field-row-3col .field-value {
             border-bottom: 1px dotted #000;
+            text-transform: uppercase;
+            padding-left: 5px;
         }
 
         /* ITEMS TABLE */
         .items-wrapper {
             border: 1px solid #000;
             margin: 10px 0;
-            min-height: 450px;
+            min-height: 400px;
         }
         .items-table {
             width: 100%;
@@ -119,7 +133,7 @@
         .items-table th {
             border-bottom: 1px solid #000;
             border-right: 1px solid #000;
-            padding: 8px 5px;
+            padding: 6px 5px;
             font-size: 10px;
             font-weight: bold;
             background: #f9f9f9;
@@ -130,9 +144,9 @@
         }
         .items-table td {
             border-right: 1px solid #000;
-            padding: 6px 8px;
+            padding: 5px 8px;
             font-size: 9px;
-            height: 24px;
+            height: 22px;
         }
         .items-table td:last-child {
             border-right: none;
@@ -164,12 +178,21 @@
         }
         .sig-label {
             font-weight: bold;
-            width: 140px;
+            white-space: nowrap;
+            width: 175px;
             padding-right: 10px;
         }
 
         @media print {
-            body { padding: 15mm; }
+            @page { size: A4; margin: 0; }
+            html, body {
+                width: 210mm;
+                height: auto;
+                min-height: 297mm;
+                padding: 15mm;
+                margin: 0;
+                overflow: visible;
+            }
         }
     </style>
 </head>
@@ -179,7 +202,7 @@
 <table class="header-table">
     <tr>
         <td class="logo-cell">
-            <img src="logo.png" width="75" alt="Logo"/>
+            <img th:src="${logoPath}" src="logo.png" width="75" alt="Logo"/>
         </td>
         <td class="company-cell">
             <div class="comp-name">Nectar Origin Private Limited</div>
@@ -192,7 +215,7 @@
 </table>
 
 <!-- TITLE -->
-<div class="form-title">GOOD DELIVERY NOTE</div>
+<div class="form-title">Good Delivery Note</div>
 
 <!-- FORM FIELDS -->
 <table class="field-row-2col">
@@ -228,23 +251,23 @@
 
 <table class="field-row-3col">
     <tr>
-        <td class="field-label">Transport:</td>
+        <td class="field-label">Transport Name</td>
         <td class="field-value" th:text="${transportName}"></td>
-        <td width="20"></td>
-        <td class="field-label">Driver:</td>
+        <td width="15"></td>
+        <td class="field-label">Driver Name</td>
         <td class="field-value" th:text="${driverName}"></td>
-        <td width="20"></td>
-        <td class="field-label">Mobile:</td>
+        <td width="15"></td>
+        <td class="field-label">Mobile No</td>
         <td class="field-value" th:text="${driverMobile}"></td>
     </tr>
 </table>
 
 <table class="field-row-2col">
     <tr>
-        <td class="field-label">Total Packages:</td>
+        <td class="field-label">Total No. of Package</td>
         <td class="field-value" th:text="${totalPackages}"></td>
         <td width="30"></td>
-        <td class="field-label">Total Weight:</td>
+        <td class="field-label">Total Weight :</td>
         <td class="field-value" th:text="${totalWeight}"></td>
     </tr>
 </table>
@@ -254,9 +277,9 @@
     <table class="items-table">
         <thead>
         <tr>
-            <th width="8%">Sr.No</th>
-            <th width="20%">Unit Type</th>
-            <th width="48%">Item Description</th>
+            <th width="8%">SrNo</th>
+            <th width="22%">Unit Type<br/>(Caton,Place etc)</th>
+            <th width="46%">Item Description</th>
             <th width="24%">No of Units Dispatch</th>
         </tr>
         </thead>
@@ -267,7 +290,6 @@
             <td th:text="${item.description}"></td>
             <td align="center" th:text="${item.quantity}"></td>
         </tr>
-        <!-- Add empty rows to maintain minimum height if needed -->
         </tbody>
     </table>
 </div>
@@ -282,17 +304,17 @@
 <div class="signature-section">
     <table class="sig-table">
         <tr>
-            <td class="sig-label">Receiver Name:</td>
+            <td class="sig-label">Name of Person Receiving :</td>
             <td></td>
             <td width="40"></td>
-            <td class="sig-label">Receiver Sig:</td>
+            <td class="sig-label">Signature of Person Receiving :</td>
             <td></td>
         </tr>
         <tr>
-            <td class="sig-label">Delivered Name:</td>
+            <td class="sig-label">Name of Person Delivering :</td>
             <td></td>
             <td width="40"></td>
-            <td class="sig-label">Delivered Sig:</td>
+            <td class="sig-label">Signature of Person Delivering :</td>
             <td></td>
         </tr>
     </table>
@@ -300,3 +322,4 @@
 
 </body>
 </html>
+

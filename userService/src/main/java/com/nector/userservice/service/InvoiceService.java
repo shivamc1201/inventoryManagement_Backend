@@ -217,7 +217,13 @@ public class InvoiceService {
         invoice.setInvoiceDate(LocalDate.now());
         invoice.setPaymentTerms("Due on Receipt");
         invoice.setOrderNo(String.valueOf(orderConfirmation.getOrderId()));
+        invoice.setOrderDate(LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
         invoice.setGdnNumber(orderConfirmation.getGdnNumber());
+        invoice.setDispatchDocNo(orderConfirmation.getGdnNumber());
+        invoice.setDeliveryNote(orderConfirmation.getGdnNumber());
+        invoice.setDeliveryNoteDate(LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+        invoice.setBillOfLading("");
+        invoice.setMotorVehicleNo("");
         invoice.setOrderConfirmationRemarks(orderConfirmation.getRemarks());
 
         // Seller details
@@ -240,6 +246,8 @@ public class InvoiceService {
             billTo.setGstin(distributor.getGstNumber());
             billTo.setState("Bihar");
             billTo.setStateCode("10");
+            billTo.setPincode(distributor.getPinCode() != null ? distributor.getPinCode() : "");
+            billTo.setContact(distributor.getPhoneNumber() != null ? distributor.getPhoneNumber() : "");
             invoice.setBillTo(billTo);
 
             // Ship To details (same as bill to for now)
@@ -249,6 +257,8 @@ public class InvoiceService {
             shipTo.setGstin(distributor.getGstNumber());
             shipTo.setState("Bihar");
             shipTo.setStateCode("10");
+            shipTo.setPincode(distributor.getPinCode() != null ? distributor.getPinCode() : "");
+            shipTo.setContact(distributor.getPhoneNumber() != null ? distributor.getPhoneNumber() : "");
             invoice.setShipTo(shipTo);
             log.info("ShipTo set with name: {}", shipTo.getName());
         } else {
@@ -260,6 +270,8 @@ public class InvoiceService {
             billTo.setGstin("Customer GSTIN");
             billTo.setState("Bihar");
             billTo.setStateCode("10");
+            billTo.setPincode("");
+            billTo.setContact("");
             invoice.setBillTo(billTo);
 
             Invoice.BuyerDetails shipTo = new Invoice.BuyerDetails();
@@ -268,6 +280,8 @@ public class InvoiceService {
             shipTo.setGstin("Customer GSTIN");
             shipTo.setState("Bihar");
             shipTo.setStateCode("10");
+            shipTo.setPincode("");
+            shipTo.setContact("");
             invoice.setShipTo(shipTo);
         }
 
@@ -315,7 +329,9 @@ public class InvoiceService {
         invoice.setTaxAmount(taxAmount);
         invoice.setGrandTotal(grandTotal);
         invoice.setTotalQty(String.valueOf(totalQuantity));
+        invoice.setTotalAltQty("");
         invoice.setAmountInWords(convertToWords(grandTotal));
+        invoice.setTaxInWords(taxAmount == 0 ? "NIL" : convertToWords(taxAmount));
 
         // Additional details
         invoice.setTermsAndConditions("1. Goods once sold will not be taken back.\n2. Payment should be made as per the terms agreed.\n3. Subject to Bihar Jurisdiction.");

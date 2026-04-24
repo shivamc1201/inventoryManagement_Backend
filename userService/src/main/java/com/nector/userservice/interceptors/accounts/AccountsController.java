@@ -91,17 +91,7 @@ public class AccountsController {
         ProformaInvoice pi = paymentService.getProformaInvoiceRepository().findByCartId(orderId)
             .orElseThrow(() -> new RuntimeException("Proforma Invoice not found for order: " + orderId));
         
-        // Update PI status to PAID directly (using credit)
-        pi.setPaymentStatus(ProformaInvoice.PaymentStatus.PAID);
-        paymentService.getProformaInvoiceRepository().save(pi);
-        
-        // Update Cart status to PAYMENT_APPROVED
-        Cart cart = paymentService.getCartRepository().findById(orderId)
-            .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
-        cart.setStatus(Cart.CartStatus.PAYMENT_APPROVED);
-        paymentService.getCartRepository().save(cart);
-        
-        // Deduct amount from distributor's creditAmount (this is the correct approach!)
+        // Get distributor and validate credit BEFORE updating any statuses
         var distributor = paymentService.getDistributorRepository().findById(distributorId)
             .orElseThrow(() -> new RuntimeException("Distributor not found: " + distributorId));
         
@@ -117,6 +107,17 @@ public class AccountsController {
             throw new RuntimeException("Insufficient credit. Available: " + currentCredit + ", Required: " + orderAmount);
         }
         
+        // Update PI status to PAID directly (using credit) - only after validation passes
+        pi.setPaymentStatus(ProformaInvoice.PaymentStatus.PAID);
+        paymentService.getProformaInvoiceRepository().save(pi);
+        
+        // Update Cart status to PAYMENT_APPROVED - only after validation passes
+        Cart cart = paymentService.getCartRepository().findById(orderId)
+            .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+        cart.setStatus(Cart.CartStatus.PAYMENT_APPROVED);
+        paymentService.getCartRepository().save(cart);
+        
+        // Deduct amount from distributor's creditAmount (this is the correct approach!)
         distributor.setCreditAmount(currentCredit.subtract(orderAmount));
         paymentService.getDistributorRepository().save(distributor);
         

@@ -217,6 +217,12 @@ public class DistributorServiceImpl implements DistributorService {
         OrderConfirmation savedConfirmation = orderConfirmationRepository.save(confirmation);
         log.info("Order confirmation saved with ID: {}", savedConfirmation.getId());
         
+        // Check if order has short or damaged remarks
+        boolean hasShortOrDamaged = hasShortOrDamagedRemarks(request);
+        if (hasShortOrDamaged) {
+            log.info("Order {} has short/damaged remarks. Invoice will not be generated.", request.getOrderId());
+        }
+        
         // Update Order Tracking Step 11: Order Received
         try {
             String orderNumber = "ORD-" + request.getOrderId() + "-" + 
@@ -231,7 +237,14 @@ public class DistributorServiceImpl implements DistributorService {
                                   request.getStatus() == OrderConfirmationRequest.ConfirmationStatus.RECEIVED_PARTIAL;
                 
                 UpdateStepRequest step11Request = new UpdateStepRequest();
-                step11Request.setStatus(isReceived ? "completed" : "cancelled");
+                
+                // Set status based on remarks - order_incomplete if short/damaged found
+                if (hasShortOrDamaged) {
+                    step11Request.setStatus("order_incomplete");
+                } else {
+                    step11Request.setStatus(isReceived ? "completed" : "cancelled");
+                }
+                
                 step11Request.setRemarks(isReceived ? 
                     "Order received by distributor: " + request.getFeedback() : 
                     "Order not received: " + request.getRemarks());
@@ -260,16 +273,64 @@ public class DistributorServiceImpl implements DistributorService {
             // Continue without failing the order confirmation
         }
         
-        // Generate and save invoice after order confirmation
-        try {
-            String invoiceResult = invoiceService.generateInvoice(savedConfirmation.getId());
-            log.info("Invoice generated successfully for order confirmation ID: {}", savedConfirmation.getId());
-        } catch (Exception e) {
-            log.error("Failed to generate invoice for order confirmation ID: {} - {}", savedConfirmation.getId(), e.getMessage());
-            // Don't throw here to avoid breaking order confirmation flow
+        // Generate and save invoice after order confirmation (only if no short/damaged remarks)
+        if (!hasShortOrDamaged) {
+            try {
+                String invoiceResult = invoiceService.generateInvoice(savedConfirmation.getId());
+                log.info("Invoice generated successfully for order confirmation ID: {}", savedConfirmation.getId());
+            } catch (Exception e) {
+                log.error("Failed to generate invoice for order confirmation ID: {} - {}", savedConfirmation.getId(), e.getMessage());
+                // Don't throw here to avoid breaking order confirmation flow
+            }
         }
         
         return mapToResponse(savedConfirmation);
+    }
+    
+    /**
+     * Check if the order confirmation request has short or damaged remarks
+     */
+    private boolean hasShortOrDamagedRemarks(OrderConfirmationRequest request) {
+        // Check main remarks
+        if (request.getRemarks() != null) {
+            String remarks = request.getRemarks().toLowerCase();
+            if (remarks.contains("short") || remarks.contains("damaged")) {
+                return true;
+            }
+        }
+        
+        // Check confirmation status
+        if (request.getStatus() == OrderConfirmationRequest.ConfirmationStatus.DAMAGED) {
+            return true;
+        }
+        
+        // Check item-level remarks and conditions
+        if (request.getItemConfirmations() != null) {
+            for (OrderConfirmationRequest.ItemConfirmation item : request.getItemConfirmations()) {
+                // Check item remarks
+                if (item.getItemRemarks() != null) {
+                    String itemRemarks = item.getItemRemarks().toLowerCase();
+                    if (itemRemarks.contains("short") || itemRemarks.contains("damaged")) {
+                        return true;
+                    }
+                }
+                
+                // Check item condition
+                if (item.getCondition() == OrderConfirmationRequest.ItemCondition.DAMAGED ||
+                    item.getCondition() == OrderConfirmationRequest.ItemCondition.MISSING) {
+                    return true;
+                }
+                
+                // Check for short quantity (received less than dispatched)
+                if (item.getReceivedQuantity() != null && item.getDispatchedQuantity() != null) {
+                    if (item.getReceivedQuantity() < item.getDispatchedQuantity()) {
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        return false;
     }
     
     @Override

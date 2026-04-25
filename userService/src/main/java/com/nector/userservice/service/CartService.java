@@ -865,7 +865,7 @@ public class CartService {
         invoice.setSgst(sgst);
         invoice.setIgst(0.0);
         invoice.setGrandTotal(grandTotal);
-        invoice.setAmountInWords(String.format("%.0f Rupees Only", grandTotal));
+        invoice.setAmountInWords(com.nector.userservice.util.NumberToWordsUtil.convertToWords(grandTotal));
 
         return invoice;
     }

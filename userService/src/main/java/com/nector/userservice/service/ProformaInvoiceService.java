@@ -301,7 +301,7 @@ public class ProformaInvoiceService {
     }
 
     private String convertToWords(double amount) {
-        return String.format("%.0f Rupees Only", amount);
+        return com.nector.userservice.util.NumberToWordsUtil.convertToWords(amount);
     }
 
 

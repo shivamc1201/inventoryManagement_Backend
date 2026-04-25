@@ -49,7 +49,7 @@ public class ProformaInvoiceService {
         try {
             // Step 1: Fetch cart
             log.info("Step 1/6: Fetching cart details for ID: {}", cartId);
-            Cart cart = cartRepository.findById(cartId)
+            Cart cart = cartRepository.findByIdWithItems(cartId)
                     .orElseThrow(() -> new RuntimeException("Cart not found with ID: " + cartId));
 
             log.info("Cart found - ID: {}, Distributor ID: {}, Status: {}, Items: {}",

@@ -56,9 +56,9 @@ public class InvoiceService {
             log.info("Order confirmation found - ID: {}, Order ID: {}, Distributor ID: {}, Status: {}",
                     orderConfirmation.getId(), orderConfirmation.getOrderId(), orderConfirmation.getDistributorId(), orderConfirmation.getStatus());
 
-            // Step 2: Fetch cart
+            // Step 2: Fetch cart with items eagerly loaded
             log.info("Step 2/6: Fetching cart details for order ID: {}", orderConfirmation.getOrderId());
-            Cart cart = cartRepository.findById(orderConfirmation.getOrderId())
+            Cart cart = cartRepository.findByIdWithItems(orderConfirmation.getOrderId())
                     .orElseThrow(() -> new RuntimeException("Cart not found with ID: " + orderConfirmation.getOrderId()));
 
             log.info("Cart found - ID: {}, Distributor ID: {}, Status: {}, Items: {}",
@@ -178,22 +178,36 @@ public class InvoiceService {
                     .ifPresent(distributor -> invoiceEntity.setDistributorName(distributor.getFirstName()));
         }
 
-        // Calculate total amount based on received quantities
+        // Calculate total amount; fallback to cart items if confirmations are dummy/empty
         java.math.BigDecimal totalAmount = java.math.BigDecimal.ZERO;
-        if (orderConfirmation.getItemConfirmations() != null) {
+        boolean hasConfirmations = orderConfirmation.getItemConfirmations() != null
+                && !orderConfirmation.getItemConfirmations().isEmpty();
+
+        if (hasConfirmations) {
             for (var itemConfirmation : orderConfirmation.getItemConfirmations()) {
-                if (itemConfirmation.getReceivedQuantity() != null && itemConfirmation.getReceivedQuantity() > 0) {
-                    // Find the corresponding cart item to get price
+                if (itemConfirmation.getItemId() == null || itemConfirmation.getItemId() <= 0) continue;
+                int qty = (itemConfirmation.getReceivedQuantity() != null && itemConfirmation.getReceivedQuantity() > 0)
+                        ? itemConfirmation.getReceivedQuantity()
+                        : (itemConfirmation.getDispatchedQuantity() != null && itemConfirmation.getDispatchedQuantity() > 0
+                                ? itemConfirmation.getDispatchedQuantity() : 0);
+                if (qty > 0) {
                     CartItem cartItem = cart.getCartItems().stream()
-                            .filter(ci -> ci.getItem().getId().equals(itemConfirmation.getItemId()))
-                            .findFirst()
-                            .orElse(null);
-                    
+                            .filter(ci -> ci.getItem() != null && ci.getItem().getId().equals(itemConfirmation.getItemId()))
+                            .findFirst().orElse(null);
                     if (cartItem != null) {
                         totalAmount = totalAmount.add(
-                            cartItem.getPriceAtTime().multiply(java.math.BigDecimal.valueOf(itemConfirmation.getReceivedQuantity()))
-                        );
+                            cartItem.getPriceAtTime().multiply(java.math.BigDecimal.valueOf(qty)));
                     }
+                }
+            }
+        }
+
+        // If total is still zero, fall back to cart items
+        if (totalAmount.compareTo(java.math.BigDecimal.ZERO) == 0) {
+            for (CartItem cartItem : cart.getCartItems()) {
+                if (cartItem.getItem() != null && cartItem.getQuantity() > 0) {
+                    totalAmount = totalAmount.add(
+                        cartItem.getPriceAtTime().multiply(java.math.BigDecimal.valueOf(cartItem.getQuantity())));
                 }
             }
         }
@@ -285,37 +299,76 @@ public class InvoiceService {
             invoice.setShipTo(shipTo);
         }
 
-        // Items from order confirmation (received quantities)
-        List<InvoiceItem> items = IntStream.range(0, orderConfirmation.getItemConfirmations().size())
-                .mapToObj(i -> {
-                    var itemConfirmation = orderConfirmation.getItemConfirmations().get(i);
-                    if (itemConfirmation.getReceivedQuantity() == null || itemConfirmation.getReceivedQuantity() <= 0) {
-                        return null;
-                    }
+        // Items from order confirmation (received/dispatched quantities), fallback to cart items
+        List<InvoiceItem> items;
+        boolean hasItemConfirmations = orderConfirmation.getItemConfirmations() != null
+                && !orderConfirmation.getItemConfirmations().isEmpty();
 
-                    // Find the corresponding cart item to get price and name
-                    CartItem cartItem = cart.getCartItems().stream()
-                            .filter(ci -> ci.getItem().getId().equals(itemConfirmation.getItemId()))
-                            .findFirst()
-                            .orElse(null);
+        if (hasItemConfirmations) {
+            items = IntStream.range(0, orderConfirmation.getItemConfirmations().size())
+                    .mapToObj(i -> {
+                        var itemConfirmation = orderConfirmation.getItemConfirmations().get(i);
 
-                    if (cartItem == null) {
-                        log.warn("Cart item not found for item ID: {}", itemConfirmation.getItemId());
-                        return null;
-                    }
+                        // Use receivedQuantity; fall back to dispatchedQuantity if receivedQuantity is null/0
+                        int qty = (itemConfirmation.getReceivedQuantity() != null && itemConfirmation.getReceivedQuantity() > 0)
+                                ? itemConfirmation.getReceivedQuantity()
+                                : (itemConfirmation.getDispatchedQuantity() != null && itemConfirmation.getDispatchedQuantity() > 0
+                                        ? itemConfirmation.getDispatchedQuantity() : 0);
 
-                    InvoiceItem item = new InvoiceItem();
-                    item.setSrNo(i + 1);
-                    item.setDescription(cartItem.getItem().getName());
-                    item.setHsnCode("1234"); // Default HSN
-                    item.setQuantity(itemConfirmation.getReceivedQuantity());
-                    item.setRatePerUnit(cartItem.getPriceAtTime().doubleValue());
-                    item.setUnit("Pcs");
-                    item.setAmount(cartItem.getPriceAtTime().doubleValue() * itemConfirmation.getReceivedQuantity());
-                    return item;
-                })
-                .filter(item -> item != null)
-                .toList();
+                        if (qty <= 0) return null;
+                        if (itemConfirmation.getItemId() == null || itemConfirmation.getItemId() <= 0) return null;
+
+                        CartItem cartItem = cart.getCartItems().stream()
+                                .filter(ci -> ci.getItem() != null && ci.getItem().getId().equals(itemConfirmation.getItemId()))
+                                .findFirst()
+                                .orElse(null);
+
+                        if (cartItem == null) {
+                            log.warn("Cart item not found for item ID: {}", itemConfirmation.getItemId());
+                            return null;
+                        }
+
+                        InvoiceItem item = new InvoiceItem();
+                        item.setSrNo(i + 1);
+                        item.setDescription(cartItem.getItem().getName());
+                        item.setHsnCode("1234");
+                        item.setQuantity(qty);
+                        item.setRatePerUnit(cartItem.getPriceAtTime().doubleValue());
+                        item.setUnit("Pcs");
+                        item.setPer("Pcs");
+                        item.setAltQty("");
+                        item.setAmount(cartItem.getPriceAtTime().doubleValue() * qty);
+                        return item;
+                    })
+                    .filter(item -> item != null)
+                    .toList();
+        } else {
+            items = java.util.Collections.emptyList();
+        }
+
+        // If items list is still empty (no confirmations, all qty=0, or all itemId=0), fall back to cart items
+        if (items.isEmpty()) {
+            log.warn("Items empty after confirmation processing for order {} — falling back to cart items (cart has {} items)",
+                    orderConfirmation.getOrderId(), cart.getCartItems().size());
+            final java.util.concurrent.atomic.AtomicInteger srNo = new java.util.concurrent.atomic.AtomicInteger(1);
+            items = cart.getCartItems().stream()
+                    .filter(ci -> ci.getItem() != null && ci.getQuantity() > 0)
+                    .map(cartItem -> {
+                        InvoiceItem item = new InvoiceItem();
+                        item.setSrNo(srNo.getAndIncrement());
+                        item.setDescription(cartItem.getItem().getName());
+                        item.setHsnCode("1234");
+                        item.setQuantity(cartItem.getQuantity());
+                        item.setRatePerUnit(cartItem.getPriceAtTime().doubleValue());
+                        item.setUnit("Pcs");
+                        item.setPer("Pcs");
+                        item.setAltQty("");
+                        item.setAmount(cartItem.getPriceAtTime().doubleValue() * cartItem.getQuantity());
+                        return item;
+                    })
+                    .toList();
+            log.info("Fallback loaded {} cart items for order {}", items.size(), orderConfirmation.getOrderId());
+        }
 
         invoice.setItems(items);
 
@@ -444,36 +497,56 @@ public class InvoiceService {
     }
 
     /**
-     * Download Invoice PDF from Cloudinary
+     * Download Invoice PDF - regenerates PDF on-the-fly from live data so items always appear correctly.
      */
+    @Transactional
     public byte[] downloadInvoicePdf(Long orderId) {
-        log.info("=== DOWNLOAD INVOICE PDF ===");
+        log.info("=== DOWNLOAD INVOICE PDF (regenerate) ===");
         log.info("Download request - Order ID: {}, Timestamp: {}", orderId, java.time.LocalDateTime.now());
 
         try {
-            com.nector.userservice.model.Invoice invoice = invoiceRepository.findByOrderId(orderId)
+            com.nector.userservice.model.Invoice invoiceEntity = invoiceRepository.findByOrderId(orderId)
                     .orElseThrow(() -> new RuntimeException("Invoice not found for order ID: " + orderId));
 
-            log.info("Invoice found - ID: {}, Invoice Number: {}", invoice.getId(), invoice.getInvoiceNumber());
+            log.info("Invoice found - ID: {}, Invoice Number: {}", invoiceEntity.getId(), invoiceEntity.getInvoiceNumber());
 
-            // Check if PDF URL exists
-            if (invoice.getPdfUrl() == null || invoice.getPdfUrl().isEmpty()) {
-                log.error("PDF URL not available for Invoice ID: {}", invoice.getId());
-                throw new RuntimeException("PDF not available for Invoice: " + invoice.getInvoiceNumber());
+            // Fetch order confirmation and cart to regenerate the PDF with latest data
+            Long orderConfirmationId = invoiceEntity.getOrderConfirmationId();
+            OrderConfirmation orderConfirmation = orderConfirmationRepository.findById(orderConfirmationId)
+                    .orElseThrow(() -> new RuntimeException("Order confirmation not found with ID: " + orderConfirmationId));
+
+            Cart cart = cartRepository.findByIdWithItems(orderConfirmation.getOrderId())
+                    .orElseThrow(() -> new RuntimeException("Cart not found with ID: " + orderConfirmation.getOrderId()));
+
+            log.info("Regenerating invoice PDF - Cart items: {}, Item confirmations: {}",
+                    cart.getCartItems().size(),
+                    orderConfirmation.getItemConfirmations() != null ? orderConfirmation.getItemConfirmations().size() : 0);
+
+            // Build the Invoice DTO fresh from live data
+            Invoice invoice = createInvoiceFromData(orderConfirmation, cart);
+
+            log.info("Invoice regenerated - Items: {}, Grand Total: {}", invoice.getItems().size(), invoice.getGrandTotal());
+
+            // Generate HTML & convert to PDF
+            String html = generateHtmlFromTemplate(invoice);
+            byte[] pdfBytes = htmlToPdfService.convertHtmlToPdf(html);
+
+            log.info("PDF regenerated successfully - Size: {} bytes ({} KB)", pdfBytes.length, pdfBytes.length / 1024.0);
+
+            // Update stored PDF in Cloudinary & DB so subsequent downloads are also correct
+            try {
+                String newUrl = uploadPdfToCloudinary(pdfBytes, invoice.getInvoiceNumber());
+                invoiceEntity.setPdfUrl(newUrl);
+                invoiceRepository.save(invoiceEntity);
+                log.info("Cloudinary PDF updated for invoice: {}", invoice.getInvoiceNumber());
+            } catch (Exception uploadEx) {
+                log.warn("Could not update Cloudinary PDF (returning bytes anyway): {}", uploadEx.getMessage());
             }
-
-            log.info("PDF URL found: {}", invoice.getPdfUrl());
-
-            // Download using Cloudinary's resource API
-            byte[] pdfBytes = cloudinaryStorageService.downloadPdfByUrl(invoice.getPdfUrl());
-
-            log.info("PDF downloaded successfully - Size: {} bytes ({} KB)",
-                    pdfBytes.length, pdfBytes.length / 1024.0);
 
             return pdfBytes;
 
         } catch (Exception e) {
-            log.error("Failed to download PDF from Cloudinary for order ID: {} - {}", orderId, e.getMessage());
+            log.error("Failed to download/regenerate PDF for order ID: {} - {}", orderId, e.getMessage());
             throw new RuntimeException("Failed to download PDF", e);
         }
     }

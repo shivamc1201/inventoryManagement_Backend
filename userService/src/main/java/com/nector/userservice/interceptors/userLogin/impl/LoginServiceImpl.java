@@ -17,6 +17,7 @@ import com.nector.userservice.interceptors.userLogin.model.FeaturePermissionDTO;
 import com.nector.userservice.interceptors.userLogin.service.LoginService;
 import com.nector.userservice.model.RoleFeaturePermission;
 import com.nector.userservice.repository.RoleFeaturePermissionRepository;
+import com.nector.userservice.repository.RoleRepository;
 import com.nector.userservice.model.Role;
 import com.nector.userservice.model.User;
 // import com.nector.userservice.model.UserSession;
@@ -47,6 +48,7 @@ public class LoginServiceImpl implements LoginService {
     private final DistributorRepository distributorRepository;
     private final SalesPersonRepository salesPersonRepository;
     private final RoleFeaturePermissionRepository roleFeaturePermissionRepository;
+    private final RoleRepository roleRepository;
     
 
     @Override
@@ -213,6 +215,10 @@ public class LoginServiceImpl implements LoginService {
         user.setLastLoginTime(LocalDateTime.now());
         userRepository.save(user);
 
+        log.info("[DEBUG] User: {}, userId: {}, roleType: {}", user.getUsername(), user.getId(), user.getRoleType());
+        log.info("[DEBUG] user.getRoles() size: {}", user.getRoles().size());
+        user.getRoles().forEach(r -> log.info("[DEBUG] Role entity: id={}, roleType={}, name={}", r.getId(), r.getRoleType(), r.getName()));
+
         Set<Features> features;
         boolean isAdmin = user.getRoleType() == RoleType.ADMIN ||
                           user.getRoleType() == RoleType.SUPER_ADMIN ||
@@ -221,14 +227,29 @@ public class LoginServiceImpl implements LoginService {
                               .map(Role::getRoleType)
                               .anyMatch(rt -> rt == RoleType.ADMIN || rt == RoleType.SUPER_ADMIN || rt == RoleType.DISPATCH);
 
+        log.info("[DEBUG] isAdmin: {}", isAdmin);
+
         if (isAdmin) {
             features = Arrays.stream(Features.values())
                     .collect(Collectors.toSet());
+            log.info("[DEBUG] Admin user - all features: {}", features.size());
         } else {
-            features = user.getRoles().stream()
-                    .flatMap(role -> role.getPermissions().stream())
-                    .map(permission -> permission.getFeature())
-                    .collect(Collectors.toSet());
+            // Fetch features from role_feature_permissions table
+            // Note: Database stores userId as role_id, so we query by userId
+            features = new HashSet<>();
+            
+            Integer userIdAsRoleId = user.getId().intValue();
+            log.info("[DEBUG] Querying role_feature_permissions by userId (used as role_id): {}", userIdAsRoleId);
+            List<RoleFeaturePermission> permissions = roleFeaturePermissionRepository.findByRoleId(userIdAsRoleId);
+            log.info("[DEBUG] Found {} permissions for userId: {}", permissions.size(), userIdAsRoleId);
+            permissions.forEach(p -> log.info("[DEBUG] Permission: feature={}, roleId={}", p.getFeature(), p.getRoleId()));
+            
+            permissions.stream()
+                    .map(RoleFeaturePermission::getFeature)
+                    .filter(Objects::nonNull)
+                    .forEach(features::add);
+            
+            log.info("[DEBUG] Total features found: {}", features.size());
         }
 
         List<Object> featureDetails = features.stream()
@@ -399,30 +420,24 @@ public class LoginServiceImpl implements LoginService {
     }
 
     /**
-     * Get user permissions based on their role(s) - same logic as RoleFeaturePermissionController
+     * Get user permissions based on userId - queries role_feature_permissions table
+     * Note: Database stores userId as role_id
      */
     private List<FeaturePermissionDTO> getUserPermissions(User user) {
-        List<FeaturePermissionDTO> allPermissions = new ArrayList<>();
+        Integer userIdAsRoleId = user.getId().intValue();
+        log.info("[DEBUG] getUserPermissions - querying by userId: {}", userIdAsRoleId);
         
-        // Get permissions from primary roleType
-        if (user.getRoleType() != null) {
-            Integer roleId = RoleFeatureMapping.getRoleId(user.getRoleType());
-            List<FeaturePermissionDTO> roleTypePermissions = getPermissionsByRoleId(roleId);
-            allPermissions.addAll(roleTypePermissions);
-        }
-        
-        // Get permissions from additional roles (many-to-many)
-        if (!user.getRoles().isEmpty()) {
-            for (var role : user.getRoles()) {
-                Integer roleId = RoleFeatureMapping.getRoleId(role.getRoleType());
-                List<FeaturePermissionDTO> rolePermissions = getPermissionsByRoleId(roleId);
-                allPermissions.addAll(rolePermissions);
-            }
-        }
-        
-        // Remove duplicates based on roleId and featureId
-        return allPermissions.stream()
-                .distinct()
+        return roleFeaturePermissionRepository.findByRoleId(userIdAsRoleId)
+                .stream()
+                .map(perm -> new FeaturePermissionDTO(
+                        perm.getRoleId(),
+                        perm.getFeatureId(),
+                        perm.getFeature().name(),
+                        perm.getCanCreate(),
+                        perm.getCanRead(),
+                        perm.getCanUpdate(),
+                        perm.getCanDelete()
+                ))
                 .collect(Collectors.toList());
     }
     

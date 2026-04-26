@@ -1,0 +1,194 @@
+package com.nector.userservice.interceptors.products.impl;
+
+import com.nector.userservice.exception.InsufficientStockException;
+import com.nector.userservice.exception.ScrapItemNotFoundException;
+import com.nector.userservice.interceptors.products.model.ScrapItemRequest;
+import com.nector.userservice.interceptors.products.model.ScrapItemResponse;
+import com.nector.userservice.interceptors.products.service.ScrapItemService;
+import com.nector.userservice.model.ScrapItem;
+import com.nector.userservice.repository.ScrapItemRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class ScrapItemServiceImpl implements ScrapItemService {
+    
+    private final ScrapItemRepository scrapItemRepository;
+    
+    @Override
+    @Transactional
+    public ScrapItemResponse createScrapItem(ScrapItemRequest request) {
+        log.info("Creating scrap item with item code: {}", request.getItemCode());
+        
+        if (scrapItemRepository.existsByItemCode(request.getItemCode())) {
+            throw new DataIntegrityViolationException("Scrap item with item code " + request.getItemCode() + " already exists");
+        }
+        
+        ScrapItem item = new ScrapItem();
+        item.setName(request.getName());
+        item.setItemCode(request.getItemCode());
+        item.setUnit(request.getUnit());
+        item.setPrice(request.getPrice());
+        item.setQuantity(request.getQuantity());
+        item.setMinimumThreshold(request.getMinimumThreshold());
+        item.setVendorId(request.getVendorId());
+        item.setVendorName(request.getVendorName());
+        item.setTransportName(request.getTransportName());
+        item.setDriverName(request.getDriverName());
+        item.setDriverMobile(request.getDriverMobile());
+        item.setActive(true);
+        
+        ScrapItem savedItem = scrapItemRepository.save(item);
+        log.info("Scrap item created successfully with ID: {}", savedItem.getId());
+        
+        return mapToResponse(savedItem);
+    }
+    
+    @Override
+    @Transactional
+    public ScrapItemResponse updateScrapItem(Long id, ScrapItemRequest request) {
+        log.info("Updating scrap item with ID: {}", id);
+        
+        ScrapItem item = scrapItemRepository.findById(id)
+            .orElseThrow(() -> new ScrapItemNotFoundException(id));
+        
+        item.setName(request.getName());
+        item.setUnit(request.getUnit());
+        item.setPrice(request.getPrice());
+        item.setQuantity(request.getQuantity());
+        item.setMinimumThreshold(request.getMinimumThreshold());
+        item.setVendorId(request.getVendorId());
+        item.setVendorName(request.getVendorName());
+        item.setTransportName(request.getTransportName());
+        item.setDriverName(request.getDriverName());
+        item.setDriverMobile(request.getDriverMobile());
+        
+        ScrapItem updatedItem = scrapItemRepository.save(item);
+        log.info("Scrap item updated successfully with ID: {}", updatedItem.getId());
+        
+        return mapToResponse(updatedItem);
+    }
+    
+    @Override
+    @Transactional
+    public void deleteScrapItem(Long id) {
+        log.info("Soft deleting scrap item with ID: {}", id);
+        
+        ScrapItem item = scrapItemRepository.findById(id)
+            .orElseThrow(() -> new ScrapItemNotFoundException(id));
+        
+        item.setActive(false);
+        scrapItemRepository.save(item);
+        
+        log.info("Scrap item soft deleted successfully with ID: {}", id);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public ScrapItemResponse getScrapItemById(Long id) {
+        log.info("Fetching scrap item with ID: {}", id);
+        
+        ScrapItem item = scrapItemRepository.findById(id)
+            .orElseThrow(() -> new ScrapItemNotFoundException(id));
+        
+        return mapToResponse(item);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<ScrapItemResponse> getAllScrapItems() {
+        log.info("Fetching all scrap items");
+        
+        return scrapItemRepository.findByActiveTrue().stream()
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
+    }
+    
+    @Override
+    @Transactional
+    public ScrapItemResponse increaseStock(Long id, Integer quantity) {
+        log.info("Increasing stock for scrap item ID: {} by quantity: {}", id, quantity);
+        
+        ScrapItem item = scrapItemRepository.findActiveById(id)
+            .orElseThrow(() -> new ScrapItemNotFoundException(id));
+        
+        item.setQuantity(item.getQuantity() + quantity);
+        ScrapItem updatedItem = scrapItemRepository.save(item);
+        
+        log.info("Stock increased successfully for scrap item ID: {}", id);
+        return mapToResponse(updatedItem);
+    }
+    
+    @Override
+    @Transactional
+    public ScrapItemResponse decreaseStock(Long id, Integer quantity) {
+        log.info("Decreasing stock for scrap item ID: {} by quantity: {}", id, quantity);
+        
+        ScrapItem item = scrapItemRepository.findActiveById(id)
+            .orElseThrow(() -> new ScrapItemNotFoundException(id));
+        
+        if (item.getQuantity() < quantity) {
+            throw new InsufficientStockException(item.getItemCode(), quantity, item.getQuantity());
+        }
+        
+        item.setQuantity(item.getQuantity() - quantity);
+        ScrapItem updatedItem = scrapItemRepository.save(item);
+        
+        if (updatedItem.getQuantity() <= updatedItem.getMinimumThreshold()) {
+            log.warn("ALERT: Scrap item {} (ID: {}) stock is below minimum threshold. Current: {}, Threshold: {}", 
+                updatedItem.getItemCode(), id, updatedItem.getQuantity(), updatedItem.getMinimumThreshold());
+        }
+        
+        log.info("Stock decreased successfully for scrap item ID: {}", id);
+        return mapToResponse(updatedItem);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<ScrapItemResponse> getLowStockItems() {
+        log.info("Fetching low stock scrap items");
+        
+        return scrapItemRepository.findLowStockItems().stream()
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
+    }
+    
+    private ScrapItemResponse mapToResponse(ScrapItem item) {
+        ScrapItemResponse response = new ScrapItemResponse();
+        response.setId(item.getId());
+        response.setName(item.getName());
+        response.setItemCode(item.getItemCode());
+        response.setUnit(item.getUnit());
+        response.setQuantity(item.getQuantity());
+        response.setPrice(item.getPrice());
+        
+        BigDecimal perItemPrice = BigDecimal.ZERO;
+        if (item.getQuantity() != null && item.getQuantity() > 0 && item.getPrice() != null) {
+            perItemPrice = item.getPrice()
+                .divide(BigDecimal.valueOf(item.getQuantity()), 2, RoundingMode.HALF_UP);
+        }
+        response.setPerItemPrice(perItemPrice);
+        
+        response.setMinimumThreshold(item.getMinimumThreshold());
+        response.setActive(item.getActive());
+        response.setLowStock(item.getQuantity() <= item.getMinimumThreshold());
+        response.setCreatedAt(item.getCreatedAt());
+        response.setUpdatedAt(item.getUpdatedAt());
+        response.setVendorId(item.getVendorId());
+        response.setVendorName(item.getVendorName());
+        response.setTransportName(item.getTransportName());
+        response.setDriverName(item.getDriverName());
+        response.setDriverMobile(item.getDriverMobile());
+        return response;
+    }
+}

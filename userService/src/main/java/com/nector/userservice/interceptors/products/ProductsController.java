@@ -1,21 +1,19 @@
 package com.nector.userservice.interceptors.products;
 
 import com.nector.userservice.dto.inventory.StockUpdateRequest;
-import com.nector.userservice.enums.StatusUpdateRequest;
 import com.nector.userservice.interceptors.products.impl.UpdateMachinePart;
 import com.nector.userservice.interceptors.products.model.*;
 import com.nector.userservice.interceptors.products.service.FinishedProductService;
 import com.nector.userservice.interceptors.products.service.MachinePartService;
 import com.nector.userservice.interceptors.products.service.RawProductService;
+import com.nector.userservice.interceptors.products.service.PromotionalItemService;
+import com.nector.userservice.interceptors.products.service.ScrapItemService;
 import com.nector.userservice.model.MachinePart;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -32,17 +30,19 @@ import java.util.Map;
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Products", description = "APIs for product management including finished products, raw materials, and machine parts")
+@Tag(name = "Products", description = "APIs for product management including finished products, raw materials, machine parts, promotional items, and scrap items")
 public class ProductsController {
-    
+
     private final FinishedProductService finishedProductService;
     private final RawProductService rawProductService;
     private final MachinePartService machinePartService;
+    private final PromotionalItemService promotionalItemService;
+    private final ScrapItemService scrapItemService;
 
-    // === FINISHED PRODUCTS ===
+    // ==================== FINISHED PRODUCTS ====================
 
-    @PostMapping(value = "/finished-products-create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Create finished products", description = "Create finished products")
+    @PostMapping(value = "/finished-products", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Create finished product", description = "Creates a new finished product with optional image")
     public ResponseEntity<FinishedProductResponse> createFinishedProduct(
             @Parameter(description = "Finished product request",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE))
@@ -52,20 +52,8 @@ public class ProductsController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PutMapping(value = "/finished-products-update/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Update finished products", description = "Update finished products")
-    public ResponseEntity<FinishedProductResponse> updateFinishedProduct(
-            @PathVariable Long id,
-            @Parameter(description = "Finished product request",content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE))
-            @RequestPart("request") FinishedProductRequest request,
-            @RequestPart(value = "image", required = false) MultipartFile image) {
-
-        FinishedProductResponse response = finishedProductService.updateFinishedProduct(id, request, image);
-        return ResponseEntity.ok(response);
-    }
-
     @GetMapping("/finished-products")
-    @Operation(summary = "Get all finished products", description = "Retrieves all finished products")
+    @Operation(summary = "Get all finished products", description = "Retrieves all active finished products")
     public ResponseEntity<List<FinishedProductResponse>> getAllFinishedProducts() {
         List<FinishedProductResponse> response = finishedProductService.getAllActiveFinishedProducts();
         return ResponseEntity.ok(response);
@@ -84,7 +72,18 @@ public class ProductsController {
         FinishedProductResponse response = finishedProductService.getFinishedProductById(id);
         return ResponseEntity.ok(response);
     }
-    
+
+    @PutMapping(value = "/finished-products/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Update finished product", description = "Updates an existing finished product")
+    public ResponseEntity<FinishedProductResponse> updateFinishedProduct(
+            @PathVariable Long id,
+            @Parameter(description = "Finished product request",content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE))
+            @RequestPart("request") FinishedProductRequest request,
+            @RequestPart(value = "image", required = false) MultipartFile image) {
+        FinishedProductResponse response = finishedProductService.updateFinishedProduct(id, request, image);
+        return ResponseEntity.ok(response);
+    }
+
     @DeleteMapping("/finished-products/{id}")
     @Operation(summary = "Delete finished product", description = "Deletes a finished product")
     public ResponseEntity<Map<String, String>> deleteFinishedProduct(@PathVariable Long id) {
@@ -93,37 +92,58 @@ public class ProductsController {
         response.put("message", "Finished product deleted successfully");
         return ResponseEntity.ok(response);
     }
-    
-    // === RAW PRODUCTS ===
-    
+
+    @PostMapping("/finished-products/{id}/increase-stock")
+    @Operation(summary = "Increase finished product stock", description = "Increases stock for a finished product")
+    public ResponseEntity<FinishedProductResponse> increaseFinishedProductStock(@PathVariable Long id, @RequestBody StockUpdateRequest request) {
+        FinishedProductResponse response = finishedProductService.increaseStock(id, request.getQuantity());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/finished-products/{id}/decrease-stock")
+    @Operation(summary = "Decrease finished product stock", description = "Decreases stock for a finished product")
+    public ResponseEntity<FinishedProductResponse> decreaseFinishedProductStock(@PathVariable Long id, @RequestBody StockUpdateRequest request) {
+        FinishedProductResponse response = finishedProductService.decreaseStock(id, request.getQuantity());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/finished-products/low-stock")
+    @Operation(summary = "Get low stock finished products", description = "Retrieves finished products with low stock")
+    public ResponseEntity<List<FinishedProductResponse>> getLowStockFinishedProducts() {
+        List<FinishedProductResponse> response = finishedProductService.getLowStockItems();
+        return ResponseEntity.ok(response);
+    }
+
+    // ==================== RAW MATERIALS ====================
+
     @PostMapping("/raw-materials")
     @Operation(summary = "Create raw material", description = "Creates a new raw material")
-    public ResponseEntity<RawProductResponse> createRawProduct(@Valid @RequestBody RawProductRequest request) {
+    public ResponseEntity<RawProductResponse> createRawProduct(@RequestBody RawProductRequest request) {
         RawProductResponse response = rawProductService.createRawProduct(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
-    
+
     @GetMapping("/raw-materials")
     @Operation(summary = "Get all raw materials", description = "Retrieves all raw materials")
     public ResponseEntity<List<RawProductResponse>> getAllRawProducts() {
         List<RawProductResponse> response = rawProductService.getAllRawProducts();
         return ResponseEntity.ok(response);
     }
-    
+
     @GetMapping("/raw-materials/{id}")
     @Operation(summary = "Get raw material by ID", description = "Retrieves a raw material by its ID")
     public ResponseEntity<RawProductResponse> getRawProductById(@PathVariable Long id) {
         RawProductResponse response = rawProductService.getRawProductById(id);
         return ResponseEntity.ok(response);
     }
-    
+
     @PutMapping("/raw-materials/{id}")
     @Operation(summary = "Update raw material", description = "Updates an existing raw material")
-    public ResponseEntity<RawProductResponse> updateRawProduct(@PathVariable Long id, @Valid @RequestBody RawProductRequest request) {
+    public ResponseEntity<RawProductResponse> updateRawProduct(@PathVariable Long id, @RequestBody RawProductRequest request) {
         RawProductResponse response = rawProductService.updateRawProduct(id, request);
         return ResponseEntity.ok(response);
     }
-    
+
     @DeleteMapping("/raw-materials/{id}")
     @Operation(summary = "Delete raw material", description = "Deletes a raw material")
     public ResponseEntity<Map<String, String>> deleteRawProduct(@PathVariable Long id) {
@@ -132,37 +152,58 @@ public class ProductsController {
         response.put("message", "Raw product deleted successfully");
         return ResponseEntity.ok(response);
     }
-    
-    // === MACHINE PARTS ===
-    
+
+    @PostMapping("/raw-materials/{id}/increase-stock")
+    @Operation(summary = "Increase raw material stock", description = "Increases stock for a raw material")
+    public ResponseEntity<RawProductResponse> increaseRawProductStock(@PathVariable Long id, @RequestBody StockUpdateRequest request) {
+        RawProductResponse response = rawProductService.increaseStock(id, request.getQuantity());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/raw-materials/{id}/decrease-stock")
+    @Operation(summary = "Decrease raw material stock", description = "Decreases stock for a raw material")
+    public ResponseEntity<RawProductResponse> decreaseRawProductStock(@PathVariable Long id, @RequestBody StockUpdateRequest request) {
+        RawProductResponse response = rawProductService.decreaseStock(id, request.getQuantity());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/raw-materials/low-stock")
+    @Operation(summary = "Get low stock raw materials", description = "Retrieves raw materials with low stock")
+    public ResponseEntity<List<RawProductResponse>> getLowStockRawProducts() {
+        List<RawProductResponse> response = rawProductService.getLowStockItems();
+        return ResponseEntity.ok(response);
+    }
+
+    // ==================== MACHINE PARTS ====================
+
     @PostMapping("/machine-parts")
     @Operation(summary = "Create machine part", description = "Creates a new machine part")
-    public ResponseEntity<MachinePartResponse> createMachinePart(@Valid @RequestBody MachinePartRequest request) {
+    public ResponseEntity<MachinePartResponse> createMachinePart(@RequestBody MachinePartRequest request) {
         MachinePartResponse response = machinePartService.createMachinePart(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
-    
+
     @GetMapping("/machine-parts")
     @Operation(summary = "Get all machine parts", description = "Retrieves all machine parts")
     public ResponseEntity<List<MachinePartResponse>> getAllMachineParts() {
         List<MachinePartResponse> response = machinePartService.getAllMachineParts();
         return ResponseEntity.ok(response);
     }
-    
+
     @GetMapping("/machine-parts/{id}")
     @Operation(summary = "Get machine part by ID", description = "Retrieves a machine part by its ID")
     public ResponseEntity<MachinePartResponse> getMachinePartById(@PathVariable Long id) {
         MachinePartResponse response = machinePartService.getMachinePartById(id);
         return ResponseEntity.ok(response);
     }
-    
+
     @PutMapping("/machine-parts/{id}")
     @Operation(summary = "Update machine part", description = "Updates an existing machine part")
-    public ResponseEntity<MachinePartResponse> updateMachinePart(@PathVariable Long id, @Valid @RequestBody UpdateMachinePart request) {
+    public ResponseEntity<MachinePartResponse> updateMachinePart(@PathVariable Long id, @RequestBody UpdateMachinePart request) {
         MachinePartResponse response = machinePartService.updateMachinePart(id, request);
         return ResponseEntity.ok(response);
     }
-    
+
     @DeleteMapping("/machine-parts/{id}")
     @Operation(summary = "Delete machine part", description = "Deletes a machine part")
     public ResponseEntity<Map<String, String>> deleteMachinePart(@PathVariable Long id) {
@@ -171,96 +212,167 @@ public class ProductsController {
         response.put("message", "Machine part deleted successfully");
         return ResponseEntity.ok(response);
     }
-    
-    // === STOCK OPERATIONS ===
-    
-    @PostMapping("/finished-products/{id}/increase-stock")
-    @Operation(summary = "Increase finished product stock", description = "Increases stock for a finished product")
-    public ResponseEntity<FinishedProductResponse> increaseFinishedProductStock(@PathVariable Long id, @Valid @RequestBody StockUpdateRequest request) {
-        FinishedProductResponse response = finishedProductService.increaseStock(id, request.getQuantity());
-        return ResponseEntity.ok(response);
-    }
-    
-    @PostMapping("/finished-products/{id}/decrease-stock")
-    @Operation(summary = "Decrease finished product stock", description = "Decreases stock for a finished product")
-    public ResponseEntity<FinishedProductResponse> decreaseFinishedProductStock(@PathVariable Long id, @Valid @RequestBody StockUpdateRequest request) {
-        FinishedProductResponse response = finishedProductService.decreaseStock(id, request.getQuantity());
-        return ResponseEntity.ok(response);
-    }
-    
-    @PostMapping("/raw-materials/{id}/increase-stock")
-    @Operation(summary = "Increase raw material stock", description = "Increases stock for a raw material")
-    public ResponseEntity<RawProductResponse> increaseRawProductStock(@PathVariable Long id, @Valid @RequestBody StockUpdateRequest request) {
-        RawProductResponse response = rawProductService.increaseStock(id, request.getQuantity());
-        return ResponseEntity.ok(response);
-    }
-    
-    @PostMapping("/raw-materials/{id}/decrease-stock")
-    @Operation(summary = "Decrease raw material stock", description = "Decreases stock for a raw material")
-    public ResponseEntity<RawProductResponse> decreaseRawProductStock(@PathVariable Long id, @Valid @RequestBody StockUpdateRequest request) {
-        RawProductResponse response = rawProductService.decreaseStock(id, request.getQuantity());
-        return ResponseEntity.ok(response);
-    }
-    
-    // === UTILITY ENDPOINTS ===
-    
-    @GetMapping("/finished-products/low-stock")
-    @Operation(summary = "Get low stock finished products", description = "Retrieves finished products with low stock")
-    public ResponseEntity<List<FinishedProductResponse>> getLowStockFinishedProducts() {
-        List<FinishedProductResponse> response = finishedProductService.getLowStockItems();
-        return ResponseEntity.ok(response);
-    }
-    
-    @GetMapping("/raw-materials/low-stock")
-    @Operation(summary = "Get low stock raw materials", description = "Retrieves raw materials with low stock")
-    public ResponseEntity<List<RawProductResponse>> getLowStockRawProducts() {
-        List<RawProductResponse> response = rawProductService.getLowStockItems();
-        return ResponseEntity.ok(response);
-    }
-    
+
     @GetMapping("/machine-parts/category/{category}")
     @Operation(summary = "Get machine parts by category", description = "Retrieves machine parts by category")
     public ResponseEntity<List<MachinePartResponse>> getMachinePartsByCategory(@PathVariable MachinePart.Category category) {
         List<MachinePartResponse> response = machinePartService.getMachinePartsByCategory(category);
         return ResponseEntity.ok(response);
     }
-    
+
     @GetMapping("/machine-parts/condition/{condition}")
     @Operation(summary = "Get machine parts by condition", description = "Retrieves machine parts by condition")
     public ResponseEntity<List<MachinePartResponse>> getMachinePartsByCondition(@PathVariable MachinePart.Condition condition) {
         List<MachinePartResponse> response = machinePartService.getMachinePartsByCondition(condition);
         return ResponseEntity.ok(response);
     }
-    
+
     @PutMapping("/machine-parts/{id}/quantity")
     @Operation(summary = "Update machine part quantity", description = "Updates the quantity of a machine part")
-    public ResponseEntity<MachinePartResponse> updateMachinePartQuantity(@PathVariable Long id, @RequestBody @Valid QuantityUpdateRequest request) {
+    public ResponseEntity<MachinePartResponse> updateMachinePartQuantity(@PathVariable Long id, @RequestBody QuantityUpdateRequest request) {
         MachinePartResponse response = machinePartService.updateQuantity(id, request.getQuantity());
         return ResponseEntity.ok(response);
     }
-    
+
     @PutMapping("/machine-parts/{id}/condition")
     @Operation(summary = "Update machine part condition", description = "Updates the condition of a machine part")
-    public ResponseEntity<MachinePartResponse> updateMachinePartCondition(@PathVariable Long id, @RequestBody @Valid ConditionUpdateRequest request) {
+    public ResponseEntity<MachinePartResponse> updateMachinePartCondition(@PathVariable Long id, @RequestBody ConditionUpdateRequest request) {
         MachinePartResponse response = machinePartService.updateCondition(id, request.getCondition());
         return ResponseEntity.ok(response);
     }
-    
-    // === INNER CLASSES ===
-    
+
+    // ==================== PROMOTIONAL ITEMS ====================
+
+    @PostMapping("/promotional-items")
+    @Operation(summary = "Create promotional item", description = "Creates a new promotional item")
+    public ResponseEntity<PromotionalItemResponse> createPromotionalItem(@RequestBody PromotionalItemRequest request) {
+        PromotionalItemResponse response = promotionalItemService.createPromotionalItem(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/promotional-items")
+    @Operation(summary = "Get all promotional items", description = "Retrieves all promotional items")
+    public ResponseEntity<List<PromotionalItemResponse>> getAllPromotionalItems() {
+        List<PromotionalItemResponse> response = promotionalItemService.getAllPromotionalItems();
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/promotional-items/{id}")
+    @Operation(summary = "Get promotional item by ID", description = "Retrieves a promotional item by its ID")
+    public ResponseEntity<PromotionalItemResponse> getPromotionalItemById(@PathVariable Long id) {
+        PromotionalItemResponse response = promotionalItemService.getPromotionalItemById(id);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/promotional-items/{id}")
+    @Operation(summary = "Update promotional item", description = "Updates an existing promotional item")
+    public ResponseEntity<PromotionalItemResponse> updatePromotionalItem(@PathVariable Long id, @RequestBody PromotionalItemRequest request) {
+        PromotionalItemResponse response = promotionalItemService.updatePromotionalItem(id, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/promotional-items/{id}")
+    @Operation(summary = "Delete promotional item", description = "Deletes a promotional item")
+    public ResponseEntity<Map<String, String>> deletePromotionalItem(@PathVariable Long id) {
+        promotionalItemService.deletePromotionalItem(id);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Promotional item deleted successfully");
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/promotional-items/{id}/increase-stock")
+    @Operation(summary = "Increase promotional item stock", description = "Increases stock for a promotional item")
+    public ResponseEntity<PromotionalItemResponse> increasePromotionalItemStock(@PathVariable Long id, @RequestBody StockUpdateRequest request) {
+        PromotionalItemResponse response = promotionalItemService.increaseStock(id, request.getQuantity());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/promotional-items/{id}/decrease-stock")
+    @Operation(summary = "Decrease promotional item stock", description = "Decreases stock for a promotional item")
+    public ResponseEntity<PromotionalItemResponse> decreasePromotionalItemStock(@PathVariable Long id, @RequestBody StockUpdateRequest request) {
+        PromotionalItemResponse response = promotionalItemService.decreaseStock(id, request.getQuantity());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/promotional-items/low-stock")
+    @Operation(summary = "Get low stock promotional items", description = "Retrieves promotional items with low stock")
+    public ResponseEntity<List<PromotionalItemResponse>> getLowStockPromotionalItems() {
+        List<PromotionalItemResponse> response = promotionalItemService.getLowStockItems();
+        return ResponseEntity.ok(response);
+    }
+
+    // ==================== SCRAP ITEMS ====================
+
+    @PostMapping("/scrap-items")
+    @Operation(summary = "Create scrap item", description = "Creates a new scrap item")
+    public ResponseEntity<ScrapItemResponse> createScrapItem(@RequestBody ScrapItemRequest request) {
+        ScrapItemResponse response = scrapItemService.createScrapItem(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/scrap-items")
+    @Operation(summary = "Get all scrap items", description = "Retrieves all scrap items")
+    public ResponseEntity<List<ScrapItemResponse>> getAllScrapItems() {
+        List<ScrapItemResponse> response = scrapItemService.getAllScrapItems();
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/scrap-items/{id}")
+    @Operation(summary = "Get scrap item by ID", description = "Retrieves a scrap item by its ID")
+    public ResponseEntity<ScrapItemResponse> getScrapItemById(@PathVariable Long id) {
+        ScrapItemResponse response = scrapItemService.getScrapItemById(id);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/scrap-items/{id}")
+    @Operation(summary = "Update scrap item", description = "Updates an existing scrap item")
+    public ResponseEntity<ScrapItemResponse> updateScrapItem(@PathVariable Long id, @RequestBody ScrapItemRequest request) {
+        ScrapItemResponse response = scrapItemService.updateScrapItem(id, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/scrap-items/{id}")
+    @Operation(summary = "Delete scrap item", description = "Deletes a scrap item")
+    public ResponseEntity<Map<String, String>> deleteScrapItem(@PathVariable Long id) {
+        scrapItemService.deleteScrapItem(id);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Scrap item deleted successfully");
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/scrap-items/{id}/increase-stock")
+    @Operation(summary = "Increase scrap item stock", description = "Increases stock for a scrap item")
+    public ResponseEntity<ScrapItemResponse> increaseScrapItemStock(@PathVariable Long id, @RequestBody StockUpdateRequest request) {
+        ScrapItemResponse response = scrapItemService.increaseStock(id, request.getQuantity());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/scrap-items/{id}/decrease-stock")
+    @Operation(summary = "Decrease scrap item stock", description = "Decreases stock for a scrap item")
+    public ResponseEntity<ScrapItemResponse> decreaseScrapItemStock(@PathVariable Long id, @RequestBody StockUpdateRequest request) {
+        ScrapItemResponse response = scrapItemService.decreaseStock(id, request.getQuantity());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/scrap-items/low-stock")
+    @Operation(summary = "Get low stock scrap items", description = "Retrieves scrap items with low stock")
+    public ResponseEntity<List<ScrapItemResponse>> getLowStockScrapItems() {
+        List<ScrapItemResponse> response = scrapItemService.getLowStockItems();
+        return ResponseEntity.ok(response);
+    }
+
+    // ==================== INNER CLASSES ====================
+
     public static class QuantityUpdateRequest {
-        @NotNull(message = "Quantity is required")
-        @Min(value = 0, message = "Quantity must be non-negative")
         private Integer quantity;
-        
+
         public Integer getQuantity() { return quantity; }
         public void setQuantity(Integer quantity) { this.quantity = quantity; }
     }
-    
+
     public static class ConditionUpdateRequest {
-        @NotNull(message = "Condition is required")
         private MachinePart.Condition condition;
-        
+
         public MachinePart.Condition getCondition() { return condition; }
         public void setCondition(MachinePart.Condition condition) { this.condition = condition; }
     }

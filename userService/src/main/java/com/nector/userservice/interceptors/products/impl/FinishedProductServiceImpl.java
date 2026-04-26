@@ -32,10 +32,11 @@ public class FinishedProductServiceImpl implements FinishedProductService {
     @Override
     @Transactional
     @Operation(summary = "Create finished product", description = "Creates a new finished product")
-    public FinishedProductResponse createFinishedProduct(FinishedProductRequest request,MultipartFile image) {
+    public FinishedProductResponse createFinishedProduct(FinishedProductRequest request, MultipartFile image) {
         log.info("Creating finished product with SKU: {}", request.getSku());
         
-        if (finishedProductRepository.existsBySku(request.getSku())) {
+        // Null-safe check for SKU
+        if (request.getSku() != null && finishedProductRepository.existsBySku(request.getSku())) {
             throw new DataIntegrityViolationException("Finished product with SKU " + request.getSku() + " already exists");
         }
         
@@ -46,7 +47,7 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         product.setUnit(request.getUnit());
         product.setWeight(request.getWeight());
         product.setPrice(request.getPrice());
-        product.setQuantity(request.getQuantity());
+        product.setQuantity(request.getQuantity() != null ? request.getQuantity() : 0);
         product.setMinimumThreshold(request.getMinimumThreshold());
         product.setActive(true);
 
@@ -73,14 +74,15 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         FinishedProduct product = finishedProductRepository.findById(id)
             .orElseThrow(() -> new FinishedProductNotFoundException(id));
         
-        product.setName(request.getName());
-        product.setDescription(request.getDescription());
-        product.setSku(request.getSku());
-        product.setUnit(request.getUnit());
-        product.setWeight(request.getWeight());
-        product.setPrice(request.getPrice());
-        product.setQuantity(request.getQuantity());
-        product.setMinimumThreshold(request.getMinimumThreshold());
+        // Only update fields if they are provided (not null)
+        if (request.getName() != null) product.setName(request.getName());
+        if (request.getDescription() != null) product.setDescription(request.getDescription());
+        if (request.getSku() != null) product.setSku(request.getSku());
+        if (request.getUnit() != null) product.setUnit(request.getUnit());
+        if (request.getWeight() != null) product.setWeight(request.getWeight());
+        if (request.getPrice() != null) product.setPrice(request.getPrice());
+        if (request.getQuantity() != null) product.setQuantity(request.getQuantity());
+        if (request.getMinimumThreshold() != null) product.setMinimumThreshold(request.getMinimumThreshold());
         
         // Update status if provided in request
         if (request.getActive() != null) {
@@ -143,10 +145,15 @@ public class FinishedProductServiceImpl implements FinishedProductService {
     public FinishedProductResponse increaseStock(Long id, Integer quantity) {
         log.info("Increasing stock for finished product ID: {} by quantity: {}", id, quantity);
         
+        if (quantity == null || quantity < 0) {
+            throw new IllegalArgumentException("Quantity must be a non-negative number");
+        }
+        
         FinishedProduct product = finishedProductRepository.findActiveById(id)
             .orElseThrow(() -> new FinishedProductNotFoundException(id));
         
-        product.setQuantity(product.getQuantity() + quantity);
+        int currentQty = product.getQuantity() != null ? product.getQuantity() : 0;
+        product.setQuantity(currentQty + quantity);
         FinishedProduct updatedProduct = finishedProductRepository.save(product);
         
         log.info("Stock increased successfully for finished product ID: {}", id);
@@ -158,14 +165,19 @@ public class FinishedProductServiceImpl implements FinishedProductService {
     public FinishedProductResponse decreaseStock(Long id, Integer quantity) {
         log.info("Decreasing stock for finished product ID: {} by quantity: {}", id, quantity);
         
+        if (quantity == null || quantity < 0) {
+            throw new IllegalArgumentException("Quantity must be a non-negative number");
+        }
+        
         FinishedProduct product = finishedProductRepository.findActiveById(id)
             .orElseThrow(() -> new FinishedProductNotFoundException(id));
         
-        if (product.getQuantity() < quantity) {
-            throw new InsufficientStockException(product.getSku(), quantity, product.getQuantity());
+        int currentQty = product.getQuantity() != null ? product.getQuantity() : 0;
+        if (currentQty < quantity) {
+            throw new InsufficientStockException(product.getSku(), quantity, currentQty);
         }
         
-        product.setQuantity(product.getQuantity() - quantity);
+        product.setQuantity(currentQty - quantity);
         FinishedProduct updatedProduct = finishedProductRepository.save(product);
         
         if (updatedProduct.getQuantity() <= (updatedProduct.getMinimumThreshold() != null ? updatedProduct.getMinimumThreshold() : 0)) {

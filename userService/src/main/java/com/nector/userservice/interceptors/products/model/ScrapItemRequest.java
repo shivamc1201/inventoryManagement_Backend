@@ -1,23 +1,23 @@
 package com.nector.userservice.interceptors.products.model;
 
-import com.nector.userservice.model.RawProduct;
+import com.nector.userservice.model.ScrapItem;
 import lombok.Data;
 
 import java.math.BigDecimal;
 
 @Data
-public class RawProductRequest {
-
+public class ScrapItemRequest {
+    
     private String name;
-
-    private String materialCode;
-
-    private RawProduct.Unit unit;
-
+    
+    private String itemCode;
+    
+    private ScrapItem.Unit unit;
+    
     private BigDecimal price;
-
+    
     private Integer quantity;
-
+    
     private Integer minimumThreshold;
 
     private String vendorId;

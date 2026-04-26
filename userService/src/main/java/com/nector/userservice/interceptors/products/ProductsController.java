@@ -41,10 +41,19 @@ public class ProductsController {
 
     // ==================== FINISHED PRODUCTS ====================
 
+    // JSON endpoint - Swagger and web without image
+    @PostMapping(value = "/finished-products", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Create finished product (JSON)", description = "Creates a new finished product with JSON payload. Use this for requests without image.")
+    public ResponseEntity<FinishedProductResponse> createFinishedProductJson(@RequestBody FinishedProductRequest request) {
+        FinishedProductResponse response = finishedProductService.createFinishedProduct(request, null);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    // Multipart endpoint - Web with optional image
     @PostMapping(value = "/finished-products", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Create finished product", description = "Creates a new finished product with optional image")
-    public ResponseEntity<FinishedProductResponse> createFinishedProduct(
-            @Parameter(description = "Finished product request",
+    @Operation(summary = "Create finished product (Multipart)", description = "Creates a new finished product with optional image. Use this for requests with image upload.")
+    public ResponseEntity<FinishedProductResponse> createFinishedProductMultipart(
+            @Parameter(description = "Finished product request JSON",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE))
             @RequestPart("request") FinishedProductRequest request,
             @RequestPart(value = "image", required = false) MultipartFile image) {
@@ -73,11 +82,21 @@ public class ProductsController {
         return ResponseEntity.ok(response);
     }
 
+    // JSON endpoint - Swagger and web without image
+    @PutMapping(value = "/finished-products/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Update finished product (JSON)", description = "Updates a finished product with JSON payload. Use this for requests without image.")
+    public ResponseEntity<FinishedProductResponse> updateFinishedProductJson(@PathVariable Long id, @RequestBody FinishedProductRequest request) {
+        FinishedProductResponse response = finishedProductService.updateFinishedProduct(id, request, null);
+        return ResponseEntity.ok(response);
+    }
+
+    // Multipart endpoint - Web with optional image
     @PutMapping(value = "/finished-products/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Update finished product", description = "Updates an existing finished product")
-    public ResponseEntity<FinishedProductResponse> updateFinishedProduct(
+    @Operation(summary = "Update finished product (Multipart)", description = "Updates a finished product with optional image. Use this for requests with image upload.")
+    public ResponseEntity<FinishedProductResponse> updateFinishedProductMultipart(
             @PathVariable Long id,
-            @Parameter(description = "Finished product request",content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE))
+            @Parameter(description = "Finished product request JSON",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE))
             @RequestPart("request") FinishedProductRequest request,
             @RequestPart(value = "image", required = false) MultipartFile image) {
         FinishedProductResponse response = finishedProductService.updateFinishedProduct(id, request, image);

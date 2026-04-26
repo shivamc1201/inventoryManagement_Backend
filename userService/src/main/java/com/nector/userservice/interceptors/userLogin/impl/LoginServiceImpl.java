@@ -242,14 +242,18 @@ public class LoginServiceImpl implements LoginService {
             log.info("[DEBUG] Querying role_feature_permissions by userId (used as role_id): {}", userIdAsRoleId);
             List<RoleFeaturePermission> permissions = roleFeaturePermissionRepository.findByRoleId(userIdAsRoleId);
             log.info("[DEBUG] Found {} permissions for userId: {}", permissions.size(), userIdAsRoleId);
-            permissions.forEach(p -> log.info("[DEBUG] Permission: feature={}, roleId={}", p.getFeature(), p.getRoleId()));
             
+            // Filter to only include features where at least one of create/read/update is true
+            // Ignore features that only have delete permission
             permissions.stream()
+                    .filter(p -> Boolean.TRUE.equals(p.getCanCreate()) || 
+                                 Boolean.TRUE.equals(p.getCanRead()) || 
+                                 Boolean.TRUE.equals(p.getCanUpdate()))
                     .map(RoleFeaturePermission::getFeature)
                     .filter(Objects::nonNull)
                     .forEach(features::add);
             
-            log.info("[DEBUG] Total features found: {}", features.size());
+            log.info("[DEBUG] Total features with at least one permission: {}", features.size());
         }
 
         List<Object> featureDetails = features.stream()
@@ -422,6 +426,7 @@ public class LoginServiceImpl implements LoginService {
     /**
      * Get user permissions based on userId - queries role_feature_permissions table
      * Note: Database stores userId as role_id
+     * Only returns permissions where at least one CRUD operation is allowed
      */
     private List<FeaturePermissionDTO> getUserPermissions(User user) {
         Integer userIdAsRoleId = user.getId().intValue();
@@ -429,6 +434,9 @@ public class LoginServiceImpl implements LoginService {
         
         return roleFeaturePermissionRepository.findByRoleId(userIdAsRoleId)
                 .stream()
+                .filter(perm -> Boolean.TRUE.equals(perm.getCanCreate()) || 
+                               Boolean.TRUE.equals(perm.getCanRead()) || 
+                               Boolean.TRUE.equals(perm.getCanUpdate()))
                 .map(perm -> new FeaturePermissionDTO(
                         perm.getRoleId(),
                         perm.getFeatureId(),

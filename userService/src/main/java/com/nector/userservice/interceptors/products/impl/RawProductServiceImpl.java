@@ -122,7 +122,8 @@ public class RawProductServiceImpl implements RawProductService {
         RawProduct product = rawProductRepository.findActiveById(id)
             .orElseThrow(() -> new RawProductNotFoundException(id));
         
-        product.setQuantity(product.getQuantity() + quantity);
+        int currentQty = product.getQuantity() != null ? product.getQuantity() : 0;
+        product.setQuantity(currentQty + quantity);
         RawProduct updatedProduct = rawProductRepository.save(product);
         
         log.info("Stock increased successfully for raw product ID: {}", id);
@@ -137,14 +138,17 @@ public class RawProductServiceImpl implements RawProductService {
         RawProduct product = rawProductRepository.findActiveById(id)
             .orElseThrow(() -> new RawProductNotFoundException(id));
         
-        if (product.getQuantity() < quantity) {
-            throw new InsufficientStockException(product.getMaterialCode(), quantity, product.getQuantity());
+        int currentQty = product.getQuantity() != null ? product.getQuantity() : 0;
+        if (currentQty < quantity) {
+            throw new InsufficientStockException(product.getMaterialCode(), quantity, currentQty);
         }
         
-        product.setQuantity(product.getQuantity() - quantity);
+        product.setQuantity(currentQty - quantity);
         RawProduct updatedProduct = rawProductRepository.save(product);
         
-        if (updatedProduct.getQuantity() <= updatedProduct.getMinimumThreshold()) {
+        int updatedQty = updatedProduct.getQuantity() != null ? updatedProduct.getQuantity() : 0;
+        int threshold = updatedProduct.getMinimumThreshold() != null ? updatedProduct.getMinimumThreshold() : 0;
+        if (updatedQty <= threshold) {
             log.warn("ALERT: Raw product {} (ID: {}) stock is below minimum threshold. Current: {}, Threshold: {}", 
                 updatedProduct.getMaterialCode(), id, updatedProduct.getQuantity(), updatedProduct.getMinimumThreshold());
         }
@@ -182,7 +186,9 @@ public class RawProductServiceImpl implements RawProductService {
         
         response.setMinimumThreshold(product.getMinimumThreshold());
         response.setActive(product.getActive());
-        response.setLowStock(product.getQuantity() <= product.getMinimumThreshold());
+        int qty = product.getQuantity() != null ? product.getQuantity() : 0;
+        int minThreshold = product.getMinimumThreshold() != null ? product.getMinimumThreshold() : 0;
+        response.setLowStock(qty <= minThreshold);
         response.setCreatedAt(product.getCreatedAt());
         response.setUpdatedAt(product.getUpdatedAt());
         response.setVendorId(product.getVendorId());

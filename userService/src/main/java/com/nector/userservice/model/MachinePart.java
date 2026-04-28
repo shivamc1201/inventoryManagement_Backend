@@ -25,14 +25,14 @@ public class MachinePart {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(nullable = false)
+    @Column
     private String name;
     
-    @Column(unique = true, nullable = false)
+    @Column(unique = true)
     private String partNumber;
     
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column
     private Category category;
     
     private String vendor;
@@ -41,14 +41,14 @@ public class MachinePart {
     
     private LocalDate warrantyExpiryDate;
     
-    @Column(nullable = false)
+    @Column
     private Integer quantity = 0;
     
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column
     private Condition condition = Condition.NEW;
     
-    @Column(nullable = false)
+    @Column
     private Boolean active = true;
     
     @CreationTimestamp

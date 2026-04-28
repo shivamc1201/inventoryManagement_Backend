@@ -24,14 +24,14 @@ public class PromotionalItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(nullable = false)
+    @Column
     private String name;
     
-    @Column(unique = true, nullable = false)
+    @Column(unique = true)
     private String itemCode;
     
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column
     private Unit unit;
     
     @Column(length = 50)
@@ -52,16 +52,16 @@ public class PromotionalItem {
     @Column(length = 20)
     private String unitStatus;
     
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(precision = 10, scale = 2)
     private BigDecimal price;
     
-    @Column(nullable = false)
+    @Column
     private Integer quantity;
     
-    @Column(nullable = false)
+    @Column
     private Integer minimumThreshold;
     
-    @Column(nullable = false, columnDefinition = "boolean default true")
+    @Column(columnDefinition = "boolean default true")
     private Boolean active = true;
     
     @CreationTimestamp

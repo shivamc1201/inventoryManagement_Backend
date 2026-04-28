@@ -25,16 +25,16 @@ public class FinishedProduct {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(nullable = false)
+    @Column
     private String name;
     
     private String description;
     
-    @Column(unique = true, nullable = false)
+    @Column(unique = true)
     private String sku;
     
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column
     private Unit unit;
     
     @Column(precision = 10, scale = 3)
@@ -58,16 +58,16 @@ public class FinishedProduct {
     @Column(length = 20)
     private String unitStatus;
     
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(precision = 10, scale = 2)
     private BigDecimal price;
     
-    @Column(nullable = false)
+    @Column
     private Integer quantity;
     
-    @Column(nullable = false, name = "minimum_threshold")
+    @Column(name = "minimum_threshold")
     private Integer minimumThreshold;
     
-    @Column(nullable = false, columnDefinition = "boolean default true")
+    @Column(columnDefinition = "boolean default true")
     private Boolean active = true;
     
     @CreationTimestamp

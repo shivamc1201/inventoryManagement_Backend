@@ -223,7 +223,8 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         response.setImageUrl(product.getImageUrl());
         
         Integer threshold = product.getMinimumThreshold() != null ? product.getMinimumThreshold() : 0;
-        response.setLowStock(product.getQuantity() <= threshold);
+        int qty = product.getQuantity() != null ? product.getQuantity() : 0;
+        response.setLowStock(qty <= threshold);
         
         response.setCreatedAt(product.getCreatedAt());
         response.setUpdatedAt(product.getUpdatedAt());

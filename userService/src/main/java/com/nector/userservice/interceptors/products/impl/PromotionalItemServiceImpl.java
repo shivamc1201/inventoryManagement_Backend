@@ -122,7 +122,8 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
         PromotionalItem item = promotionalItemRepository.findActiveById(id)
             .orElseThrow(() -> new PromotionalItemNotFoundException(id));
         
-        item.setQuantity(item.getQuantity() + quantity);
+        int currentQty = item.getQuantity() != null ? item.getQuantity() : 0;
+        item.setQuantity(currentQty + quantity);
         PromotionalItem updatedItem = promotionalItemRepository.save(item);
         
         log.info("Stock increased successfully for promotional item ID: {}", id);
@@ -137,14 +138,17 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
         PromotionalItem item = promotionalItemRepository.findActiveById(id)
             .orElseThrow(() -> new PromotionalItemNotFoundException(id));
         
-        if (item.getQuantity() < quantity) {
-            throw new InsufficientStockException(item.getItemCode(), quantity, item.getQuantity());
+        int currentQty = item.getQuantity() != null ? item.getQuantity() : 0;
+        if (currentQty < quantity) {
+            throw new InsufficientStockException(item.getItemCode(), quantity, currentQty);
         }
         
-        item.setQuantity(item.getQuantity() - quantity);
+        item.setQuantity(currentQty - quantity);
         PromotionalItem updatedItem = promotionalItemRepository.save(item);
         
-        if (updatedItem.getQuantity() <= updatedItem.getMinimumThreshold()) {
+        int updatedQty = updatedItem.getQuantity() != null ? updatedItem.getQuantity() : 0;
+        int threshold = updatedItem.getMinimumThreshold() != null ? updatedItem.getMinimumThreshold() : 0;
+        if (updatedQty <= threshold) {
             log.warn("ALERT: Promotional item {} (ID: {}) stock is below minimum threshold. Current: {}, Threshold: {}", 
                 updatedItem.getItemCode(), id, updatedItem.getQuantity(), updatedItem.getMinimumThreshold());
         }
@@ -181,7 +185,9 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
         
         response.setMinimumThreshold(item.getMinimumThreshold());
         response.setActive(item.getActive());
-        response.setLowStock(item.getQuantity() <= item.getMinimumThreshold());
+        int qty = item.getQuantity() != null ? item.getQuantity() : 0;
+        int minThreshold = item.getMinimumThreshold() != null ? item.getMinimumThreshold() : 0;
+        response.setLowStock(qty <= minThreshold);
         response.setCreatedAt(item.getCreatedAt());
         response.setUpdatedAt(item.getUpdatedAt());
         response.setVendorId(item.getVendorId());

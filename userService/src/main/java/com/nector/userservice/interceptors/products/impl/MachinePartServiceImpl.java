@@ -53,7 +53,7 @@ public class MachinePartServiceImpl implements MachinePartService {
         log.info("Updating machine part with ID: {}", id);
 
         MachinePart part = machinePartRepository.findById(id)
-                .filter(MachinePart::getActive)
+                .filter(p -> Boolean.TRUE.equals(p.getActive()))
                 .orElseThrow(() -> new MachinePartNotFoundException(id));
 
         part.setName(request.getName());
@@ -111,7 +111,7 @@ public class MachinePartServiceImpl implements MachinePartService {
         log.info("Fetching machine parts by category: {}", category);
         
         return machinePartRepository.findByCategory(category).stream()
-            .filter(MachinePart::getActive)
+            .filter(p -> Boolean.TRUE.equals(p.getActive()))
             .map(this::mapToResponse)
             .collect(Collectors.toList());
     }
@@ -122,7 +122,7 @@ public class MachinePartServiceImpl implements MachinePartService {
         log.info("Fetching machine parts by condition: {}", condition);
         
         return machinePartRepository.findByCondition(condition).stream()
-            .filter(MachinePart::getActive)
+            .filter(p -> Boolean.TRUE.equals(p.getActive()))
             .map(this::mapToResponse)
             .collect(Collectors.toList());
     }
@@ -133,7 +133,7 @@ public class MachinePartServiceImpl implements MachinePartService {
         log.info("Updating quantity for machine part ID: {} to quantity: {}", id, quantity);
         
         MachinePart part = machinePartRepository.findById(id)
-                .filter(MachinePart::getActive)
+                .filter(p -> Boolean.TRUE.equals(p.getActive()))
                 .orElseThrow(() -> new MachinePartNotFoundException(id));
         
         part.setQuantity(quantity);
@@ -149,7 +149,7 @@ public class MachinePartServiceImpl implements MachinePartService {
         log.info("Updating condition for machine part ID: {} to condition: {}", id, condition);
         
         MachinePart part = machinePartRepository.findById(id)
-                .filter(MachinePart::getActive)
+                .filter(p -> Boolean.TRUE.equals(p.getActive()))
                 .orElseThrow(() -> new MachinePartNotFoundException(id));
         
         part.setCondition(condition);

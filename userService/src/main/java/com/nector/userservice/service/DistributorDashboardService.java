@@ -30,7 +30,7 @@ public class DistributorDashboardService {
         BigDecimal totalAmount;
 
         if (distributorId != null) {
-            // Filter by specific distributor - only count GDN_GENERATED orders for this distributor
+            // Filter by specific distributor - only count GDN_GENERATED orders within the period
             totalOrders = orderRepository.countOrdersByDistributorAndStatus(distributorId, OrderStatus.GDN_GENERATED);
             totalAmount = orderRepository.getTotalAmountByDistributorAndStatus(distributorId, OrderStatus.GDN_GENERATED);
         } else {

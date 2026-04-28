@@ -11,8 +11,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-import static com.nector.userservice.enums.OrderStatus.GDN_GENERATED;
-
 @Repository
 public interface OrderRepository extends JpaRepository<OrderWithSalesPerson, Long> {
 
@@ -29,35 +27,52 @@ public interface OrderRepository extends JpaRepository<OrderWithSalesPerson, Lon
     List<OrderWithSalesPerson> findByDistributorIdAndCreatedAtBetween(Long distributorId, LocalDate dateFrom, LocalDate dateTo);
 
     // Volume analytics methods - only count GDN_GENERATED orders
-    @Query("SELECT COUNT(o) FROM OrderWithSalesPerson o WHERE o.status = GDN_GENERATED AND o.createdAt BETWEEN :dateFrom AND :dateTo")
+    @Query("SELECT COUNT(o) FROM OrderWithSalesPerson o WHERE o.status = com.nector.userservice.enums.OrderStatus.GDN_GENERATED AND o.createdAt BETWEEN :dateFrom AND :dateTo")
     Long countGdnOrdersBetweenDates(@Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
 
-    @Query("SELECT COUNT(o) FROM OrderWithSalesPerson o WHERE o.status = GDN_GENERATED AND o.salespersonId = :salespersonId AND o.createdAt BETWEEN :dateFrom AND :dateTo")
+    @Query("SELECT COUNT(o) FROM OrderWithSalesPerson o WHERE o.status = com.nector.userservice.enums.OrderStatus.GDN_GENERATED AND o.salespersonId = :salespersonId AND o.createdAt BETWEEN :dateFrom AND :dateTo")
     Long countGdnOrdersBySalespersonBetweenDates(
             @Param("salespersonId") Long salespersonId,
             @Param("dateFrom") LocalDate dateFrom,
             @Param("dateTo") LocalDate dateTo
     );
 
-    @Query("SELECT COUNT(o) FROM OrderWithSalesPerson o WHERE o.status = GDN_GENERATED AND o.distributorId = :distributorId AND o.createdAt BETWEEN :dateFrom AND :dateTo")
+    @Query("SELECT COUNT(o) FROM OrderWithSalesPerson o WHERE o.status = com.nector.userservice.enums.OrderStatus.GDN_GENERATED AND o.distributorId = :distributorId AND o.createdAt BETWEEN :dateFrom AND :dateTo")
     Long countGdnOrdersByDistributorBetweenDates(
             @Param("distributorId") Long distributorId,
             @Param("dateFrom") LocalDate dateFrom,
             @Param("dateTo") LocalDate dateTo
     );
 
-    @Query("SELECT o FROM OrderWithSalesPerson o WHERE o.status = GDN_GENERATED AND o.createdAt BETWEEN :dateFrom AND :dateTo")
+    @Query("SELECT o FROM OrderWithSalesPerson o WHERE o.status = com.nector.userservice.enums.OrderStatus.GDN_GENERATED AND o.createdAt BETWEEN :dateFrom AND :dateTo")
     List<OrderWithSalesPerson> findGdnOrdersByCreatedAtBetween(@Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
 
-    @Query("SELECT o FROM OrderWithSalesPerson o WHERE o.status = GDN_GENERATED AND o.salespersonId = :salespersonId AND o.createdAt BETWEEN :dateFrom AND :dateTo")
+    @Query("SELECT o FROM OrderWithSalesPerson o WHERE o.status = com.nector.userservice.enums.OrderStatus.GDN_GENERATED AND o.salespersonId = :salespersonId AND o.createdAt BETWEEN :dateFrom AND :dateTo")
     List<OrderWithSalesPerson> findGdnOrdersBySalespersonAndCreatedAtBetween(
             @Param("salespersonId") Long salespersonId,
             @Param("dateFrom") LocalDate dateFrom,
             @Param("dateTo") LocalDate dateTo
     );
 
-    @Query("SELECT o FROM OrderWithSalesPerson o WHERE o.status = GDN_GENERATED AND o.distributorId = :distributorId AND o.createdAt BETWEEN :dateFrom AND :dateTo")
+    @Query("SELECT o FROM OrderWithSalesPerson o WHERE o.status = com.nector.userservice.enums.OrderStatus.GDN_GENERATED AND o.distributorId = :distributorId AND o.createdAt BETWEEN :dateFrom AND :dateTo")
     List<OrderWithSalesPerson> findGdnOrdersByDistributorAndCreatedAtBetween(
+            @Param("distributorId") Long distributorId,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
+
+    @Query("SELECT COALESCE(SUM(o.totalCartAmount), 0) FROM OrderWithSalesPerson o WHERE o.status = com.nector.userservice.enums.OrderStatus.GDN_GENERATED AND o.createdAt BETWEEN :dateFrom AND :dateTo")
+    BigDecimal sumGdnAmountBetweenDates(@Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
+
+    @Query("SELECT COALESCE(SUM(o.totalCartAmount), 0) FROM OrderWithSalesPerson o WHERE o.status = com.nector.userservice.enums.OrderStatus.GDN_GENERATED AND o.salespersonId = :salespersonId AND o.createdAt BETWEEN :dateFrom AND :dateTo")
+    BigDecimal sumGdnAmountBySalespersonBetweenDates(
+            @Param("salespersonId") Long salespersonId,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
+
+    @Query("SELECT COALESCE(SUM(o.totalCartAmount), 0) FROM OrderWithSalesPerson o WHERE o.status = com.nector.userservice.enums.OrderStatus.GDN_GENERATED AND o.distributorId = :distributorId AND o.createdAt BETWEEN :dateFrom AND :dateTo")
+    BigDecimal sumGdnAmountByDistributorBetweenDates(
             @Param("distributorId") Long distributorId,
             @Param("dateFrom") LocalDate dateFrom,
             @Param("dateTo") LocalDate dateTo

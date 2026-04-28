@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -38,12 +39,31 @@ public class VolumeAnalyticsService {
         Map<String, Long> regionVolume = getVolumeByRegion(startDate, now, salespersonId, distributorId);
         Map<String, Long> categoryVolume = getVolumeByCategory(startDate, now, salespersonId, distributorId);
 
+        // Combined order summary (total GDN orders + amount for the selected period)
+        Long totalOrders;
+        BigDecimal totalAmount;
+        if (salespersonId != null) {
+            totalOrders = orderRepository.countGdnOrdersBySalespersonBetweenDates(salespersonId, startDate, now);
+            totalAmount = orderRepository.sumGdnAmountBySalespersonBetweenDates(salespersonId, startDate, now);
+        } else if (distributorId != null) {
+            totalOrders = orderRepository.countGdnOrdersByDistributorBetweenDates(distributorId, startDate, now);
+            totalAmount = orderRepository.sumGdnAmountByDistributorBetweenDates(distributorId, startDate, now);
+        } else {
+            totalOrders = orderRepository.countGdnOrdersBetweenDates(startDate, now);
+            totalAmount = orderRepository.sumGdnAmountBetweenDates(startDate, now);
+        }
+        totalOrders = totalOrders != null ? totalOrders : 0L;
+        totalAmount = totalAmount != null ? totalAmount : BigDecimal.ZERO;
+
         VolumeAnalyticsResponse response = new VolumeAnalyticsResponse();
         response.setYearToDate(yearToDate);
         response.setMonthToDate(monthToDate);
         response.setWeekToDate(weekToDate);
         response.setVolumeByRegion(regionVolume);
         response.setVolumeByCategory(categoryVolume);
+        response.setTotalOrders(totalOrders);
+        response.setTotalAmount(totalAmount);
+        response.setPeriod(period);
 
         log.info("Exiting getVolumeAnalyticsData() with response for period: {}", period);
         return response;

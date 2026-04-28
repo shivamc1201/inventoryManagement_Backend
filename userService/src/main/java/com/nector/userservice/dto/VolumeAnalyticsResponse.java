@@ -1,6 +1,7 @@
 package com.nector.userservice.dto;
 
 import lombok.Data;
+import java.math.BigDecimal;
 import java.util.Map;
 
 @Data
@@ -10,7 +11,12 @@ public class VolumeAnalyticsResponse {
     private VolumeMetrics weekToDate;
     private Map<String, Long> volumeByRegion;
     private Map<String, Long> volumeByCategory;
-    
+
+    // Combined from distributor-orders / orders dashboard
+    private Long totalOrders;
+    private BigDecimal totalAmount;
+    private String period;
+
     @Data
     public static class VolumeMetrics {
         private Long totalTransactions;

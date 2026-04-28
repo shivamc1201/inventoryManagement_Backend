@@ -30,7 +30,7 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
     public PromotionalItemResponse createPromotionalItem(PromotionalItemRequest request) {
         log.info("Creating promotional item with item code: {}", request.getItemCode());
         
-        if (promotionalItemRepository.existsByItemCode(request.getItemCode())) {
+        if (request.getItemCode() != null && promotionalItemRepository.existsByItemCode(request.getItemCode())) {
             throw new DataIntegrityViolationException("Promotional item with item code " + request.getItemCode() + " already exists");
         }
         

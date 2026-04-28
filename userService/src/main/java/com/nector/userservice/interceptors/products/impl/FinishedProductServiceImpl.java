@@ -47,7 +47,7 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         product.setUnit(request.getUnit());
         product.setWeight(request.getWeight());
         product.setPrice(request.getPrice());
-        product.setQuantity(request.getQuantity() != null ? request.getQuantity() : 0);
+        product.setQuantity(request.getQuantity());
         product.setMinimumThreshold(request.getMinimumThreshold());
         product.setActive(true);
 

@@ -27,10 +27,10 @@ public class MachinePartServiceImpl implements MachinePartService {
     public MachinePartResponse createMachinePart(MachinePartRequest request) {
         log.info("Creating machine part with part number: {}", request.getPartNumber());
         
-        if (machinePartRepository.existsByPartNumber(request.getPartNumber())) {
+        if (request.getPartNumber() != null && machinePartRepository.existsByPartNumber(request.getPartNumber())) {
             throw new DataIntegrityViolationException("Machine part with part number " + request.getPartNumber() + " already exists");
         }
-        
+
         MachinePart part = new MachinePart();
         part.setName(request.getName());
         part.setPartNumber(request.getPartNumber());

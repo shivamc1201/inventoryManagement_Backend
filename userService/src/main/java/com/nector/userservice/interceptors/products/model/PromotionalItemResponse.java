@@ -1,6 +1,6 @@
 package com.nector.userservice.interceptors.products.model;
 
-import com.nector.userservice.model.PromotionalItem;
+import com.nector.userservice.enums.Unit;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -11,7 +11,7 @@ public class PromotionalItemResponse {
     private Long id;
     private String name;
     private String itemCode;
-    private PromotionalItem.Unit unit;
+    private Unit unit;
     private Integer quantity;
     private BigDecimal price;
     private BigDecimal perItemPrice;

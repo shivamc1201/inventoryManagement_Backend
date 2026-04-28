@@ -2,6 +2,7 @@ package com.nector.userservice.unit.service;
 
 import com.nector.userservice.unit.dto.UnitRequestDTO;
 import com.nector.userservice.unit.dto.UnitResponseDTO;
+import com.nector.userservice.enums.Unit;
 import com.nector.userservice.model.FinishedProduct;
 import com.nector.userservice.model.RawProduct;
 import com.nector.userservice.repository.FinishedProductRepository;
@@ -62,7 +63,7 @@ public class UnitService {
         RawProduct unit = new RawProduct();
         unit.setName(request.getUnitName());
         unit.setMaterialCode(request.getUnitCode());
-        unit.setUnit(RawProduct.Unit.PIECE);
+        unit.setUnit(Unit.PIECES);
         unit.setUnitType(request.getUnitType());
         unit.setProductSize(request.getProductSize());
         unit.setUnitName(request.getUnitName());

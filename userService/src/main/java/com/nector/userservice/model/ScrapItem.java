@@ -1,5 +1,6 @@
 package com.nector.userservice.model;
 
+import com.nector.userservice.enums.Unit;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -86,7 +87,4 @@ public class ScrapItem {
     @Column(length = 20)
     private String driverMobile;
 
-    public enum Unit {
-        KG, LITER, PIECE
-    }
 }

@@ -30,7 +30,7 @@ public class ScrapItemServiceImpl implements ScrapItemService {
     public ScrapItemResponse createScrapItem(ScrapItemRequest request) {
         log.info("Creating scrap item with item code: {}", request.getItemCode());
         
-        if (scrapItemRepository.existsByItemCode(request.getItemCode())) {
+        if (request.getItemCode() != null && scrapItemRepository.existsByItemCode(request.getItemCode())) {
             throw new DataIntegrityViolationException("Scrap item with item code " + request.getItemCode() + " already exists");
         }
         

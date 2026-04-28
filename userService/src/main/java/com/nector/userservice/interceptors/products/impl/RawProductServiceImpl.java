@@ -30,7 +30,7 @@ public class RawProductServiceImpl implements RawProductService {
     public RawProductResponse createRawProduct(RawProductRequest request) {
         log.info("Creating raw product with material code: {}", request.getMaterialCode());
         
-        if (rawProductRepository.existsByMaterialCode(request.getMaterialCode())) {
+        if (request.getMaterialCode() != null && rawProductRepository.existsByMaterialCode(request.getMaterialCode())) {
             throw new DataIntegrityViolationException("Raw product with material code " + request.getMaterialCode() + " already exists");
         }
         

@@ -1,6 +1,6 @@
 package com.nector.userservice.interceptors.products.model;
 
-import com.nector.userservice.model.RawProduct;
+import com.nector.userservice.enums.Unit;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -12,7 +12,7 @@ public class RawProductRequest {
 
     private String materialCode;
 
-    private RawProduct.Unit unit;
+    private Unit unit;
 
     private BigDecimal price;
 

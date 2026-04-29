@@ -309,6 +309,91 @@ public class PaymentService {
         return response;
     }
     
+    public com.nector.userservice.dto.payment.OrderApprovalResponse approvePIUsingCredit(Long orderId, Long distributorId) {
+        // Get PI for the order
+        ProformaInvoice pi = proformaInvoiceRepository.findByCartId(orderId)
+            .orElseThrow(() -> new RuntimeException("Proforma Invoice not found for order: " + orderId));
+
+        // Get distributor and validate credit BEFORE updating any statuses
+        var distributor = distributorRepository.findById(distributorId)
+            .orElseThrow(() -> new RuntimeException("Distributor not found: " + distributorId));
+
+        BigDecimal currentCredit = distributor.getCreditAmount();
+        BigDecimal orderAmount = pi.getAmount();
+
+        if (currentCredit == null) {
+            throw new RuntimeException("Credit not available for distributor: " + distributorId);
+        }
+
+        if (currentCredit.compareTo(orderAmount) < 0) {
+            throw new RuntimeException("Insufficient credit. Available: " + currentCredit + ", Required: " + orderAmount);
+        }
+
+        // Ensure order tracking exists before updating steps
+        ensureOrderTrackingExists(orderId);
+
+        // Update order tracking Step 5: Awaiting Payment Confirmation
+        updateAwaitingPaymentStep(orderId);
+
+        // Update PI status to PAID directly (using credit)
+        pi.setPaymentStatus(ProformaInvoice.PaymentStatus.PAID);
+        proformaInvoiceRepository.save(pi);
+
+        // Update Cart status to PAYMENT_APPROVED
+        Cart cart = cartRepository.findById(orderId)
+            .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+        cart.setStatus(Cart.CartStatus.PAYMENT_APPROVED);
+        cartRepository.save(cart);
+
+        // Deduct amount from distributor's creditAmount
+        distributor.setCreditAmount(currentCredit.subtract(orderAmount));
+        distributorRepository.save(distributor);
+
+        // Create a ledger entry for audit trail
+        updateDistributorBalance(distributorId, orderAmount, "DEBIT", "Payment for Order #" + orderId + " (using credit)");
+
+        // Update order tracking Step 6: Approved from Accounts
+        updatePaymentApprovedStep(orderId);
+
+        BigDecimal updatedCredit = distributor.getCreditAmount();
+
+        com.nector.userservice.dto.payment.OrderApprovalResponse response = new com.nector.userservice.dto.payment.OrderApprovalResponse();
+        response.setOrderId(orderId);
+        response.setDistributorId(distributorId);
+        response.setOrderAmount(orderAmount);
+        response.setLedgerBalance(updatedCredit);
+        response.setStatus("APPROVED_USING_CREDIT");
+        response.setMessage("PI approved using available credit");
+
+        return response;
+    }
+
+    /**
+     * Adds credit amount to a distributor's credit limit.
+     * This increases the distributor's creditAmount on their profile.
+     * @param distributorId  the distributor to credit
+     * @param amount         how much credit to add (must be > 0)
+     * @param description    reason / remarks for the credit addition
+     */
+    public void addCreditToDistributor(Long distributorId, BigDecimal amount, String description) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Credit amount must be greater than zero");
+        }
+
+        var distributor = distributorRepository.findById(distributorId)
+            .orElseThrow(() -> new RuntimeException("Distributor not found: " + distributorId));
+
+        BigDecimal currentCredit = distributor.getCreditAmount() != null
+            ? distributor.getCreditAmount()
+            : BigDecimal.ZERO;
+
+        distributor.setCreditAmount(currentCredit.add(amount));
+        distributorRepository.save(distributor);
+
+        // Create a ledger entry so the transaction appears in the ledger
+        updateDistributorBalance(distributorId, amount, "CREDIT", description);
+    }
+
     public List<ProformaInvoice> getPendingPaymentApprovals() {
         return proformaInvoiceRepository.findAll().stream()
             .filter(pi -> pi.getPaymentStatus() == ProformaInvoice.PaymentStatus.PENDING)

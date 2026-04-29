@@ -350,7 +350,7 @@ public class PaymentService {
         distributorRepository.save(distributor);
 
         // Create a ledger entry for audit trail
-        updateDistributorBalance(distributorId, orderAmount.negate(), "DEBIT", "Payment for Order #" + orderId + " (using credit)");
+        updateDistributorBalance(distributorId, orderAmount, "DEBIT", "Payment for Order #" + orderId + " (using credit)");
 
         // Update order tracking Step 6: Approved from Accounts
         updatePaymentApprovedStep(orderId);
@@ -389,6 +389,9 @@ public class PaymentService {
 
         distributor.setCreditAmount(currentCredit.add(amount));
         distributorRepository.save(distributor);
+
+        // Create a ledger entry so the transaction appears in the ledger
+        updateDistributorBalance(distributorId, amount, "CREDIT", description);
     }
 
     public List<ProformaInvoice> getPendingPaymentApprovals() {

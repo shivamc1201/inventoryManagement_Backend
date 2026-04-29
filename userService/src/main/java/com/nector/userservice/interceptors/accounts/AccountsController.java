@@ -80,64 +80,31 @@ public class AccountsController {
         return ResponseEntity.ok(approval);
     }
     
+    @PostMapping("/add-credit/{distributorId}")
+    @Operation(summary = "Add credit to distributor", description = "Increases the credit limit (creditAmount) for a distributor")
+    @ApiResponse(responseCode = "200", description = "Credit added successfully")
+    public ResponseEntity<PaymentApprovalResponse> addCreditToDistributor(
+            @PathVariable Long distributorId,
+            @RequestParam BigDecimal amount,
+            @RequestParam(required = false, defaultValue = "Credit added by accounts team") String description) {
+        paymentService.addCreditToDistributor(distributorId, amount, description);
+
+        PaymentApprovalResponse response = new PaymentApprovalResponse();
+        response.setPaymentId(null);
+        response.setMessage("Credit of " + amount + " added successfully to distributor " + distributorId);
+        response.setStatus("CREDIT_ADDED");
+
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/approve-PI-using-credit/{orderId}")
     @Operation(summary = "Approve PI using credit", description = "Approves PI using available credit without balance check")
     @ApiResponse(responseCode = "200", description = "PI approved using credit successfully")
     public ResponseEntity<OrderApprovalResponse> approvePIUsingCredit(
             @PathVariable Long orderId,
             @RequestParam Long distributorId) {
-        
-        // Get PI for the order
-        ProformaInvoice pi = paymentService.getProformaInvoiceRepository().findByCartId(orderId)
-            .orElseThrow(() -> new RuntimeException("Proforma Invoice not found for order: " + orderId));
-        
-        // Get distributor and validate credit BEFORE updating any statuses
-        var distributor = paymentService.getDistributorRepository().findById(distributorId)
-            .orElseThrow(() -> new RuntimeException("Distributor not found: " + distributorId));
-        
-        BigDecimal currentCredit = distributor.getCreditAmount();
-        BigDecimal orderAmount = pi.getAmount();
-        
-        // Check if credit is available or null
-        if (currentCredit == null) {
-            throw new RuntimeException("Credit not available for distributor: " + distributorId);
-        }
-        
-        if (currentCredit.compareTo(orderAmount) < 0) {
-            throw new RuntimeException("Insufficient credit. Available: " + currentCredit + ", Required: " + orderAmount);
-        }
-        
-        // Update PI status to PAID directly (using credit) - only after validation passes
-        pi.setPaymentStatus(ProformaInvoice.PaymentStatus.PAID);
-        paymentService.getProformaInvoiceRepository().save(pi);
-        
-        // Update Cart status to PAYMENT_APPROVED - only after validation passes
-        Cart cart = paymentService.getCartRepository().findById(orderId)
-            .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
-        cart.setStatus(Cart.CartStatus.PAYMENT_APPROVED);
-        paymentService.getCartRepository().save(cart);
-        
-        // Deduct amount from distributor's creditAmount (this is the correct approach!)
-        distributor.setCreditAmount(currentCredit.subtract(orderAmount));
-        paymentService.getDistributorRepository().save(distributor);
-        
-        // Also create a ledger entry for audit trail
-        paymentService.updateDistributorBalance(distributorId, orderAmount.negate(), "DEBIT", "Payment for Order #" + orderId + " (using credit)");
-        
-        // Get updated credit amount and ledger balance
-        BigDecimal updatedCredit = distributor.getCreditAmount();
-        BigDecimal updatedLedgerBalance = paymentService.getCurrentLedgerBalance(distributorId);
-        
-        // Create response
-        OrderApprovalResponse response = new OrderApprovalResponse();
-        response.setOrderId(orderId);
-        response.setDistributorId(distributorId);
-        response.setOrderAmount(pi.getAmount());
-        response.setLedgerBalance(updatedCredit);
-        response.setStatus("APPROVED_USING_CREDIT");
-        response.setMessage("PI approved using available credit");
-        
-        return ResponseEntity.ok(response);
+        OrderApprovalResponse approval = paymentService.approvePIUsingCredit(orderId, distributorId);
+        return ResponseEntity.ok(approval);
     }
     
     @GetMapping("/pending-payment-approvals")

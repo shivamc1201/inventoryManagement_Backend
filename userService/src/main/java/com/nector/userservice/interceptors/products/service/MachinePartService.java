@@ -26,4 +26,6 @@ public interface MachinePartService {
     MachinePartResponse updateQuantity(Long id, Integer quantity);
     
     MachinePartResponse updateCondition(Long id, MachinePart.Condition condition);
+
+    MachinePartResponse updateByPartNumber(String partNumber, MachinePartRequest request);
 }

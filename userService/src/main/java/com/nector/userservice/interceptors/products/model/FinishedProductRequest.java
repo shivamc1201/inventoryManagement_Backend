@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.products.model;
 
+import com.nector.userservice.enums.ProductStatus;
 import com.nector.userservice.enums.Unit;
 import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,5 +27,6 @@ public class FinishedProductRequest {
     private Integer minimumThreshold;
     
     private Boolean active;
-
+    
+    private ProductStatus status;
 }

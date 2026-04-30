@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.products.model;
 
+import com.nector.userservice.enums.ProductStatus;
 import com.nector.userservice.enums.Unit;
 import lombok.Data;
 
@@ -23,4 +24,5 @@ public class FinishedProductResponse {
     private String imageUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private ProductStatus status;
 }

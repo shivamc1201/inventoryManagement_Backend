@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.products.model;
 
+import com.nector.userservice.enums.ProductStatus;
 import com.nector.userservice.model.MachinePart;
 import lombok.Data;
 
@@ -23,4 +24,6 @@ public class MachinePartRequest {
     private Integer quantity;
 
     private MachinePart.Condition condition;
+
+    private ProductStatus status;
 }

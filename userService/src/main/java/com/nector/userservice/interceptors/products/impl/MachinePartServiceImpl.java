@@ -40,6 +40,7 @@ public class MachinePartServiceImpl implements MachinePartService {
         part.setWarrantyExpiryDate(request.getWarrantyExpiryDate());
         part.setQuantity(request.getQuantity());
         part.setCondition(request.getCondition());
+        if (request.getStatus() != null) part.setStatus(request.getStatus());
         
         MachinePart savedPart = machinePartRepository.save(part);
         log.info("Machine part created successfully with ID: {}", savedPart.getId());
@@ -173,6 +174,29 @@ public class MachinePartServiceImpl implements MachinePartService {
         response.setActive(part.getActive());
         response.setCreatedAt(part.getCreatedAt());
         response.setUpdatedAt(part.getUpdatedAt());
+        response.setStatus(part.getStatus());
         return response;
+    }
+
+    @Override
+    @Transactional
+    public MachinePartResponse updateByPartNumber(String partNumber, MachinePartRequest request) {
+        log.info("Updating machine part by part number: {}", partNumber);
+
+        MachinePart part = machinePartRepository.findByPartNumber(partNumber)
+                .orElseThrow(() -> new MachinePartNotFoundException(0L));
+
+        if (request.getName() != null) part.setName(request.getName());
+        if (request.getCategory() != null) part.setCategory(request.getCategory());
+        if (request.getVendor() != null) part.setVendor(request.getVendor());
+        if (request.getPurchaseDate() != null) part.setPurchaseDate(request.getPurchaseDate());
+        if (request.getWarrantyExpiryDate() != null) part.setWarrantyExpiryDate(request.getWarrantyExpiryDate());
+        if (request.getQuantity() != null) part.setQuantity(request.getQuantity());
+        if (request.getCondition() != null) part.setCondition(request.getCondition());
+        if (request.getStatus() != null) part.setStatus(request.getStatus());
+
+        MachinePart updatedPart = machinePartRepository.save(part);
+        log.info("Machine part updated by part number: {}", partNumber);
+        return mapToResponse(updatedPart);
     }
 }

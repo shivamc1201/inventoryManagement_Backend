@@ -47,6 +47,7 @@ public class ScrapItemServiceImpl implements ScrapItemService {
         item.setDriverName(request.getDriverName());
         item.setDriverMobile(request.getDriverMobile());
         item.setActive(true);
+        if (request.getStatus() != null) item.setStatus(request.getStatus());
         
         ScrapItem savedItem = scrapItemRepository.save(item);
         log.info("Scrap item created successfully with ID: {}", savedItem.getId());
@@ -195,6 +196,32 @@ public class ScrapItemServiceImpl implements ScrapItemService {
         response.setTransportName(item.getTransportName());
         response.setDriverName(item.getDriverName());
         response.setDriverMobile(item.getDriverMobile());
+        response.setStatus(item.getStatus());
         return response;
+    }
+
+    @Override
+    @Transactional
+    public ScrapItemResponse updateByItemCode(String itemCode, ScrapItemRequest request) {
+        log.info("Updating scrap item by item code: {}", itemCode);
+
+        ScrapItem item = scrapItemRepository.findByItemCode(itemCode)
+                .orElseThrow(() -> new ScrapItemNotFoundException(0L));
+
+        if (request.getName() != null) item.setName(request.getName());
+        if (request.getUnit() != null) item.setUnit(request.getUnit());
+        if (request.getPrice() != null) item.setPrice(request.getPrice());
+        if (request.getQuantity() != null) item.setQuantity(request.getQuantity());
+        if (request.getMinimumThreshold() != null) item.setMinimumThreshold(request.getMinimumThreshold());
+        if (request.getVendorId() != null) item.setVendorId(request.getVendorId());
+        if (request.getVendorName() != null) item.setVendorName(request.getVendorName());
+        if (request.getTransportName() != null) item.setTransportName(request.getTransportName());
+        if (request.getDriverName() != null) item.setDriverName(request.getDriverName());
+        if (request.getDriverMobile() != null) item.setDriverMobile(request.getDriverMobile());
+        if (request.getStatus() != null) item.setStatus(request.getStatus());
+
+        ScrapItem updatedItem = scrapItemRepository.save(item);
+        log.info("Scrap item updated by item code: {}", itemCode);
+        return mapToResponse(updatedItem);
     }
 }

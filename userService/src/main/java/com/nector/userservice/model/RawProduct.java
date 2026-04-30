@@ -1,5 +1,6 @@
 package com.nector.userservice.model;
 
+import com.nector.userservice.enums.ProductStatus;
 import com.nector.userservice.enums.Unit;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -86,5 +87,9 @@ public class RawProduct {
 
     @Column(length = 20)
     private String driverMobile;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private ProductStatus status = ProductStatus.MASTER;
 
 }

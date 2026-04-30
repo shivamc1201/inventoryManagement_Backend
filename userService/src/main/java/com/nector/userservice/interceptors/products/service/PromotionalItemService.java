@@ -22,4 +22,6 @@ public interface PromotionalItemService {
     PromotionalItemResponse decreaseStock(Long id, Integer quantity);
     
     List<PromotionalItemResponse> getLowStockItems();
+
+    PromotionalItemResponse updateByItemCode(String itemCode, PromotionalItemRequest request);
 }

@@ -28,8 +28,10 @@ public interface DealerLedgerTransactionRepository extends JpaRepository<DealerL
     List<DealerLedgerTransaction> findByDealerIdAndDistributorIdAndDateBetweenOrderByDateDescCreatedAtDesc(
             Long dealerId, Long distributorId, LocalDate startDate, LocalDate endDate);
 
-    // Reference uniqueness check
+    // Reference uniqueness check and lookup
     boolean existsByDealerIdAndDistributorIdAndReference(Long dealerId, Long distributorId, String reference);
+
+    Optional<DealerLedgerTransaction> findByDealerIdAndDistributorIdAndReference(Long dealerId, Long distributorId, String reference);
 
     // Balance calculation methods with pessimistic locking
     @Lock(LockModeType.PESSIMISTIC_WRITE)

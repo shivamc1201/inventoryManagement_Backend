@@ -151,6 +151,19 @@ public class DealerSaleService {
         return dealerOrderRepository.findByDistributorIdOrderByDateDesc(distributorId);
     }
 
+    @Transactional
+    public void deleteDealerSale(Long saleId, Long distributorId) {
+        log.info("Deleting dealer sale: {} for distributor: {}", saleId, distributorId);
+
+        // Find the sale with tenant isolation
+        DealerSale sale = dealerSaleRepository.findByIdAndDistributorId(saleId, distributorId)
+                .orElseThrow(() -> new BusinessException("Sale not found or access denied"));
+
+        // Delete the sale
+        dealerSaleRepository.delete(sale);
+        log.info("Deleted dealer sale with ID: {}", saleId);
+    }
+
     private void  createSaleLedgerEntry(DealerSale sale, Dealer dealer) {
         log.info("Creating ledger entry for sale ID: {}", sale.getId());
 

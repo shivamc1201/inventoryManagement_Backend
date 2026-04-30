@@ -169,7 +169,7 @@ public class AccountsController {
     }
 
     @PostMapping("/payment-approval/{paymentId}")
-    @Operation(summary = "Approve payment", description = "Approves payment added distributor ")
+    @Operation(summary = "Approve payment", description = "Approves payment and updates ledger. For CREDIT transactions, automatically restores creditBalance to creditLimit first, then adds remaining amount to ledger balance.")
     @ApiResponse(responseCode = "200", description = "Payment approved successfully")
     public ResponseEntity<String> paymentApproval(
             @PathVariable Long paymentId,
@@ -309,6 +309,14 @@ public class AccountsController {
         response.setStatus("LEDGER_UPDATED");
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/credit-balance/{distributorId}")
+    @Operation(summary = "Get credit balance", description = "Retrieves credit limit, credit balance, and usage information for a distributor")
+    @ApiResponse(responseCode = "200", description = "Credit balance retrieved successfully")
+    public ResponseEntity<CreditBalanceResponse> getCreditBalance(@PathVariable Long distributorId) {
+        CreditBalanceResponse creditBalance = paymentService.getCreditBalance(distributorId);
+        return ResponseEntity.ok(creditBalance);
     }
 
     @GetMapping("/payment-history/{distributorId}/download")

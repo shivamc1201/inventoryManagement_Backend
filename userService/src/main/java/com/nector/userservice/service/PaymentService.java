@@ -318,15 +318,15 @@ public class PaymentService {
         var distributor = distributorRepository.findById(distributorId)
             .orElseThrow(() -> new RuntimeException("Distributor not found: " + distributorId));
 
-        BigDecimal currentCredit = distributor.getCreditAmount();
+        BigDecimal currentCreditBalance = distributor.getCreditBalance();
         BigDecimal orderAmount = pi.getAmount();
 
-        if (currentCredit == null) {
-            throw new RuntimeException("Credit not available for distributor: " + distributorId);
+        if (currentCreditBalance == null) {
+            throw new RuntimeException("Credit balance not available for distributor: " + distributorId);
         }
 
-        if (currentCredit.compareTo(orderAmount) < 0) {
-            throw new RuntimeException("Insufficient credit. Available: " + currentCredit + ", Required: " + orderAmount);
+        if (currentCreditBalance.compareTo(orderAmount) < 0) {
+            throw new RuntimeException("Insufficient credit balance. Available: " + currentCreditBalance + ", Required: " + orderAmount);
         }
 
         // Ensure order tracking exists before updating steps
@@ -345,8 +345,8 @@ public class PaymentService {
         cart.setStatus(Cart.CartStatus.PAYMENT_APPROVED);
         cartRepository.save(cart);
 
-        // Deduct amount from distributor's creditAmount
-        distributor.setCreditAmount(currentCredit.subtract(orderAmount));
+        // Deduct amount from distributor's creditBalance
+        distributor.setCreditBalance(currentCreditBalance.subtract(orderAmount));
         distributorRepository.save(distributor);
 
         // Create a ledger entry for audit trail
@@ -355,22 +355,22 @@ public class PaymentService {
         // Update order tracking Step 6: Approved from Accounts
         updatePaymentApprovedStep(orderId);
 
-        BigDecimal updatedCredit = distributor.getCreditAmount();
+        BigDecimal updatedCreditBalance = distributor.getCreditBalance();
 
         com.nector.userservice.dto.payment.OrderApprovalResponse response = new com.nector.userservice.dto.payment.OrderApprovalResponse();
         response.setOrderId(orderId);
         response.setDistributorId(distributorId);
         response.setOrderAmount(orderAmount);
-        response.setLedgerBalance(updatedCredit);
+        response.setLedgerBalance(updatedCreditBalance);
         response.setStatus("APPROVED_USING_CREDIT");
-        response.setMessage("PI approved using available credit");
+        response.setMessage("PI approved using available credit balance");
 
         return response;
     }
 
     /**
-     * Adds credit amount to a distributor's credit limit.
-     * This increases the distributor's creditAmount on their profile.
+     * Adds credit amount to a distributor's credit balance.
+     * This increases the distributor's creditBalance but cannot exceed creditLimit.
      * @param distributorId  the distributor to credit
      * @param amount         how much credit to add (must be > 0)
      * @param description    reason / remarks for the credit addition
@@ -383,11 +383,25 @@ public class PaymentService {
         var distributor = distributorRepository.findById(distributorId)
             .orElseThrow(() -> new RuntimeException("Distributor not found: " + distributorId));
 
-        BigDecimal currentCredit = distributor.getCreditAmount() != null
-            ? distributor.getCreditAmount()
+        BigDecimal currentCreditBalance = distributor.getCreditBalance() != null
+            ? distributor.getCreditBalance()
             : BigDecimal.ZERO;
 
-        distributor.setCreditAmount(currentCredit.add(amount));
+        BigDecimal creditLimit = distributor.getCreditLimit() != null
+            ? distributor.getCreditLimit()
+            : BigDecimal.ZERO;
+
+        BigDecimal newCreditBalance = currentCreditBalance.add(amount);
+
+        // Check if new balance would exceed credit limit
+        if (newCreditBalance.compareTo(creditLimit) > 0) {
+            throw new IllegalArgumentException(
+                String.format("Cannot add credit. New balance (%s) would exceed credit limit (%s). Current balance: %s, Amount to add: %s",
+                    newCreditBalance, creditLimit, currentCreditBalance, amount)
+            );
+        }
+
+        distributor.setCreditBalance(newCreditBalance);
         distributorRepository.save(distributor);
 
         // Create a ledger entry so the transaction appears in the ledger
@@ -442,9 +456,58 @@ public class PaymentService {
             throw new RuntimeException("Payment already processed");
         }
 
-        // Update distributor ledger
-        updateDistributorBalance(payment.getDistributorId(), payment.getAmount(),
-                payment.getTransactionType(), payment.getDescription());
+        // Special handling for CREDIT transactions - restore creditBalance first
+        if ("CREDIT".equalsIgnoreCase(payment.getTransactionType())) {
+            var distributor = distributorRepository.findById(payment.getDistributorId())
+                    .orElseThrow(() -> new RuntimeException("Distributor not found: " + payment.getDistributorId()));
+            
+            BigDecimal creditLimit = distributor.getCreditLimit() != null ? distributor.getCreditLimit() : BigDecimal.ZERO;
+            BigDecimal creditBalance = distributor.getCreditBalance() != null ? distributor.getCreditBalance() : BigDecimal.ZERO;
+            BigDecimal paymentAmount = payment.getAmount();
+            
+            // Check if creditBalance is less than creditLimit (distributor has used some credit)
+            if (creditBalance.compareTo(creditLimit) < 0) {
+                BigDecimal creditShortfall = creditLimit.subtract(creditBalance);
+                
+                if (paymentAmount.compareTo(creditShortfall) >= 0) {
+                    // Payment is enough to restore full credit and have余额
+                    // 1. Restore creditBalance to creditLimit
+                    distributor.setCreditBalance(creditLimit);
+                    distributorRepository.save(distributor);
+                    
+                    // 2. Calculate remaining amount to add to ledger
+                    BigDecimal remainingAmount = paymentAmount.subtract(creditShortfall);
+                    
+                    // Log both transactions
+                    if (creditShortfall.compareTo(BigDecimal.ZERO) > 0) {
+                        updateDistributorBalance(payment.getDistributorId(), creditShortfall,
+                                "CREDIT", payment.getDescription() + " (Credit Restored)");
+                    }
+                    
+                    if (remainingAmount.compareTo(BigDecimal.ZERO) > 0) {
+                        updateDistributorBalance(payment.getDistributorId(), remainingAmount,
+                                "CREDIT", payment.getDescription() + " (Ledger Balance)");
+                    }
+                } else {
+                    // Payment is less than shortfall - add entire amount to creditBalance only
+                    BigDecimal newCreditBalance = creditBalance.add(paymentAmount);
+                    distributor.setCreditBalance(newCreditBalance);
+                    distributorRepository.save(distributor);
+                    
+                    // Log the transaction
+                    updateDistributorBalance(payment.getDistributorId(), paymentAmount,
+                            "CREDIT", payment.getDescription() + " (Credit Restored)");
+                }
+            } else {
+                // creditBalance is already at limit or above - add entire amount to ledger
+                updateDistributorBalance(payment.getDistributorId(), payment.getAmount(),
+                        payment.getTransactionType(), payment.getDescription());
+            }
+        } else {
+            // For DEBIT or other transaction types, process normally
+            updateDistributorBalance(payment.getDistributorId(), payment.getAmount(),
+                    payment.getTransactionType(), payment.getDescription());
+        }
 
         // Update payment status
         payment.setStatus("LEDGER_UPDATED");
@@ -823,6 +886,48 @@ public class PaymentService {
         
         pi.setPaymentStatus(paymentStatus);
         proformaInvoiceRepository.save(pi);
+    }
+
+    /**
+     * Get credit balance information for a distributor
+     * @param distributorId The distributor ID
+     * @return CreditBalanceResponse with credit information
+     */
+    public com.nector.userservice.dto.payment.CreditBalanceResponse getCreditBalance(Long distributorId) {
+        var distributor = distributorRepository.findById(distributorId)
+                .orElseThrow(() -> new RuntimeException("Distributor not found: " + distributorId));
+        
+        BigDecimal creditLimit = distributor.getCreditLimit() != null ? distributor.getCreditLimit() : BigDecimal.ZERO;
+        BigDecimal creditBalance = distributor.getCreditBalance() != null ? distributor.getCreditBalance() : BigDecimal.ZERO;
+        BigDecimal creditUsed = creditLimit.subtract(creditBalance);
+        
+        BigDecimal availablePercentage = BigDecimal.ZERO;
+        if (creditLimit.compareTo(BigDecimal.ZERO) > 0) {
+            availablePercentage = creditBalance.divide(creditLimit, 2, java.math.RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100));
+        }
+        
+        String status;
+        if (creditBalance.equals(creditLimit)) {
+            status = "FULL_CREDIT_AVAILABLE";
+        } else if (creditBalance.compareTo(creditLimit.multiply(BigDecimal.valueOf(0.5))) >= 0) {
+            status = "GOOD";
+        } else if (creditBalance.compareTo(BigDecimal.ZERO) > 0) {
+            status = "LOW_CREDIT";
+        } else {
+            status = "CREDIT_EXHAUSTED";
+        }
+        
+        com.nector.userservice.dto.payment.CreditBalanceResponse response = new com.nector.userservice.dto.payment.CreditBalanceResponse();
+        response.setDistributorId(distributorId);
+        response.setDistributorName(distributor.getFirstName());
+        response.setCreditLimit(creditLimit);
+        response.setCreditBalance(creditBalance);
+        response.setCreditUsed(creditUsed);
+        response.setAvailablePercentage(availablePercentage);
+        response.setStatus(status);
+        
+        return response;
     }
 
 

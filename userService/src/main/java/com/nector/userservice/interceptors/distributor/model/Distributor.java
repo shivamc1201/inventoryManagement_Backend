@@ -89,8 +89,11 @@ public class Distributor {
     @Column(name = "bank_guarantee_number", length = 50)
     private String bankGuaranteeNumber;
 
-    @Column(name = "credit_amount", precision = 15, scale = 2)
-    private java.math.BigDecimal creditAmount;
+    @Column(name = "credit_limit", precision = 15, scale = 2)
+    private java.math.BigDecimal creditLimit;
+
+    @Column(name = "credit_balance", precision = 15, scale = 2)
+    private java.math.BigDecimal creditBalance;
 
     @Column(name = "bg_expiry_date")
     private java.time.LocalDate bgExpiryDate;

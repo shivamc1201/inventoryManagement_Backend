@@ -89,8 +89,11 @@ public class DistributorResponseDTO {
     @Schema(description = "Bank guarantee number", example = "BG123456789")
     private String bankGuaranteeNumber;
 
-    @Schema(description = "Credit amount", example = "500000.00")
-    private BigDecimal creditAmount;
+    @Schema(description = "Credit limit", example = "500000.00")
+    private BigDecimal creditLimit;
+
+    @Schema(description = "Credit balance", example = "450000.00")
+    private BigDecimal creditBalance;
 
     @Schema(description = "Bank guarantee expiry date", example = "2025-12-31")
     private LocalDate bgExpiryDate;

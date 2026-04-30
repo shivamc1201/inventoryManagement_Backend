@@ -90,6 +90,19 @@ public class DealerSaleController {
         return ResponseEntity.ok(orders);
     }
 
+    @DeleteMapping("/{saleId}")
+    @Operation(summary = "Delete dealer sale", description = "Delete a dealer sale by ID")
+    public ResponseEntity<Void> deleteDealerSale(
+            @Parameter(description = "Sale ID to delete")
+            @PathVariable Long saleId,
+            @Parameter(description = "Distributor ID for tenant isolation")
+            @RequestParam Long distributorId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        dealerSaleService.deleteDealerSale(saleId, distributorId);
+        return ResponseEntity.noContent().build();
+    }
+
     private Long getDistributorIdFromUser(UserDetails userDetails) {
         // This should extract distributorId from the authenticated user
         // Implementation depends on your user authentication structure

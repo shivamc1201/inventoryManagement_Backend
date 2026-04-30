@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.products.model;
 
+import com.nector.userservice.enums.ProductStatus;
 import com.nector.userservice.model.MachinePart;
 import lombok.Data;
 
@@ -20,4 +21,5 @@ public class MachinePartResponse {
     private Boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private ProductStatus status;
 }

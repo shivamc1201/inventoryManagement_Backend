@@ -380,6 +380,53 @@ public class ProductsController {
         return ResponseEntity.ok(response);
     }
 
+    // ==================== UPDATE BY SKU ====================
+
+    @PutMapping(value = "/finished-products/sku/{sku}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Update finished product by SKU (JSON)", description = "Updates a finished product using its SKU. Only provided fields are updated.")
+    public ResponseEntity<FinishedProductResponse> updateFinishedProductBySku(@PathVariable String sku, @RequestBody FinishedProductRequest request) {
+        FinishedProductResponse response = finishedProductService.updateBySku(sku, request, null);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping(value = "/finished-products/sku/{sku}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Update finished product by SKU (Multipart)", description = "Updates a finished product using its SKU with optional image.")
+    public ResponseEntity<FinishedProductResponse> updateFinishedProductBySkuMultipart(
+            @PathVariable String sku,
+            @RequestPart("request") FinishedProductRequest request,
+            @RequestPart(value = "image", required = false) MultipartFile image) {
+        FinishedProductResponse response = finishedProductService.updateBySku(sku, request, image);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/raw-materials/sku/{materialCode}")
+    @Operation(summary = "Update raw material by material code", description = "Updates a raw material using its material code. Only provided fields are updated.")
+    public ResponseEntity<RawProductResponse> updateRawProductByMaterialCode(@PathVariable String materialCode, @RequestBody RawProductRequest request) {
+        RawProductResponse response = rawProductService.updateByMaterialCode(materialCode, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/machine-parts/sku/{partNumber}")
+    @Operation(summary = "Update machine part by part number", description = "Updates a machine part using its part number. Only provided fields are updated.")
+    public ResponseEntity<MachinePartResponse> updateMachinePartByPartNumber(@PathVariable String partNumber, @RequestBody MachinePartRequest request) {
+        MachinePartResponse response = machinePartService.updateByPartNumber(partNumber, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/promotional-items/sku/{itemCode}")
+    @Operation(summary = "Update promotional item by item code", description = "Updates a promotional item using its item code. Only provided fields are updated.")
+    public ResponseEntity<PromotionalItemResponse> updatePromotionalItemByItemCode(@PathVariable String itemCode, @RequestBody PromotionalItemRequest request) {
+        PromotionalItemResponse response = promotionalItemService.updateByItemCode(itemCode, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/scrap-items/sku/{itemCode}")
+    @Operation(summary = "Update scrap item by item code", description = "Updates a scrap item using its item code. Only provided fields are updated.")
+    public ResponseEntity<ScrapItemResponse> updateScrapItemByItemCode(@PathVariable String itemCode, @RequestBody ScrapItemRequest request) {
+        ScrapItemResponse response = scrapItemService.updateByItemCode(itemCode, request);
+        return ResponseEntity.ok(response);
+    }
+
     // ==================== INNER CLASSES ====================
 
     public static class QuantityUpdateRequest {

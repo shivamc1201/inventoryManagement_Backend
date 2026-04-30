@@ -47,6 +47,7 @@ public class RawProductServiceImpl implements RawProductService {
         product.setDriverName(request.getDriverName());
         product.setDriverMobile(request.getDriverMobile());
         product.setActive(true);
+        if (request.getStatus() != null) product.setStatus(request.getStatus());
         
         RawProduct savedProduct = rawProductRepository.save(product);
         log.info("Raw product created successfully with ID: {}", savedProduct.getId());
@@ -195,7 +196,34 @@ public class RawProductServiceImpl implements RawProductService {
         response.setVendorName(product.getVendorName());
         response.setTransportName(product.getTransportName());
         response.setDriverName(product.getDriverName());
+        response.setDriverName(product.getDriverName());
         response.setDriverMobile(product.getDriverMobile());
+        response.setStatus(product.getStatus());
         return response;
+    }
+
+    @Override
+    @Transactional
+    public RawProductResponse updateByMaterialCode(String materialCode, RawProductRequest request) {
+        log.info("Updating raw product by material code: {}", materialCode);
+
+        RawProduct product = rawProductRepository.findByMaterialCode(materialCode)
+                .orElseThrow(() -> new RawProductNotFoundException(0L));
+
+        if (request.getName() != null) product.setName(request.getName());
+        if (request.getUnit() != null) product.setUnit(request.getUnit());
+        if (request.getPrice() != null) product.setPrice(request.getPrice());
+        if (request.getQuantity() != null) product.setQuantity(request.getQuantity());
+        if (request.getMinimumThreshold() != null) product.setMinimumThreshold(request.getMinimumThreshold());
+        if (request.getVendorId() != null) product.setVendorId(request.getVendorId());
+        if (request.getVendorName() != null) product.setVendorName(request.getVendorName());
+        if (request.getTransportName() != null) product.setTransportName(request.getTransportName());
+        if (request.getDriverName() != null) product.setDriverName(request.getDriverName());
+        if (request.getDriverMobile() != null) product.setDriverMobile(request.getDriverMobile());
+        if (request.getStatus() != null) product.setStatus(request.getStatus());
+
+        RawProduct updatedProduct = rawProductRepository.save(product);
+        log.info("Raw product updated by material code: {}", materialCode);
+        return mapToResponse(updatedProduct);
     }
 }

@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.products.model;
 
+import com.nector.userservice.enums.ProductStatus;
 import com.nector.userservice.enums.Unit;
 import lombok.Data;
 
@@ -25,4 +26,5 @@ public class RawProductResponse {
     private String transportName;
     private String driverName;
     private String driverMobile;
+    private ProductStatus status;
 }

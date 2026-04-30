@@ -1,5 +1,6 @@
 package com.nector.userservice.model;
 
+import com.nector.userservice.enums.ProductStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -50,6 +51,10 @@ public class MachinePart {
     
     @Column
     private Boolean active = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private ProductStatus status = ProductStatus.MASTER;
     
     @CreationTimestamp
     @Column(updatable = false)

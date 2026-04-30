@@ -22,4 +22,6 @@ public interface ScrapItemService {
     ScrapItemResponse decreaseStock(Long id, Integer quantity);
     
     List<ScrapItemResponse> getLowStockItems();
+
+    ScrapItemResponse updateByItemCode(String itemCode, ScrapItemRequest request);
 }

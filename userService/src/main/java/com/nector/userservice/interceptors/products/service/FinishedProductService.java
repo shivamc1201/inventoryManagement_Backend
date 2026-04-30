@@ -27,4 +27,6 @@ public interface FinishedProductService {
     FinishedProductResponse updateProductStatus(Long id, Boolean status);
 
     List<FinishedProductResponse> getAllFinishedProductsWithoutStatusCheck();
+
+    FinishedProductResponse updateBySku(String sku, FinishedProductRequest request, MultipartFile image);
 }

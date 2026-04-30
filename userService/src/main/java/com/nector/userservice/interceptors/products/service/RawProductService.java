@@ -22,4 +22,6 @@ public interface RawProductService {
     RawProductResponse decreaseStock(Long id, Integer quantity);
     
     List<RawProductResponse> getLowStockItems();
+
+    RawProductResponse updateByMaterialCode(String materialCode, RawProductRequest request);
 }

@@ -2,6 +2,8 @@ package com.nector.userservice.interceptors.products.impl;
 
 import com.nector.userservice.exception.FinishedProductNotFoundException;
 import com.nector.userservice.exception.InsufficientStockException;
+import com.nector.userservice.enums.ProductStatus;
+import com.nector.userservice.enums.ProductStatus;
 import com.nector.userservice.interceptors.products.model.FinishedProductRequest;
 import com.nector.userservice.interceptors.products.model.FinishedProductResponse;
 import com.nector.userservice.interceptors.products.service.FinishedProductService;
@@ -50,6 +52,7 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         product.setQuantity(request.getQuantity());
         product.setMinimumThreshold(request.getMinimumThreshold());
         product.setActive(true);
+        if (request.getStatus() != null) product.setStatus(request.getStatus());
 
         // Handle image upload if provided
         if (image != null && !image.isEmpty()) {
@@ -228,6 +231,7 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         
         response.setCreatedAt(product.getCreatedAt());
         response.setUpdatedAt(product.getUpdatedAt());
+        response.setStatus(product.getStatus());
         return response;
     }
 
@@ -252,5 +256,33 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         return finishedProductRepository.findAll().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public FinishedProductResponse updateBySku(String sku, FinishedProductRequest request, MultipartFile image) {
+        log.info("Updating finished product by SKU: {}", sku);
+
+        FinishedProduct product = finishedProductRepository.findBySku(sku)
+                .orElseThrow(() -> new FinishedProductNotFoundException(0L));
+
+        if (request.getName() != null) product.setName(request.getName());
+        if (request.getDescription() != null) product.setDescription(request.getDescription());
+        if (request.getUnit() != null) product.setUnit(request.getUnit());
+        if (request.getWeight() != null) product.setWeight(request.getWeight());
+        if (request.getPrice() != null) product.setPrice(request.getPrice());
+        if (request.getQuantity() != null) product.setQuantity(request.getQuantity());
+        if (request.getMinimumThreshold() != null) product.setMinimumThreshold(request.getMinimumThreshold());
+        if (request.getActive() != null) product.setActive(request.getActive());
+        if (request.getStatus() != null) product.setStatus(request.getStatus());
+
+        if (image != null && !image.isEmpty()) {
+            String imageUrl = cloudinaryService.uploadImage(image);
+            product.setImageUrl(imageUrl);
+        }
+
+        FinishedProduct updatedProduct = finishedProductRepository.save(product);
+        log.info("Finished product updated by SKU: {}", sku);
+        return mapToResponse(updatedProduct);
     }
 }

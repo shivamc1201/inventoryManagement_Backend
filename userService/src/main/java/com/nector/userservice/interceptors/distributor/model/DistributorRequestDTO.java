@@ -56,9 +56,6 @@ public class DistributorRequestDTO {
     @NotNull
     private DistributorStatus status;
 
-
-    private boolean creditLimit;
-
     @NotBlank(message = "Username is required")
     @Size(min = 5, max = 50, message = "Username must be between 5 and 50 characters")
     @Schema(description = "Unique username", example = "johndoe123")
@@ -81,8 +78,11 @@ public class DistributorRequestDTO {
     @Schema(description = "Bank guarantee number", example = "BG123456789")
     private String bankGuaranteeNumber;
 
-    @Schema(description = "Credit amount", example = "500000.00")
-    private java.math.BigDecimal creditAmount;
+    @Schema(description = "Credit limit", example = "500000.00")
+    private java.math.BigDecimal creditLimit;
+
+    @Schema(description = "Credit balance", example = "450000.00")
+    private java.math.BigDecimal creditBalance;
 
     @Schema(description = "Bank guarantee expiry date", example = "2025-12-31")
     private java.time.LocalDate bgExpiryDate;

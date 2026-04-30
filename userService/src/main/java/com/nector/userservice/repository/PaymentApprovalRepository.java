@@ -11,4 +11,6 @@ public interface PaymentApprovalRepository extends JpaRepository<PaymentApproval
     List<PaymentApproval> findByStatusOrderByCreatedAtDesc(String status);
     List<PaymentApproval> findByDistributorIdOrderByCreatedAtDesc(Long distributorId);
     List<PaymentApproval> findByDistributorIdAndStatusOrderByCreatedAtDesc(Long distributorId, String status);
+    List<PaymentApproval> findBySalespersonIdAndStatusOrderByCreatedAtDesc(Long salespersonId, String status);
+    List<PaymentApproval> findByDistributorIdAndSalespersonIdAndStatusOrderByCreatedAtDesc(Long distributorId, Long salespersonId, String status);
 }

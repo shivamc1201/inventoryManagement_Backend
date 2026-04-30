@@ -223,6 +223,16 @@ public class AccountsController {
         return ResponseEntity.ok(approvedOrders);
     }
 
+    @GetMapping("/ledger-updated-payments")
+    @Operation(summary = "Get ledger updated payments", description = "Retrieves payments with LEDGER_UPDATED status, optionally filtered by salespersonId and distributorId")
+    @ApiResponse(responseCode = "200", description = "Ledger updated payments retrieved successfully")
+    public ResponseEntity<List<PaymentApproval>> getLedgerUpdatedPayments(
+            @RequestParam(required = false) Long salespersonId,
+            @RequestParam(required = false) Long distributorId) {
+        List<PaymentApproval> ledgerUpdatedPayments = paymentService.getLedgerUpdatedPayments(salespersonId, distributorId);
+        return ResponseEntity.ok(ledgerUpdatedPayments);
+    }
+
     private void populateDistributorNames(List<PaymentApproval> payments) {
         payments.forEach(payment -> {
             if (payment.getDistributorName() == null) {

@@ -73,6 +73,7 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
         item.setTransportName(request.getTransportName());
         item.setDriverName(request.getDriverName());
         item.setDriverMobile(request.getDriverMobile());
+        if (request.getStatus() != null) item.setStatus(request.getStatus());
         
         PromotionalItem updatedItem = promotionalItemRepository.save(item);
         log.info("Promotional item updated successfully with ID: {}", updatedItem.getId());

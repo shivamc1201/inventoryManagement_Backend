@@ -380,6 +380,7 @@ public class ProductsController {
         return ResponseEntity.ok(response);
     }
 
+
     // ==================== UPDATE BY SKU ====================
 
     @PutMapping(value = "/finished-products/sku/{sku}", consumes = MediaType.APPLICATION_JSON_VALUE)

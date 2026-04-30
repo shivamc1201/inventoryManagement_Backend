@@ -519,6 +519,37 @@ public class PaymentService {
         return distributorLedgerRepository.findByDistributorIdAndTransactionTypeOrderByCreatedAtDesc(distributorId, "JV");
     }
 
+    public List<PaymentApproval> getLedgerUpdatedPayments(Long salespersonId, Long distributorId) {
+        List<PaymentApproval> payments;
+        
+        if (salespersonId != null && distributorId != null) {
+            // Both parameters provided
+            payments = paymentApprovalRepository.findByDistributorIdAndSalespersonIdAndStatusOrderByCreatedAtDesc(
+                    distributorId, salespersonId, "LEDGER_UPDATED");
+        } else if (salespersonId != null) {
+            // Only salespersonId provided
+            payments = paymentApprovalRepository.findBySalespersonIdAndStatusOrderByCreatedAtDesc(
+                    salespersonId, "LEDGER_UPDATED");
+        } else if (distributorId != null) {
+            // Only distributorId provided
+            payments = paymentApprovalRepository.findByDistributorIdAndStatusOrderByCreatedAtDesc(
+                    distributorId, "LEDGER_UPDATED");
+        } else {
+            // No filters - get all LEDGER_UPDATED payments
+            payments = paymentApprovalRepository.findByStatusOrderByCreatedAtDesc("LEDGER_UPDATED");
+        }
+
+        // Populate distributor names
+        payments.forEach(payment -> {
+            if (payment.getDistributorName() == null) {
+                distributorRepository.findById(payment.getDistributorId())
+                        .ifPresent(distributor -> payment.setDistributorName(distributor.getFirstName()));
+            }
+        });
+
+        return payments;
+    }
+
     public void processJournalVoucher(Long distributorId, JournalVoucherRequest request) {
         for (JournalVoucherEntry entry : request.getEntries()) {
             if (entry.getDebit() != null && entry.getDebit().compareTo(BigDecimal.ZERO) > 0) {

@@ -4,6 +4,7 @@ import com.nector.userservice.enums.ProductStatus;
 import com.nector.userservice.model.MachinePart;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 

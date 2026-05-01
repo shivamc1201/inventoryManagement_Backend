@@ -25,5 +25,9 @@ public class MachinePartRequest {
 
     private MachinePart.Condition condition;
 
+    private String hsn;
+
+    private BigDecimal taxRate;
+
     private ProductStatus status;
 }

@@ -17,6 +17,8 @@ public class RawProductResponse {
     private BigDecimal price;
     private BigDecimal perItemPrice;
     private Integer minimumThreshold;
+    private String hsn;
+    private BigDecimal taxRate;
     private Boolean active;
     private Boolean lowStock;
     private LocalDateTime createdAt;

@@ -68,6 +68,8 @@ public class RawProductServiceImpl implements RawProductService {
         product.setPrice(request.getPrice());
         product.setQuantity(request.getQuantity());
         product.setMinimumThreshold(request.getMinimumThreshold());
+        product.setHsn(request.getHsn());
+        product.setTaxRate(request.getTaxRate());
         product.setVendorId(request.getVendorId());
         product.setVendorName(request.getVendorName());
         product.setTransportName(request.getTransportName());
@@ -187,6 +189,8 @@ public class RawProductServiceImpl implements RawProductService {
         response.setPerItemPrice(perItemPrice);
         
         response.setMinimumThreshold(product.getMinimumThreshold());
+        response.setHsn(product.getHsn());
+        response.setTaxRate(product.getTaxRate());
         response.setActive(product.getActive());
         int qty = product.getQuantity() != null ? product.getQuantity() : 0;
         int minThreshold = product.getMinimumThreshold() != null ? product.getMinimumThreshold() : 0;
@@ -216,6 +220,8 @@ public class RawProductServiceImpl implements RawProductService {
         if (request.getPrice() != null) product.setPrice(request.getPrice());
         if (request.getQuantity() != null) product.setQuantity(request.getQuantity());
         if (request.getMinimumThreshold() != null) product.setMinimumThreshold(request.getMinimumThreshold());
+        if (request.getHsn() != null) product.setHsn(request.getHsn());
+        if (request.getTaxRate() != null) product.setTaxRate(request.getTaxRate());
         if (request.getVendorId() != null) product.setVendorId(request.getVendorId());
         if (request.getVendorName() != null) product.setVendorName(request.getVendorName());
         if (request.getTransportName() != null) product.setTransportName(request.getTransportName());

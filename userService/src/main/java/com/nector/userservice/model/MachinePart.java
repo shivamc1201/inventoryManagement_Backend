@@ -49,6 +49,12 @@ public class MachinePart {
     @Column
     private Condition condition = Condition.NEW;
     
+    @Column(length = 50)
+    private String hsn;
+    
+    @Column(precision = 5, scale = 2)
+    private BigDecimal taxRate;
+    
     @Column
     private Boolean active = true;
 

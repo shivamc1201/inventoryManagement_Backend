@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
@@ -32,4 +33,25 @@ public class UpdateMachinePart {
 
     @NotNull(message = "Condition is required")
     private MachinePart.Condition condition;
+
+    private String hsn;
+
+    private BigDecimal taxRate;
+
+    // Explicit getters/setters for hsn and taxRate to ensure compilation
+    public String getHsn() {
+        return hsn;
+    }
+
+    public void setHsn(String hsn) {
+        this.hsn = hsn;
+    }
+
+    public BigDecimal getTaxRate() {
+        return taxRate;
+    }
+
+    public void setTaxRate(BigDecimal taxRate) {
+        this.taxRate = taxRate;
+    }
 }

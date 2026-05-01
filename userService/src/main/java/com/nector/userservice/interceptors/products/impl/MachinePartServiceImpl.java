@@ -64,6 +64,8 @@ public class MachinePartServiceImpl implements MachinePartService {
         part.setWarrantyExpiryDate(request.getWarrantyExpiryDate());
         part.setQuantity(request.getQuantity());
         part.setCondition(request.getCondition());
+        part.setHsn(request.getHsn());
+        part.setTaxRate(request.getTaxRate());
 
         MachinePart updatedPart = machinePartRepository.save(part);
         log.info("Machine part updated successfully with ID: {}", updatedPart.getId());
@@ -193,6 +195,8 @@ public class MachinePartServiceImpl implements MachinePartService {
         if (request.getWarrantyExpiryDate() != null) part.setWarrantyExpiryDate(request.getWarrantyExpiryDate());
         if (request.getQuantity() != null) part.setQuantity(request.getQuantity());
         if (request.getCondition() != null) part.setCondition(request.getCondition());
+        if (request.getHsn() != null) part.setHsn(request.getHsn());
+        if (request.getTaxRate() != null) part.setTaxRate(request.getTaxRate());
         if (request.getStatus() != null) part.setStatus(request.getStatus());
 
         MachinePart updatedPart = machinePartRepository.save(part);

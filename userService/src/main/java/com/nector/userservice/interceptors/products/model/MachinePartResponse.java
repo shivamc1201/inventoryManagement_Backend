@@ -18,6 +18,8 @@ public class MachinePartResponse {
     private LocalDate warrantyExpiryDate;
     private Integer quantity;
     private MachinePart.Condition condition;
+    private String hsn;
+    private BigDecimal taxRate;
     private Boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

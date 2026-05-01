@@ -41,6 +41,8 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
         item.setPrice(request.getPrice());
         item.setQuantity(request.getQuantity());
         item.setMinimumThreshold(request.getMinimumThreshold());
+        item.setHsn(request.getHsn());
+        item.setTaxRate(request.getTaxRate());
         item.setVendorId(request.getVendorId());
         item.setVendorName(request.getVendorName());
         item.setTransportName(request.getTransportName());
@@ -68,6 +70,8 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
         item.setPrice(request.getPrice());
         item.setQuantity(request.getQuantity());
         item.setMinimumThreshold(request.getMinimumThreshold());
+        item.setHsn(request.getHsn());
+        item.setTaxRate(request.getTaxRate());
         item.setVendorId(request.getVendorId());
         item.setVendorName(request.getVendorName());
         item.setTransportName(request.getTransportName());
@@ -214,6 +218,8 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
         if (request.getPrice() != null) item.setPrice(request.getPrice());
         if (request.getQuantity() != null) item.setQuantity(request.getQuantity());
         if (request.getMinimumThreshold() != null) item.setMinimumThreshold(request.getMinimumThreshold());
+        if (request.getHsn() != null) item.setHsn(request.getHsn());
+        if (request.getTaxRate() != null) item.setTaxRate(request.getTaxRate());
         if (request.getVendorId() != null) item.setVendorId(request.getVendorId());
         if (request.getVendorName() != null) item.setVendorName(request.getVendorName());
         if (request.getTransportName() != null) item.setTransportName(request.getTransportName());

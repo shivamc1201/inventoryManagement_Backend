@@ -2,10 +2,16 @@ package com.nector.userservice.bom.service.impl;
 
 import com.nector.userservice.bom.dto.*;
 import com.nector.userservice.bom.entity.*;
+import com.nector.userservice.exception.InsufficientStockException;
+import com.nector.userservice.exception.RawProductNotFoundException;
 import com.nector.userservice.exception.ResourceNotFoundException;
 import com.nector.userservice.bom.mapper.BomMapper;
 import com.nector.userservice.bom.repository.BillOfMaterialRepository;
 import com.nector.userservice.bom.service.BomService;
+import com.nector.userservice.model.FinishedProduct;
+import com.nector.userservice.model.RawProduct;
+import com.nector.userservice.repository.FinishedProductRepository;
+import com.nector.userservice.repository.RawProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -16,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,6 +35,8 @@ public class BomServiceImpl implements BomService {
 
     private final BillOfMaterialRepository billOfMaterialRepository;
     private final BomMapper bomMapper;
+    private final RawProductRepository rawProductRepository;
+    private final FinishedProductRepository finishedProductRepository;
 
     @Override
     public BomResponseDto create(BomRequestDto requestDto) {
@@ -205,5 +214,93 @@ public class BomServiceImpl implements BomService {
         bom.setMaterialCount(bom.getComponents().size());
 
         log.debug("Cost computation completed for BOM: {}", bom.getBomName());
+    }
+
+    @Override
+    public BomProductionResponseDto produceFinishedProduct(BomProductionRequestDto requestDto) {
+        log.info("Producing finished product: {} with quantity: {}", 
+                requestDto.getFinishedProductName(), requestDto.getQuantity());
+
+        BillOfMaterial bom = billOfMaterialRepository
+                .findByFinishedProductNameIgnoreCase(requestDto.getFinishedProductName())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "BOM not found for finished product: " + requestDto.getFinishedProductName()));
+
+        FinishedProduct finishedProduct = finishedProductRepository.findById(bom.getFinishedProductId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Finished product not found with ID: " + bom.getFinishedProductId()));
+
+        BigDecimal requestedQuantity = requestDto.getQuantity();
+        BigDecimal bomOutputQuantity = bom.getOutputQuantity();
+
+        BigDecimal ratio = requestedQuantity.divide(bomOutputQuantity, 4, RoundingMode.HALF_UP);
+        log.debug("Production ratio calculated: {} (requested: {}, BOM output: {})", 
+                ratio, requestedQuantity, bomOutputQuantity);
+
+        List<BomProductionResponseDto.RawMaterialConsumptionDto> consumptions = 
+                new java.util.ArrayList<>();
+
+        for (BomComponent component : bom.getComponents()) {
+            BigDecimal requiredQuantity = component.getQuantity().multiply(ratio)
+                    .setScale(4, RoundingMode.HALF_UP);
+
+            RawProduct rawProduct = rawProductRepository.findById(component.getRawMaterialId())
+                    .orElseThrow(() -> new RawProductNotFoundException(component.getRawMaterialId()));
+
+            if (rawProduct.getQuantity() == null) {
+                rawProduct.setQuantity(0);
+            }
+
+            int requiredInt = requiredQuantity.intValue();
+            if (rawProduct.getQuantity() < requiredInt) {
+                throw new InsufficientStockException(
+                        String.format("Insufficient stock for raw material '%s'. Required: %s %s, Available: %d %s",
+                                rawProduct.getName(), requiredQuantity, component.getUnit(), 
+                                rawProduct.getQuantity(), rawProduct.getUnitName() != null ? rawProduct.getUnitName() : component.getUnit()));
+            }
+
+            rawProduct.setQuantity(rawProduct.getQuantity() - requiredInt);
+            rawProductRepository.save(rawProduct);
+            log.info("Deducted {} {} from raw material: {} (ID: {}). New stock: {}",
+                    requiredInt, component.getUnit(), rawProduct.getName(), 
+                    rawProduct.getId(), rawProduct.getQuantity());
+
+            consumptions.add(BomProductionResponseDto.RawMaterialConsumptionDto.builder()
+                    .rawMaterialId(rawProduct.getId())
+                    .rawMaterialName(rawProduct.getName())
+                    .quantityRequired(requiredQuantity)
+                    .quantityAvailable(BigDecimal.valueOf(rawProduct.getQuantity() + requiredInt))
+                    .unit(component.getUnit())
+                    .newStock(rawProduct.getQuantity())
+                    .build());
+        }
+
+        int requestedInt = requestedQuantity.intValue();
+        int newFinishedProductStock = (finishedProduct.getQuantity() != null ? finishedProduct.getQuantity() : 0) + requestedInt;
+        finishedProduct.setQuantity(newFinishedProductStock);
+
+        if (requestDto.getMinimumThreshold() != null) {
+            finishedProduct.setMinimumThreshold(requestDto.getMinimumThreshold());
+            log.info("Updated minimum threshold for finished product: {} to {}",
+                    finishedProduct.getName(), requestDto.getMinimumThreshold());
+        }
+
+        finishedProductRepository.save(finishedProduct);
+        log.info("Added {} {} of finished product: {}. New stock: {}",
+                requestedInt, bom.getOutputUnit(), finishedProduct.getName(), newFinishedProductStock);
+
+        return BomProductionResponseDto.builder()
+                .bomId(bom.getId())
+                .finishedProductName(finishedProduct.getName())
+                .finishedProductId(finishedProduct.getId())
+                .quantityProduced(requestedQuantity)
+                .outputUnit(bom.getOutputUnit())
+                .finishedProductNewStock(newFinishedProductStock)
+                .minimumThreshold(finishedProduct.getMinimumThreshold())
+                .rawMaterialsConsumed(consumptions)
+                .productionTime(Instant.now())
+                .message(String.format("Successfully produced %s %s of '%s' using BOM '%s'",
+                        requestedQuantity, bom.getOutputUnit(), finishedProduct.getName(), bom.getBomName()))
+                .build();
     }
 }

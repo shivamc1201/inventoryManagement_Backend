@@ -1,5 +1,7 @@
 package com.nector.userservice.bom.controller;
 
+import com.nector.userservice.bom.dto.BomProductionRequestDto;
+import com.nector.userservice.bom.dto.BomProductionResponseDto;
 import com.nector.userservice.bom.dto.BomRequestDto;
 import com.nector.userservice.bom.dto.BomResponseDto;
 import com.nector.userservice.bom.dto.BomSummaryDto;
@@ -152,6 +154,25 @@ public class BomController {
         return ResponseEntity.ok(
                 bomService.getSummary()
         );
+    }
+
+    @Operation(summary = "Produce finished product using BOM", description = "Produce finished product by consuming raw materials according to BOM recipe. Deducts raw materials from inventory and adds finished product to inventory.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Finished product produced successfully"),
+        @ApiResponse(responseCode = "400", description = "Validation error or insufficient raw materials"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized access"),
+        @ApiResponse(responseCode = "404", description = "BOM or finished product not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PostMapping("/produce")
+    public ResponseEntity<BomProductionResponseDto> produceFinishedProduct(
+            @Valid @RequestBody BomProductionRequestDto requestDto) {
+        
+        log.info("Producing finished product: {} with quantity: {}", 
+                requestDto.getFinishedProductName(), requestDto.getQuantity());
+        
+        BomProductionResponseDto response = bomService.produceFinishedProduct(requestDto);
+        return ResponseEntity.ok(response);
     }
 
 }

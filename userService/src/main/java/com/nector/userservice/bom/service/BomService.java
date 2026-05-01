@@ -1,5 +1,7 @@
 package com.nector.userservice.bom.service;
 
+import com.nector.userservice.bom.dto.BomProductionRequestDto;
+import com.nector.userservice.bom.dto.BomProductionResponseDto;
 import com.nector.userservice.bom.dto.BomRequestDto;
 import com.nector.userservice.bom.dto.BomResponseDto;
 import com.nector.userservice.bom.dto.BomSummaryDto;
@@ -23,4 +25,6 @@ public interface BomService {
     Page<BomResponseDto> search(String keyword, Pageable pageable);
 
     BomSummaryDto getSummary();
+
+    BomProductionResponseDto produceFinishedProduct(BomProductionRequestDto requestDto);
 }

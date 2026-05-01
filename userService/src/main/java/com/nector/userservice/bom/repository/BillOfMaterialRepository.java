@@ -13,6 +13,8 @@ public interface BillOfMaterialRepository extends JpaRepository<BillOfMaterial, 
 
     Optional<BillOfMaterial> findByBomNameIgnoreCase(String bomName);
 
+    Optional<BillOfMaterial> findByFinishedProductNameIgnoreCase(String finishedProductName);
+
     Page<BillOfMaterial> findByBomNameContainingIgnoreCaseOrFinishedProductNameContainingIgnoreCase(
             String bom, String product, Pageable pageable);
 

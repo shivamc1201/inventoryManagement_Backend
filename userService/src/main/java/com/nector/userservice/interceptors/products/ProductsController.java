@@ -8,7 +8,9 @@ import com.nector.userservice.interceptors.products.service.MachinePartService;
 import com.nector.userservice.interceptors.products.service.RawProductService;
 import com.nector.userservice.interceptors.products.service.PromotionalItemService;
 import com.nector.userservice.interceptors.products.service.ScrapItemService;
+import com.nector.userservice.interceptors.products.service.OutwardItemService;
 import com.nector.userservice.model.MachinePart;
+import com.nector.userservice.model.OutwardItemTransaction;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -38,6 +40,7 @@ public class ProductsController {
     private final MachinePartService machinePartService;
     private final PromotionalItemService promotionalItemService;
     private final ScrapItemService scrapItemService;
+    private final OutwardItemService outwardItemService;
 
     // ==================== FINISHED PRODUCTS ====================
 
@@ -380,6 +383,42 @@ public class ProductsController {
         return ResponseEntity.ok(response);
     }
 
+    // ==================== OUTWARD ITEMS ====================
+
+    @PostMapping("/outward-items")
+    @Operation(summary = "Create outward item transaction", description = "Creates a new outward item transaction for spare parts, promotional items, or scrap material. Transaction type can be OUTWARD_GIVING or RETURNED_PART.")
+    public ResponseEntity<OutwardItemResponse> createOutwardItem(@RequestBody OutwardItemRequest request) {
+        OutwardItemResponse response = outwardItemService.createOutwardItem(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/outward-items")
+    @Operation(summary = "Get all outward item transactions", description = "Retrieves all outward item transactions")
+    public ResponseEntity<List<OutwardItemResponse>> getAllOutwardItems() {
+        List<OutwardItemResponse> response = outwardItemService.getAllOutwardItems();
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/outward-items/{id}")
+    @Operation(summary = "Get outward item transaction by ID", description = "Retrieves an outward item transaction by its ID")
+    public ResponseEntity<OutwardItemResponse> getOutwardItemById(@PathVariable Long id) {
+        OutwardItemResponse response = outwardItemService.getOutwardItemById(id);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/outward-items/type/{itemType}")
+    @Operation(summary = "Get outward items by type", description = "Retrieves outward item transactions by item type (SPARE_PARTS, PROMOTIONAL_ITEMS, SCRAP_MATERIAL)")
+    public ResponseEntity<List<OutwardItemResponse>> getOutwardItemsByType(@PathVariable OutwardItemTransaction.ItemType itemType) {
+        List<OutwardItemResponse> response = outwardItemService.getOutwardItemsByType(itemType);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/outward-items/transaction-type/{transactionType}")
+    @Operation(summary = "Get outward items by transaction type", description = "Retrieves outward item transactions by transaction type (OUTWARD_GIVING, RETURNED_PART)")
+    public ResponseEntity<List<OutwardItemResponse>> getOutwardItemsByTransactionType(@PathVariable OutwardItemTransaction.TransactionType transactionType) {
+        List<OutwardItemResponse> response = outwardItemService.getOutwardItemsByTransactionType(transactionType);
+        return ResponseEntity.ok(response);
+    }
 
     // ==================== UPDATE BY SKU ====================
 

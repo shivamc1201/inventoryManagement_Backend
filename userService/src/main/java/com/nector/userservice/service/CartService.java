@@ -21,6 +21,7 @@ import com.nector.userservice.dto.invoice.ProformaInvoice;
 import com.nector.userservice.repository.SalesPersonRepository;
 import com.nector.userservice.model.SalesPerson;
 import com.nector.userservice.service.SalesHierarchyValidationService;
+import com.nector.userservice.service.PaymentService;
 import com.nector.userservice.ordertracking.service.OrderTrackingService;
 import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +51,7 @@ public class CartService {
     private final SalesHierarchyValidationService salesHierarchyValidationService;
     private final OrderTrackingService orderTrackingService;
     private final HtmlToPdfService htmlToPdfService;
+    private final @org.springframework.context.annotation.Lazy PaymentService paymentService;
 
     // Self-injection to enable @Async method calls through Spring proxy
     private CartService self;
@@ -384,11 +386,8 @@ public class CartService {
     private void updateOrderTrackingSync(Cart updatedCart) {
         // Update Order Tracking Step 3: Approved from Sales
         try {
-            String orderNumber = "ORD-" + updatedCart.getId() + "-" +
-                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-
             com.nector.userservice.ordertracking.entity.OrderTracking order =
-                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+                orderTrackingService.getOrderRepository().findByCartId(updatedCart.getId());
 
             if (order != null) {
                 UpdateStepRequest request = new UpdateStepRequest();
@@ -472,11 +471,8 @@ public class CartService {
 
         // Update order tracking Step 4: PI Generated - set to "completed"
         try {
-            String orderNumber = "ORD-" + updatedCartId + "-" +
-                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-
             com.nector.userservice.ordertracking.entity.OrderTracking order =
-                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+                orderTrackingService.getOrderRepository().findByCartId(updatedCartId);
 
             if (order != null) {
                 UpdateStepRequest step4Request = new UpdateStepRequest();
@@ -508,11 +504,8 @@ public class CartService {
         
         // Update Order Tracking Step 3: Cancelled (Sales Rejection)
         try {
-            String orderNumber = "ORD-" + cartId + "-" + 
-                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-            
             com.nector.userservice.ordertracking.entity.OrderTracking order = 
-                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+                orderTrackingService.getOrderRepository().findByCartId(cartId);
             
             if (order != null) {
                 UpdateStepRequest request = new UpdateStepRequest();
@@ -609,26 +602,10 @@ public class CartService {
      */
     private void createOrderTrackingSync(Cart cart) {
         try {
-            String distributorName = cart.getDistributorName() != null ? 
-                cart.getDistributorName() : "Unknown Distributor";
-            String orderNumber = "ORD-" + cart.getId() + "-" + 
-                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-            
-            BigDecimal totalAmount = cart.getTotalCartAmount() != null ? 
-                cart.getTotalCartAmount() : 
-                cart.getCartItems().stream()
-                    .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            // Check if OrderTracking already exists for this cart/order
-            if (orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber) == null) {
-                orderTrackingService.createFromCart(
-                    cart.getId(), 
-                    distributorName, 
-                    cart.getDistributorId(),
-                    orderNumber,
-                    totalAmount
-                );
+            // Check if OrderTracking already exists for this cart
+            if (orderTrackingService.getOrderRepository().findByCartId(cart.getId()) == null) {
+                // Delegate to PaymentService which generates SO number properly
+                paymentService.createOrderTrackingFromCart(cart.getId());
                 log.info("OrderTracking record created for cart {}", cart.getId());
             } else {
                 log.info("OrderTracking record already exists for cart {}, skipping creation", cart.getId());
@@ -1013,26 +990,12 @@ public class CartService {
     private void initializeOrderTrackingForCart(Cart cart, Long distributorId) {
         try {
             // Check if order tracking already exists for this cart
-            String orderNumber = "ORD-" + cart.getId() + "-" + 
-                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-            
-            if (orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber) == null) {
-                // Get distributor information
-                String distributorName = distributorRepository.findById(distributorId)
-                    .map(distributor -> distributor.getFirstName() != null ? distributor.getFirstName() : "Unknown Distributor")
-                    .orElse("Unknown Distributor");
+            if (orderTrackingService.getOrderRepository().findByCartId(cart.getId()) == null) {
+                // Delegate to PaymentService which handles SO number generation
+                paymentService.createOrderTrackingFromCart(cart.getId());
                 
-                // Create initial order tracking record with distributor information
-                orderTrackingService.createFromCart(
-                    cart.getId(), 
-                    distributorName, 
-                    distributorId,
-                    orderNumber,
-                    BigDecimal.ZERO // Initial amount, will be updated when order is placed
-                );
-                
-                log.info("Order tracking initialized for cart {} with distributor {} ({})", 
-                    cart.getId(), distributorName, distributorId);
+                log.info("Order tracking initialized for cart {} with distributor {}", 
+                    cart.getId(), distributorId);
             }
         } catch (Exception e) {
             log.warn("Failed to initialize order tracking for cart {}: {}", cart.getId(), e.getMessage());

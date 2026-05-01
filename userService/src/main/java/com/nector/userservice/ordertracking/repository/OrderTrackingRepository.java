@@ -16,6 +16,8 @@ public interface OrderTrackingRepository extends JpaRepository<OrderTracking, Lo
     boolean existsByOrderNumber(String orderNumber);
     
     OrderTracking findByOrderNumber(String orderNumber);
+    
+    OrderTracking findByCartId(Long cartId);
 
     /**
      * Supports the 3 filter values from the frontend's filter chips:

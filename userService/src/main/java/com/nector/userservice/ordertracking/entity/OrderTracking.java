@@ -29,6 +29,9 @@ public class OrderTracking {
 
     @Column(name = "order_number", nullable = false, unique = true)
     private String orderNumber;
+    
+    @Column(name = "cart_id")
+    private Long cartId;
 
     @Column(name = "distributor_id", nullable = false)
     private Long distributorId;

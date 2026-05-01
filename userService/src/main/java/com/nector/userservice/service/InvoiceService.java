@@ -40,6 +40,7 @@ public class InvoiceService {
     private final TemplateEngine templateEngine;
     private final HtmlToPdfService htmlToPdfService;
     private final CloudinaryStorageService cloudinaryStorageService;
+    private final DocumentNumberService documentNumberService;
     private final DistributorRepository distributorRepository;
 
     @Transactional
@@ -64,16 +65,20 @@ public class InvoiceService {
             log.info("Cart found - ID: {}, Distributor ID: {}, Status: {}, Items: {}",
                     cart.getId(), cart.getDistributorId(), cart.getStatus(), cart.getCartItems().size());
 
+            // Generate Invoice number once (format: OP/YYYY-YY/NNNN)
+            String invoiceNumber = documentNumberService.generateInvoiceNumber();
+            log.info("Generated Invoice Number: {}", invoiceNumber);
+
             // Step 3: Create Invoice entity
             log.info("Step 3/6: Creating Invoice entity in database");
-            com.nector.userservice.model.Invoice invoiceEntity = createInvoiceEntity(orderConfirmation, cart);
+            com.nector.userservice.model.Invoice invoiceEntity = createInvoiceEntity(orderConfirmation, cart, invoiceNumber);
             invoiceRepository.save(invoiceEntity);
             log.info("Invoice entity created - ID: {}, Invoice Number: {}, Amount: {}",
                     invoiceEntity.getId(), invoiceEntity.getInvoiceNumber(), invoiceEntity.getGrandTotal());
 
             // Step 4: Generate invoice data
             log.info("Step 4/6: Generating invoice data from cart and order confirmation");
-            Invoice invoice = createInvoiceFromData(orderConfirmation, cart);
+            Invoice invoice = createInvoiceFromData(orderConfirmation, cart, invoiceNumber);
             log.info("Invoice data created - Invoice Number: {}, Items: {}, Total Amount: {}",
                     invoice.getInvoiceNumber(), invoice.getItems().size(), invoice.getGrandTotal());
 
@@ -164,9 +169,11 @@ public class InvoiceService {
         }
     }
 
-    private com.nector.userservice.model.Invoice createInvoiceEntity(OrderConfirmation orderConfirmation, Cart cart) {
+    private com.nector.userservice.model.Invoice createInvoiceEntity(OrderConfirmation orderConfirmation, Cart cart, String invoiceNumber) {
         com.nector.userservice.model.Invoice invoiceEntity = new com.nector.userservice.model.Invoice();
-        invoiceEntity.setInvoiceNumber("INV-" + orderConfirmation.getOrderId() + "-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")));
+        
+        // Use provided Invoice number in format: OP/YYYY-YY/NNNN (e.g., OP/2026-27/0001)
+        invoiceEntity.setInvoiceNumber(invoiceNumber);
         invoiceEntity.setOrderId(orderConfirmation.getOrderId());
         invoiceEntity.setOrderConfirmationId(orderConfirmation.getId());
         invoiceEntity.setDistributorId(orderConfirmation.getDistributorId());
@@ -223,11 +230,11 @@ public class InvoiceService {
         return invoiceEntity;
     }
 
-    private Invoice createInvoiceFromData(OrderConfirmation orderConfirmation, Cart cart) {
+    private Invoice createInvoiceFromData(OrderConfirmation orderConfirmation, Cart cart, String invoiceNumber) {
         Invoice invoice = new Invoice();
 
-        // Invoice details
-        invoice.setInvoiceNumber("INV-" + orderConfirmation.getOrderId() + "-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")));
+        // Invoice details - use provided Invoice number
+        invoice.setInvoiceNumber(invoiceNumber);
         invoice.setInvoiceDate(LocalDate.now());
         invoice.setPaymentTerms("Due on Receipt");
         invoice.setOrderNo(String.valueOf(orderConfirmation.getOrderId()));
@@ -522,8 +529,8 @@ public class InvoiceService {
                     cart.getCartItems().size(),
                     orderConfirmation.getItemConfirmations() != null ? orderConfirmation.getItemConfirmations().size() : 0);
 
-            // Build the Invoice DTO fresh from live data
-            Invoice invoice = createInvoiceFromData(orderConfirmation, cart);
+            // Build the Invoice DTO fresh from live data (reuse existing invoice number)
+            Invoice invoice = createInvoiceFromData(orderConfirmation, cart, invoiceEntity.getInvoiceNumber());
 
             log.info("Invoice regenerated - Items: {}, Grand Total: {}", invoice.getItems().size(), invoice.getGrandTotal());
 

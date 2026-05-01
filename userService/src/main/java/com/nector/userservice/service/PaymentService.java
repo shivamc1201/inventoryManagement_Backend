@@ -52,6 +52,9 @@ public class PaymentService {
     @Autowired
     private RbacService rbacService;
     
+    @Autowired
+    private DocumentNumberService documentNumberService;
+    
     /**
      * Get current user ID from security context
      * For now, returns hardcoded user ID 1L (same as RbacService)
@@ -677,11 +680,9 @@ public class PaymentService {
      */
     private void updatePIGenerationStep(Long orderId) {
         try {
-            // Find order tracking by order number (assuming orderId is cartId that maps to orderNumber)
-            String orderNumber = "ORD-" + orderId + "-" + 
-                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+            // Find order tracking by cartId (orderId is actually cartId in this context)
             com.nector.userservice.ordertracking.entity.OrderTracking order = 
-                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+                orderTrackingService.getOrderRepository().findByCartId(orderId);
             
             if (order != null) {
                 UpdateStepRequest request = new UpdateStepRequest();
@@ -697,7 +698,7 @@ public class PaymentService {
                 
                 orderTrackingService.updateStepBySequence(order.getId(), 4, request);
             } else {
-                System.err.println("Order tracking not found for order number: " + orderNumber);
+                System.err.println("Order tracking not found for cart ID: " + orderId);
             }
         } catch (Exception e) {
             // Log error but don't fail the main process
@@ -711,10 +712,8 @@ public class PaymentService {
      */
     private void updateAwaitingPaymentStep(Long orderId) {
         try {
-            String orderNumber = "ORD-" + orderId + "-" + 
-                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
             com.nector.userservice.ordertracking.entity.OrderTracking order = 
-                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+                orderTrackingService.getOrderRepository().findByCartId(orderId);
             
             if (order != null) {
                 UpdateStepRequest request = new UpdateStepRequest();
@@ -728,7 +727,7 @@ public class PaymentService {
                 
                 orderTrackingService.updateStepBySequence(order.getId(), 5, request);
             } else {
-                System.err.println("Order tracking not found for order number: " + orderNumber);
+                System.err.println("Order tracking not found for cart ID: " + orderId);
             }
         } catch (Exception e) {
             System.err.println("Failed to update awaiting payment step: " + e.getMessage());
@@ -741,10 +740,8 @@ public class PaymentService {
      */
     private void updatePaymentApprovedStep(Long orderId) {
         try {
-            String orderNumber = "ORD-" + orderId + "-" + 
-                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
             com.nector.userservice.ordertracking.entity.OrderTracking order = 
-                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+                orderTrackingService.getOrderRepository().findByCartId(orderId);
             
             if (order != null) {
                 UpdateStepRequest request = new UpdateStepRequest();
@@ -773,7 +770,7 @@ public class PaymentService {
                     System.err.println("Step 5 already completed or not found: " + e.getMessage());
                 }
             } else {
-                System.err.println("Order tracking not found for order number: " + orderNumber);
+                System.err.println("Order tracking not found for cart ID: " + orderId);
             }
         } catch (Exception e) {
             System.err.println("Failed to update payment approved step: " + e.getMessage());
@@ -785,10 +782,8 @@ public class PaymentService {
      */
     private void ensureOrderTrackingExists(Long orderId) {
         try {
-            String orderNumber = "ORD-" + orderId + "-" + 
-                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
             com.nector.userservice.ordertracking.entity.OrderTracking existingOrder = 
-                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+                orderTrackingService.getOrderRepository().findByCartId(orderId);
             
             if (existingOrder == null) {
                 // Create order tracking if it doesn't exist
@@ -818,9 +813,8 @@ public class PaymentService {
                 .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
             
-            // Create order number
-            String orderNumber = "ORD-" + cartId + "-" + 
-                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+            // Generate order number in format: SO/YYYY-YY/NNNN (e.g., SO/2026-27/0001)
+            String orderNumber = documentNumberService.generateSalesOrderNumber();
             
             // Use OrderTrackingService to create from cart
             orderTrackingService.createFromCart(
@@ -841,11 +835,9 @@ public class PaymentService {
      */
     private void updateOrderTrackingStep(Long orderId, Integer stepSequence, String status, String remarks) {
         try {
-            // Find the order tracking entry by order number
-            String orderNumber = "ORD-" + orderId + "-" + 
-                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+            // Find the order tracking entry by cartId
             com.nector.userservice.ordertracking.entity.OrderTracking order = 
-                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+                orderTrackingService.getOrderRepository().findByCartId(orderId);
             
             if (order != null) {
                 UpdateStepRequest request = new UpdateStepRequest();
@@ -855,7 +847,7 @@ public class PaymentService {
                 
                 orderTrackingService.updateStepBySequence(order.getId(), stepSequence.intValue(), request);
             } else {
-                System.err.println("Order tracking not found for order number: " + orderNumber);
+                System.err.println("Order tracking not found for cart ID: " + orderId);
             }
         } catch (Exception e) {
             System.err.println("Error updating order tracking step: " + e.getMessage());

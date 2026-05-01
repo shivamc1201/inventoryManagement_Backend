@@ -38,6 +38,7 @@ public class ProformaInvoiceService {
     private final TemplateEngine templateEngine;
     private final HtmlToPdfService htmlToPdfService;
     private final CloudinaryStorageService cloudinaryStorageService;
+    private final DocumentNumberService documentNumberService;
     private final DistributorRepository distributorRepository;
 
 
@@ -55,16 +56,20 @@ public class ProformaInvoiceService {
             log.info("Cart found - ID: {}, Distributor ID: {}, Status: {}, Items: {}",
                     cart.getId(), cart.getDistributorId(), cart.getStatus(), cart.getCartItems().size());
 
+            // Generate PI number once (format: EI/YYYY-YY/NNNN)
+            String piNumber = documentNumberService.generateProformaInvoiceNumber();
+            log.info("Generated PI Number: {}", piNumber);
+
             // Step 2: Create PI entity
             log.info("Step 2/6: Creating Proforma Invoice entity in database");
-            com.nector.userservice.model.ProformaInvoice piEntity = createProformaInvoiceEntity(cart);
+            com.nector.userservice.model.ProformaInvoice piEntity = createProformaInvoiceEntity(cart, piNumber);
             proformaInvoiceRepository.save(piEntity);
             log.info("PI entity created - ID: {}, PI Number: {}, Amount: {}",
                     piEntity.getId(), piEntity.getPiNumber(), piEntity.getAmount());
 
             // Step 3: Generate invoice data
             log.info("Step 3/6: Generating invoice data from cart");
-            ProformaInvoice invoice = createInvoiceFromCart(cart);
+            ProformaInvoice invoice = createInvoiceFromCart(cart, piNumber);
             log.info("Invoice data created - PI Number: {}, Items: {}, Total Amount: {}",
                     invoice.getPiNumber(), invoice.getItems().size(), invoice.getGrandTotal());
 
@@ -138,7 +143,7 @@ public class ProformaInvoiceService {
         }
 
         // Create temp file
-        String tempFileName = piNumber + "_" + System.currentTimeMillis() + ".pdf";
+        String tempFileName = piNumber.replace("/", "-") + "_" + System.currentTimeMillis() + ".pdf";
         File tempFile = tempDir.resolve(tempFileName).toFile();
 
         try (FileOutputStream fos = new FileOutputStream(tempFile)) {
@@ -161,9 +166,11 @@ public class ProformaInvoiceService {
         }
     }
 
-    private com.nector.userservice.model.ProformaInvoice createProformaInvoiceEntity(Cart cart) {
+    private com.nector.userservice.model.ProformaInvoice createProformaInvoiceEntity(Cart cart, String piNumber) {
         com.nector.userservice.model.ProformaInvoice piEntity = new com.nector.userservice.model.ProformaInvoice();
-        piEntity.setPiNumber("PI-" + cart.getId() + "-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")));
+        
+        // Use provided PI number in format: EI/YYYY-YY/NNNN (e.g., EI/2026-27/0001)
+        piEntity.setPiNumber(piNumber);
         piEntity.setCartId(cart.getId());
         piEntity.setDistributorId(cart.getDistributorId());
 
@@ -184,11 +191,11 @@ public class ProformaInvoiceService {
     }
 
     // Keep existing methods unchanged
-    private ProformaInvoice createInvoiceFromCart(Cart cart) {
+    private ProformaInvoice createInvoiceFromCart(Cart cart, String piNumber) {
         ProformaInvoice invoice = new ProformaInvoice();
 
-        // Invoice details
-        invoice.setPiNumber("PI-" + cart.getId() + "-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")));
+        // Invoice details - use provided PI number
+        invoice.setPiNumber(piNumber);
         invoice.setPiDate(LocalDate.now());
         invoice.setModeOfPayment("Bank Transfer");
 

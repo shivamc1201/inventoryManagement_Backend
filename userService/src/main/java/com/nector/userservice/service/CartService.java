@@ -275,6 +275,7 @@ public class CartService {
         BigDecimal totalWeight = cart.calculateTotalWeight();
         BigDecimal volumeInTons = totalWeight.divide(BigDecimal.valueOf(1000), 6, BigDecimal.ROUND_HALF_UP);
         response.setVolumeInTons(volumeInTons);
+        response.setTotalCartWeightKg(totalWeight);
 
         return response;
     }
@@ -654,6 +655,7 @@ public class CartService {
         BigDecimal totalWeight = cart.calculateTotalWeight();
         BigDecimal volumeInTons = totalWeight.divide(BigDecimal.valueOf(1000), 6, BigDecimal.ROUND_HALF_UP);
         response.setVolumeInTons(volumeInTons);
+        response.setTotalCartWeightKg(totalWeight);
 
         return response;
     }

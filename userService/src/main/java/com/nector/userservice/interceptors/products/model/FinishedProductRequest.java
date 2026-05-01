@@ -26,6 +26,10 @@ public class FinishedProductRequest {
     
     private Integer minimumThreshold;
     
+    private String hsn;
+    
+    private BigDecimal taxRate;
+    
     private Boolean active;
     
     private ProductStatus status;

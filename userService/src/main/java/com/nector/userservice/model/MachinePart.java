@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -48,6 +49,12 @@ public class MachinePart {
     @Enumerated(EnumType.STRING)
     @Column
     private Condition condition = Condition.NEW;
+    
+    @Column(length = 50)
+    private String hsn;
+    
+    @Column(precision = 5, scale = 2)
+    private BigDecimal taxRate;
     
     @Column
     private Boolean active = true;

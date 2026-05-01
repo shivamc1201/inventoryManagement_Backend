@@ -63,6 +63,12 @@ public class RawProduct {
     @Column
     private Integer minimumThreshold;
     
+    @Column(length = 50)
+    private String hsn;
+    
+    @Column(precision = 5, scale = 2)
+    private BigDecimal taxRate;
+    
     @Column(columnDefinition = "boolean default true")
     private Boolean active = true;
     

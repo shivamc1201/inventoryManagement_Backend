@@ -4,6 +4,7 @@ import com.nector.userservice.enums.ProductStatus;
 import com.nector.userservice.model.MachinePart;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
@@ -24,6 +25,10 @@ public class MachinePartRequest {
     private Integer quantity;
 
     private MachinePart.Condition condition;
+
+    private String hsn;
+
+    private BigDecimal taxRate;
 
     private ProductStatus status;
 }

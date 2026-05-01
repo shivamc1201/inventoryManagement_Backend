@@ -68,6 +68,8 @@ public class ScrapItemServiceImpl implements ScrapItemService {
         item.setPrice(request.getPrice());
         item.setQuantity(request.getQuantity());
         item.setMinimumThreshold(request.getMinimumThreshold());
+        item.setHsn(request.getHsn());
+        item.setTaxRate(request.getTaxRate());
         item.setVendorId(request.getVendorId());
         item.setVendorName(request.getVendorName());
         item.setTransportName(request.getTransportName());
@@ -185,6 +187,8 @@ public class ScrapItemServiceImpl implements ScrapItemService {
         response.setPerItemPrice(perItemPrice);
         
         response.setMinimumThreshold(item.getMinimumThreshold());
+        response.setHsn(item.getHsn());
+        response.setTaxRate(item.getTaxRate());
         response.setActive(item.getActive());
         int qty = item.getQuantity() != null ? item.getQuantity() : 0;
         int minThreshold = item.getMinimumThreshold() != null ? item.getMinimumThreshold() : 0;
@@ -213,6 +217,8 @@ public class ScrapItemServiceImpl implements ScrapItemService {
         if (request.getPrice() != null) item.setPrice(request.getPrice());
         if (request.getQuantity() != null) item.setQuantity(request.getQuantity());
         if (request.getMinimumThreshold() != null) item.setMinimumThreshold(request.getMinimumThreshold());
+        if (request.getHsn() != null) item.setHsn(request.getHsn());
+        if (request.getTaxRate() != null) item.setTaxRate(request.getTaxRate());
         if (request.getVendorId() != null) item.setVendorId(request.getVendorId());
         if (request.getVendorName() != null) item.setVendorName(request.getVendorName());
         if (request.getTransportName() != null) item.setTransportName(request.getTransportName());

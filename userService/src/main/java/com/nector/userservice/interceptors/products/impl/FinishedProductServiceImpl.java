@@ -51,6 +51,8 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         product.setPrice(request.getPrice());
         product.setQuantity(request.getQuantity());
         product.setMinimumThreshold(request.getMinimumThreshold());
+        product.setHsn(request.getHsn());
+        product.setTaxRate(request.getTaxRate());
         product.setActive(true);
         if (request.getStatus() != null) product.setStatus(request.getStatus());
 
@@ -86,6 +88,8 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         if (request.getPrice() != null) product.setPrice(request.getPrice());
         if (request.getQuantity() != null) product.setQuantity(request.getQuantity());
         if (request.getMinimumThreshold() != null) product.setMinimumThreshold(request.getMinimumThreshold());
+        if (request.getHsn() != null) product.setHsn(request.getHsn());
+        if (request.getTaxRate() != null) product.setTaxRate(request.getTaxRate());
         
         // Update status if provided in request
         if (request.getActive() != null) {
@@ -222,6 +226,8 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         response.setPerPieceRate(perPieceRate);
         
         response.setMinimumThreshold(product.getMinimumThreshold());
+        response.setHsn(product.getHsn());
+        response.setTaxRate(product.getTaxRate());
         response.setActive(product.getActive());
         response.setImageUrl(product.getImageUrl());
         
@@ -273,6 +279,8 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         if (request.getPrice() != null) product.setPrice(request.getPrice());
         if (request.getQuantity() != null) product.setQuantity(request.getQuantity());
         if (request.getMinimumThreshold() != null) product.setMinimumThreshold(request.getMinimumThreshold());
+        if (request.getHsn() != null) product.setHsn(request.getHsn());
+        if (request.getTaxRate() != null) product.setTaxRate(request.getTaxRate());
         if (request.getActive() != null) product.setActive(request.getActive());
         if (request.getStatus() != null) product.setStatus(request.getStatus());
 

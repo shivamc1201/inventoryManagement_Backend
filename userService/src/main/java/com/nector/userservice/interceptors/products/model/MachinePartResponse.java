@@ -4,6 +4,7 @@ import com.nector.userservice.enums.ProductStatus;
 import com.nector.userservice.model.MachinePart;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -18,6 +19,8 @@ public class MachinePartResponse {
     private LocalDate warrantyExpiryDate;
     private Integer quantity;
     private MachinePart.Condition condition;
+    private String hsn;
+    private BigDecimal taxRate;
     private Boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

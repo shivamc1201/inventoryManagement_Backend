@@ -21,6 +21,10 @@ public class ScrapItemRequest {
     
     private Integer minimumThreshold;
 
+    private String hsn;
+
+    private BigDecimal taxRate;
+
     private String vendorId;
 
     private String vendorName;

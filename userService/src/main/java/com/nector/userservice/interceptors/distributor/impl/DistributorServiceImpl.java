@@ -225,11 +225,8 @@ public class DistributorServiceImpl implements DistributorService {
         
         // Update Order Tracking Step 11: Order Received
         try {
-            String orderNumber = "ORD-" + request.getOrderId() + "-" + 
-                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-            
             com.nector.userservice.ordertracking.entity.OrderTracking order = 
-                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+                orderTrackingService.getOrderRepository().findByCartId(request.getOrderId());
             
             if (order != null) {
                 // Determine if order was received (yes/no) based on status

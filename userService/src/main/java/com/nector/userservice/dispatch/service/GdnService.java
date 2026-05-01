@@ -61,6 +61,7 @@ public class GdnService {
     private final RbacService rbacService;
     private final DistributorRepository distributorRepository;
     private final DistributorLedgerRepository distributorLedgerRepository;
+    private final com.nector.userservice.service.DocumentNumberService documentNumberService;
     
     /**
      * Get current user ID from security context
@@ -316,11 +317,8 @@ public class GdnService {
 
         // Update Order Tracking Steps 8, 9, 10
         try {
-            String orderNumber = "ORD-" + orderId + "-" +
-                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-
             com.nector.userservice.ordertracking.entity.OrderTracking order =
-                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+                orderTrackingService.getOrderRepository().findByCartId(orderId);
 
             if (order != null) {
                 // Step 8: Approved from Logistics -> Completed
@@ -403,11 +401,8 @@ public class GdnService {
 
         // Step 7: Awaiting Confirmation from Logistics -> Completed
         try {
-            String orderNumber = "ORD-" + orderId + "-" +
-                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-
             com.nector.userservice.ordertracking.entity.OrderTracking order =
-                orderTrackingService.getOrderRepository().findByOrderNumber(orderNumber);
+                orderTrackingService.getOrderRepository().findByCartId(orderId);
 
             if (order != null) {
                 UpdateStepRequest step7Request = new UpdateStepRequest();
@@ -446,9 +441,8 @@ public class GdnService {
     }
     
     private String generateGdnNumber() {
-        int year = LocalDateTime.now().getYear();
-        long count = gdnRepository.count() + 1;
-        return String.format("GDN/%d/%04d", year, count);
+        // Generate GDN number in format: DC/YYYY-YY/NNNN (e.g., DC/2026-27/0001)
+        return documentNumberService.generateGdnNumber();
     }
     
     private GdnItem createGdnItemFromVerification(Gdn gdn, GdnGenerationRequest.InventoryVerificationItem verifiedItem, InventoryVerificationItem dbItem, CartItem cartItem) {

@@ -31,10 +31,7 @@ public class OrderDocumentIntegrationService {
     public void saveProformaInvoiceReference(Long cartId, String piNumber, String pdfUrl) {
         try {
             // Find order tracking by cart ID
-            String orderNumber = "ORD-" + cartId + "-" + 
-                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-            
-            OrderTracking order = orderTrackingRepository.findByOrderNumber(orderNumber);
+            OrderTracking order = orderTrackingRepository.findByCartId(cartId);
             if (order == null) {
                 log.warn("Order tracking not found for cart {} when saving PI reference", cartId);
                 return;
@@ -64,11 +61,8 @@ public class OrderDocumentIntegrationService {
     @Transactional
     public void saveGdnReference(Long orderId, String gdnNumber, String pdfUrl) {
         try {
-            // Find order tracking by order ID
-            String orderNumber = "ORD-" + orderId + "-" + 
-                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-            
-            OrderTracking order = orderTrackingRepository.findByOrderNumber(orderNumber);
+            // Find order tracking by cart ID (orderId is actually cartId in this context)
+            OrderTracking order = orderTrackingRepository.findByCartId(orderId);
             if (order == null) {
                 log.warn("Order tracking not found for order {} when saving GDN reference", orderId);
                 return;

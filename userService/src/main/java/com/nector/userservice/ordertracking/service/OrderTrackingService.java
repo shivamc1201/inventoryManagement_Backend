@@ -202,6 +202,7 @@ public class OrderTrackingService {
         
         OrderTracking order = OrderTracking.builder()
             .orderNumber(orderNumber)
+            .cartId(cartId)
             .distributorId(distributorId)
             .distributorName(distributorName)
             .orderDate(LocalDate.now())

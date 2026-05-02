@@ -71,10 +71,10 @@ public class MachinePart {
     private LocalDateTime updatedAt;
     
     public enum Category {
-        Machine, Electrical, Hydraulic, Pneumatic, Other
+        Machine, MACHINE, Electrical, ELECTRICAL, Hydraulic, HYDRAULIC, Pneumatic, PNEUMATIC, Tool, TOOL, SparePart, SPARE_PART, Other, OTHER
     }
     
     public enum Condition {
-        New, Used, Refurbished, Damaged
+        New, NEW, Used, USED, InUse, IN_USE, Refurbished, REFURBISHED, Damaged, DAMAGED
     }
 }

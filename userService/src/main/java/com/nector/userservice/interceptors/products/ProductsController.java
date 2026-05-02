@@ -420,6 +420,15 @@ public class ProductsController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/outward-items/returned-for-selling")
+    @Operation(summary = "Get returned parts ready for selling", description = "Retrieves returned parts (RETURNED_PART transaction type) by item type. Use this to get scrap material or spare parts that are returned and ready to be sold. Query params: itemType (SCRAP_MATERIAL, SPARE_PARTS, PROMOTIONAL_ITEMS)")
+    public ResponseEntity<List<OutwardItemResponse>> getReturnedPartsForSelling(
+            @RequestParam OutwardItemTransaction.ItemType itemType) {
+        List<OutwardItemResponse> response = outwardItemService.getOutwardItemsByTypeAndTransaction(
+                itemType, OutwardItemTransaction.TransactionType.RETURNED_PART);
+        return ResponseEntity.ok(response);
+    }
+
     // ==================== UPDATE BY SKU ====================
 
     @PutMapping(value = "/finished-products/sku/{sku}", consumes = MediaType.APPLICATION_JSON_VALUE)

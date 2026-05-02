@@ -83,6 +83,18 @@ public class OutwardItemServiceImpl implements OutwardItemService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<OutwardItemResponse> getOutwardItemsByTypeAndTransaction(
+            OutwardItemTransaction.ItemType itemType,
+            OutwardItemTransaction.TransactionType transactionType) {
+        log.info("Fetching outward item transactions by type: {} and transaction type: {}", itemType, transactionType);
+
+        return outwardItemRepository.findByItemTypeAndTransactionType(itemType, transactionType).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
     private OutwardItemResponse mapToResponse(OutwardItemTransaction transaction) {
         OutwardItemResponse response = new OutwardItemResponse();
         response.setId(transaction.getId());

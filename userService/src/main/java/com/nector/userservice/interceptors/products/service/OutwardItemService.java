@@ -17,4 +17,8 @@ public interface OutwardItemService {
     List<OutwardItemResponse> getOutwardItemsByType(OutwardItemTransaction.ItemType itemType);
 
     List<OutwardItemResponse> getOutwardItemsByTransactionType(OutwardItemTransaction.TransactionType transactionType);
+
+    List<OutwardItemResponse> getOutwardItemsByTypeAndTransaction(
+            OutwardItemTransaction.ItemType itemType,
+            OutwardItemTransaction.TransactionType transactionType);
 }

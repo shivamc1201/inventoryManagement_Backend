@@ -31,6 +31,9 @@ public class UpdateMachinePart {
     @Min(value = 0, message = "Quantity must be non-negative")
     private Integer quantity;
 
+    @Size(max = 20, message = "Unit must not exceed 20 characters")
+    private String unit;
+
     @NotNull(message = "Condition is required")
     private MachinePart.Condition condition;
 

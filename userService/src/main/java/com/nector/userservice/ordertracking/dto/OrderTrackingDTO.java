@@ -12,7 +12,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderTrackingDTO {
-    private Long id;
+    private Long id;               // order_tracking.id (Order Tracking ID)
+    private Long cartId;           // order_tracking.cart_id (Original Cart ID)
     private String orderNumber;
     private String distributorName;
     private Long distributorId;

@@ -241,6 +241,7 @@ public class OrderTrackingService {
 
         return OrderTrackingDTO.builder()
             .id(o.getId())
+            .cartId(o.getCartId())  // Include cart ID for reference
             .orderNumber(o.getOrderNumber())
             .distributorName(o.getDistributorName())
             .distributorId(o.getDistributorId())

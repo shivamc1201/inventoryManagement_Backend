@@ -44,4 +44,9 @@ public interface DealerSaleRepository extends JpaRepository<DealerSale, Long> {
     List<DealerSale> findByDealerIdOrderByDateDesc(Long dealerId);
 
     List<DealerSale> findByDistributorIdOrderByDateDesc(Long distributorId);
+
+    // Check if product price already exists for dealer
+    boolean existsByDealerIdAndSkuAndDistributorId(Long dealerId, String sku, Long distributorId);
+
+    Optional<DealerSale> findByDealerIdAndSkuAndDistributorId(Long dealerId, String sku, Long distributorId);
 }

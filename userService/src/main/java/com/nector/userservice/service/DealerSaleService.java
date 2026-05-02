@@ -51,6 +51,11 @@ public class DealerSaleService {
         Dealer dealer = dealerRepository.findByIdAndDistributorId(request.getDealerId(), distributorId)
                 .orElseThrow(() -> new BusinessException("Dealer not found or access denied"));
 
+        // Check if price already exists for this product and dealer
+        if (dealerSaleRepository.existsByDealerIdAndSkuAndDistributorId(request.getDealerId(), request.getSku(), distributorId)) {
+            throw new BusinessException("Price already set for this product. Please update the existing price instead.");
+        }
+
         // Create the sale
         DealerSale sale = new DealerSale();
         sale.setDealerId(request.getDealerId());
@@ -182,7 +187,7 @@ public class DealerSaleService {
         transaction.setDealerId(sale.getDealerId());
         transaction.setDistributorId(sale.getDistributorId());
         transaction.setDate(sale.getDate());
-        transaction.setDescription("Sale of " + sale.getItemName() + ("SKU of " + sale.getSku()));
+        transaction.setDescription("Sale of " + sale.getItemName() + " (SKU: " + sale.getSku() + ")");
         transaction.setReference("SALE-" + sale.getId());
         transaction.setType(LedgerTransactionType.DEBIT);
         transaction.setDebit(sale.getAmount());

@@ -429,6 +429,31 @@ public class ProductsController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/outward-items/filter")
+    @Operation(summary = "Filter outward items", description = "Retrieves outward item transactions filtered by item type and/or transaction type using query parameters")
+    public ResponseEntity<List<OutwardItemResponse>> getOutwardItemsByFilter(
+            @RequestParam(required = false) OutwardItemTransaction.ItemType itemType,
+            @RequestParam(required = false) OutwardItemTransaction.TransactionType transactionType) {
+        List<OutwardItemResponse> response;
+        if (itemType != null && transactionType != null) {
+            response = outwardItemService.getOutwardItemsByTypeAndTransaction(itemType, transactionType);
+        } else if (itemType != null) {
+            response = outwardItemService.getOutwardItemsByType(itemType);
+        } else if (transactionType != null) {
+            response = outwardItemService.getOutwardItemsByTransactionType(transactionType);
+        } else {
+            response = outwardItemService.getAllOutwardItems();
+        }
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/outward-items/scrap")
+    @Operation(summary = "Get scrap outward items", description = "Retrieves outward item transactions with item type SPARE_PARTS")
+    public ResponseEntity<List<OutwardItemResponse>> getScrapOutwardItems() {
+        List<OutwardItemResponse> response = outwardItemService.getOutwardItemsByType(OutwardItemTransaction.ItemType.SPARE_PARTS);
+        return ResponseEntity.ok(response);
+    }
+
     // ==================== UPDATE BY SKU ====================
 
     @PutMapping(value = "/finished-products/sku/{sku}", consumes = MediaType.APPLICATION_JSON_VALUE)

@@ -48,7 +48,7 @@ public class MachinePart {
     
     @Enumerated(EnumType.STRING)
     @Column
-    private Condition condition = Condition.NEW;
+    private Condition condition = Condition.New;
     
     @Column(length = 50)
     private String hsn;
@@ -71,10 +71,10 @@ public class MachinePart {
     private LocalDateTime updatedAt;
     
     public enum Category {
-        MACHINE, SPARE_PART, TOOL
+        Machine, Electrical, Hydraulic, Pneumatic, Other
     }
     
     public enum Condition {
-        NEW, IN_USE, DAMAGED
+        New, Used, Refurbished, Damaged
     }
 }

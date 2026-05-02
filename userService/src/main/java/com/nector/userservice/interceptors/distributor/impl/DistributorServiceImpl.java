@@ -491,39 +491,44 @@ public class DistributorServiceImpl implements DistributorService {
         Distributor distributor = distributorRepository.findById(distributorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Distributor not found with ID: " + distributorId));
 
-        // Get all carts for this distributor with PLACED status (delivered orders)
-        List<Cart> placedCarts = cartRepository.findAllByDistributorIdAndStatus(distributorId, Cart.CartStatus.GDN_GENERATED);
+        // Get all order confirmations for this distributor
+        List<OrderConfirmation> orderConfirmations = orderConfirmationRepository.findByDistributorIdOrderByConfirmedAtDesc(distributorId);
 
-        // Aggregate stock by item
+        // Aggregate stock by item using received quantities from order confirmations
         Map<Long, DistributorStockResponse.StockItem> stockMap = new HashMap<>();
 
-        for (Cart cart : placedCarts) {
-            if (cart.getCartItems() != null) {
-                for (CartItem cartItem : cart.getCartItems()) {
-                    if (cartItem.getItem() == null) continue;
-
-                    Long itemId = cartItem.getItem().getId();
+        for (OrderConfirmation confirmation : orderConfirmations) {
+            if (confirmation.getItemConfirmations() != null) {
+                for (ItemConfirmationEntity itemConfirmation : confirmation.getItemConfirmations()) {
+                    Long itemId = itemConfirmation.getItemId();
                     DistributorStockResponse.StockItem stockItem = stockMap.get(itemId);
 
                     if (stockItem == null) {
-                        stockItem = new DistributorStockResponse.StockItem();
-                        stockItem.setItemId(itemId);
-                        stockItem.setItemName(cartItem.getItem().getName());
-                        stockItem.setItemSku(cartItem.getItem().getSku());
-                        stockItem.setUnitPrice(cartItem.getPriceAtTime());
-                        stockItem.setUnitType(cartItem.getUnitType());
-                        stockItem.setTotalQuantity(0);
-                        stockItem.setTotalValue(BigDecimal.ZERO);
+                        DistributorStockResponse.StockItem newStockItem = new DistributorStockResponse.StockItem();
+                        newStockItem.setItemId(itemId);
+                        newStockItem.setItemSku(itemConfirmation.getSku());
+                        newStockItem.setTotalQuantity(0);
+                        newStockItem.setTotalValue(BigDecimal.ZERO);
+                        
+                        // Get item details from repository
+                        itemRepository.findById(itemId).ifPresent(item -> {
+                            newStockItem.setItemName(item.getName());
+                            newStockItem.setUnitPrice(item.getPrice());
+                        });
+                        
+                        stockItem = newStockItem;
                         stockMap.put(itemId, stockItem);
                     }
 
-                    // Add quantity to existing stock
-                    int newQuantity = stockItem.getTotalQuantity() + cartItem.getQuantity();
+                    // Add received quantity to existing stock
+                    int newQuantity = stockItem.getTotalQuantity() + itemConfirmation.getReceivedQuantity();
                     stockItem.setTotalQuantity(newQuantity);
 
-                    // Calculate total value
-                    BigDecimal itemValue = cartItem.getPriceAtTime().multiply(BigDecimal.valueOf(cartItem.getQuantity()));
-                    stockItem.setTotalValue(stockItem.getTotalValue().add(itemValue));
+                    // Calculate total value (using current price from item repository)
+                    if (stockItem.getUnitPrice() != null) {
+                        BigDecimal itemValue = stockItem.getUnitPrice().multiply(BigDecimal.valueOf(itemConfirmation.getReceivedQuantity()));
+                        stockItem.setTotalValue(stockItem.getTotalValue().add(itemValue));
+                    }
                 }
             }
         }
@@ -547,7 +552,7 @@ public class DistributorServiceImpl implements DistributorService {
         response.setTotalStockValue(totalStockValue);
         response.setLastUpdated(LocalDateTime.now());
 
-        log.info("Stock calculated for distributor {}: {} unique items, {} total quantity",
+        log.info("Stock calculated for distributor {}: {} unique items, {} total quantity from order confirmations",
                 distributorId, response.getTotalUniqueItems(), response.getTotalQuantity());
 
         return response;

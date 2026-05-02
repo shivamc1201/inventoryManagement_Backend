@@ -16,6 +16,7 @@ import com.nector.userservice.ordertracking.dto.CreateOrderTrackingRequest;
 import com.nector.userservice.service.RbacService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
@@ -23,6 +24,7 @@ import java.util.Collections;
 import java.math.BigDecimal;
 
 @Service
+@Slf4j
 public class PaymentService {
     
     @Autowired
@@ -122,8 +124,8 @@ public class PaymentService {
             // Ensure order tracking exists before updating steps
             ensureOrderTrackingExists(orderId);
             
-//            // Update order tracking Step 4: PI Generated
-//            updatePIGenerationStep(orderId);
+            // Update order tracking Step 4: PI Generated
+            updatePIGenerationStep(orderId);
             
             // Update order tracking Step 5: Awaiting Payment Confirmation
             updateAwaitingPaymentStep(orderId);
@@ -799,22 +801,32 @@ public class PaymentService {
      * This should be called when cart status changes to APPROVED
      */
     public void createOrderTrackingFromCart(Long cartId) {
+        log.info("Creating order tracking from cart: {}", cartId);
         try {
             Cart cart = cartRepository.findById(cartId)
                 .orElseThrow(() -> new RuntimeException("Cart not found: " + cartId));
+            
+            log.info("Found cart: {}, distributorId: {}, items: {}", 
+                cart.getId(), cart.getDistributorId(), cart.getCartItems().size());
             
             // Get distributor info
             String distributorName = distributorRepository.findById(cart.getDistributorId())
                 .map(distributor -> distributor.getFirstName() + " " + distributor.getLastName())
                 .orElse("Unknown Distributor");
             
+            log.info("Distributor name: {}", distributorName);
+            
             // Calculate total amount
             BigDecimal totalAmount = cart.getCartItems().stream()
                 .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
             
+            log.info("Total amount calculated: {}", totalAmount);
+            
             // Generate order number in format: SO/YYYY-YY/NNNN (e.g., SO/2026-27/0001)
             String orderNumber = documentNumberService.generateSalesOrderNumber();
+            
+            log.info("Generated order number: {}", orderNumber);
             
             // Use OrderTrackingService to create from cart
             orderTrackingService.createFromCart(
@@ -825,8 +837,11 @@ public class PaymentService {
                 totalAmount
             );
             
+            log.info("Successfully created order tracking for cart: {}", cartId);
+            
         } catch (Exception e) {
-            System.err.println("Failed to create order tracking from cart: " + e.getMessage());
+            log.error("Failed to create order tracking from cart {}: {}", cartId, e.getMessage(), e);
+            throw new RuntimeException("Failed to create order tracking from cart: " + cartId, e);
         }
     }
 

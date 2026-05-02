@@ -68,12 +68,6 @@ public class CartService {
     public CartResponse addItemsToCart(Long distributorId, List<AddToCartRequest> requests) {
         long cartStart = System.currentTimeMillis();
         Cart cart = getOrCreateActiveCart(distributorId);
-        long trackingStart = System.currentTimeMillis();
-        if (self != null) {
-            self.initializeOrderTrackingForCartAsync(cart, distributorId);
-        } else {
-            initializeOrderTrackingForCart(cart, distributorId);
-        }
 
         long itemsLoopStart = System.currentTimeMillis();
         int itemCount = 0;
@@ -118,6 +112,12 @@ public class CartService {
         long saveCartStart = System.currentTimeMillis();
         cart.setStatus(Cart.CartStatus.ACTIVE);
         Cart updatedCart = cartRepository.save(cart);
+        
+        // Initialize order tracking synchronously AFTER cart is saved
+        // This ensures the cart exists in DB and transaction is committed
+        // We run it sync to avoid transaction isolation issues with async
+        initializeOrderTrackingForCart(updatedCart, distributorId);
+        
         long mapStart = System.currentTimeMillis();
         CartResponse response = mapToResponse(updatedCart);
         return response;
@@ -390,6 +390,24 @@ public class CartService {
             com.nector.userservice.ordertracking.entity.OrderTracking order =
                 orderTrackingService.getOrderRepository().findByCartId(updatedCart.getId());
 
+            // If order tracking doesn't exist, create it first
+            if (order == null) {
+                log.warn("Order tracking not found for cart {}, creating it now", updatedCart.getId());
+                try {
+                    paymentService.createOrderTrackingFromCart(updatedCart.getId());
+                    // Fetch the newly created order tracking
+                    order = orderTrackingService.getOrderRepository().findByCartId(updatedCart.getId());
+                    if (order == null) {
+                        log.error("Failed to create order tracking for cart {}", updatedCart.getId());
+                        return;
+                    }
+                    log.info("Successfully created order tracking for cart {}", updatedCart.getId());
+                } catch (Exception e) {
+                    log.error("Error creating order tracking for cart {}: {}", updatedCart.getId(), e.getMessage(), e);
+                    return;
+                }
+            }
+
             if (order != null) {
                 UpdateStepRequest request = new UpdateStepRequest();
                 request.setStatus("completed");
@@ -467,13 +485,35 @@ public class CartService {
      * Also updates order tracking Step 4
      */
     private void generateProformaInvoiceSync(Long cartId, Long updatedCartId) {
+        log.info("Starting proforma invoice generation for cart {}", cartId);
+        
         // Generate Proforma Invoice after approval
         proformaInvoiceService.generateProformaInvoice(cartId);
+        log.info("Proforma invoice generated successfully for cart {}", cartId);
 
         // Update order tracking Step 4: PI Generated - set to "completed"
         try {
             com.nector.userservice.ordertracking.entity.OrderTracking order =
                 orderTrackingService.getOrderRepository().findByCartId(updatedCartId);
+
+            // If order tracking doesn't exist, create it first
+            if (order == null) {
+                log.warn("Order tracking not found for cart {} during PI generation, creating it now", updatedCartId);
+                try {
+                    paymentService.createOrderTrackingFromCart(updatedCartId);
+                    // Fetch the newly created order tracking
+                    order = orderTrackingService.getOrderRepository().findByCartId(updatedCartId);
+                    if (order == null) {
+                        log.error("Failed to create order tracking for cart {} during PI generation", updatedCartId);
+                        return;
+                    }
+                    log.info("Successfully created order tracking for cart {} during PI generation", updatedCartId);
+                } catch (Exception e) {
+                    log.error("Error creating order tracking for cart {} during PI generation: {}", 
+                        updatedCartId, e.getMessage(), e);
+                    return;
+                }
+            }
 
             if (order != null) {
                 UpdateStepRequest step4Request = new UpdateStepRequest();
@@ -484,11 +524,12 @@ public class CartService {
                 step4Request.setDownloadLabel("Download Proforma Invoice");
 
                 orderTrackingService.updateStepBySequence(order.getId(), 4, step4Request);
-                log.info("Order tracking Step 4 set to completed for cart {}", updatedCartId);
+                log.info("Order tracking Step 4 set to completed for cart {} (order tracking ID: {})", 
+                    updatedCartId, order.getId());
             }
         } catch (Exception e) {
             log.error("Failed to update Order Tracking Step 4 for cart {}: {}",
-                updatedCartId, e.getMessage());
+                updatedCartId, e.getMessage(), e);
             // Continue without failing the approval
         }
     }
@@ -570,12 +611,11 @@ public class CartService {
         cart.setAddress(request.getAddress());
         cart.setStatus(Cart.CartStatus.PLACED);
         Cart updatedCart = cartRepository.save(cart);
-        if (self != null) {
-            self.createOrderTrackingAsync(updatedCart);
-        } else {
-            // Fallback to sync if self not available
-            createOrderTrackingSync(updatedCart);
-        }
+        
+        // Create order tracking synchronously after cart is saved
+        // This ensures proper transaction visibility
+        createOrderTrackingSync(updatedCart);
+        
         // Use lightweight response mapper - avoid extra DB lookups
         long mapStart = System.currentTimeMillis();
         CartResponse response = mapToResponseFast(updatedCart);
@@ -990,17 +1030,21 @@ public class CartService {
      * This ensures distributor tracking starts from the very beginning
      */
     private void initializeOrderTrackingForCart(Cart cart, Long distributorId) {
+        log.info("Initializing order tracking for cart {} with distributor {}", cart.getId(), distributorId);
         try {
             // Check if order tracking already exists for this cart
             if (orderTrackingService.getOrderRepository().findByCartId(cart.getId()) == null) {
+                log.info("No existing order tracking found for cart {}, creating new one", cart.getId());
                 // Delegate to PaymentService which handles SO number generation
                 paymentService.createOrderTrackingFromCart(cart.getId());
                 
-                log.info("Order tracking initialized for cart {} with distributor {}", 
+                log.info("Order tracking initialized successfully for cart {} with distributor {}", 
                     cart.getId(), distributorId);
+            } else {
+                log.info("Order tracking already exists for cart {}, skipping initialization", cart.getId());
             }
         } catch (Exception e) {
-            log.warn("Failed to initialize order tracking for cart {}: {}", cart.getId(), e.getMessage());
+            log.error("Failed to initialize order tracking for cart {}: {}", cart.getId(), e.getMessage(), e);
             // Don't fail the cart operation if tracking initialization fails
         }
     }

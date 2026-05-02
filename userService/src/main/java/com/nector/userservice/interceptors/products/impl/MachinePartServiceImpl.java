@@ -26,7 +26,7 @@ public class MachinePartServiceImpl implements MachinePartService {
     @Transactional
     public MachinePartResponse createMachinePart(MachinePartRequest request) {
         log.info("Creating machine part with part number: {}", request.getPartNumber());
-        
+
         if (request.getPartNumber() != null && machinePartRepository.existsByPartNumber(request.getPartNumber())) {
             throw new DataIntegrityViolationException("Machine part with part number " + request.getPartNumber() + " already exists");
         }
@@ -39,9 +39,12 @@ public class MachinePartServiceImpl implements MachinePartService {
         part.setPurchaseDate(request.getPurchaseDate());
         part.setWarrantyExpiryDate(request.getWarrantyExpiryDate());
         part.setQuantity(request.getQuantity());
+        part.setUnit(request.getUnit());
         part.setCondition(request.getCondition());
+        part.setHsn(request.getHsn());
+        part.setTaxRate(parseTaxRate(request.getTaxRateCode()));
         if (request.getStatus() != null) part.setStatus(request.getStatus());
-        
+
         MachinePart savedPart = machinePartRepository.save(part);
         log.info("Machine part created successfully with ID: {}", savedPart.getId());
         
@@ -63,6 +66,7 @@ public class MachinePartServiceImpl implements MachinePartService {
         part.setPurchaseDate(request.getPurchaseDate());
         part.setWarrantyExpiryDate(request.getWarrantyExpiryDate());
         part.setQuantity(request.getQuantity());
+        part.setUnit(request.getUnit());
         part.setCondition(request.getCondition());
         part.setHsn(request.getHsn());
         part.setTaxRate(request.getTaxRate());
@@ -172,6 +176,7 @@ public class MachinePartServiceImpl implements MachinePartService {
         response.setPurchaseDate(part.getPurchaseDate());
         response.setWarrantyExpiryDate(part.getWarrantyExpiryDate());
         response.setQuantity(part.getQuantity());
+        response.setUnit(part.getUnit());
         response.setCondition(part.getCondition());
         response.setActive(part.getActive());
         response.setCreatedAt(part.getCreatedAt());
@@ -194,13 +199,27 @@ public class MachinePartServiceImpl implements MachinePartService {
         if (request.getPurchaseDate() != null) part.setPurchaseDate(request.getPurchaseDate());
         if (request.getWarrantyExpiryDate() != null) part.setWarrantyExpiryDate(request.getWarrantyExpiryDate());
         if (request.getQuantity() != null) part.setQuantity(request.getQuantity());
+        if (request.getUnit() != null) part.setUnit(request.getUnit());
         if (request.getCondition() != null) part.setCondition(request.getCondition());
         if (request.getHsn() != null) part.setHsn(request.getHsn());
-        if (request.getTaxRate() != null) part.setTaxRate(request.getTaxRate());
+        if (request.getTaxRateCode() != null) part.setTaxRate(parseTaxRate(request.getTaxRateCode()));
         if (request.getStatus() != null) part.setStatus(request.getStatus());
 
         MachinePart updatedPart = machinePartRepository.save(part);
         log.info("Machine part updated by part number: {}", partNumber);
         return mapToResponse(updatedPart);
+    }
+
+    private java.math.BigDecimal parseTaxRate(String taxRateCode) {
+        if (taxRateCode == null || taxRateCode.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            String cleanRate = taxRateCode.replace("%", "").trim();
+            return new java.math.BigDecimal(cleanRate);
+        } catch (NumberFormatException e) {
+            log.warn("Invalid tax rate code: {}", taxRateCode);
+            return null;
+        }
     }
 }

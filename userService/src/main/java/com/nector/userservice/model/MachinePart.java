@@ -45,7 +45,10 @@ public class MachinePart {
     
     @Column
     private Integer quantity = 0;
-    
+
+    @Column(length = 20)
+    private String unit;
+
     @Enumerated(EnumType.STRING)
     @Column
     private Condition condition = Condition.New;

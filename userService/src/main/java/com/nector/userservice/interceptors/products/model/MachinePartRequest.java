@@ -24,11 +24,13 @@ public class MachinePartRequest {
 
     private Integer quantity;
 
+    private String unit;
+
     private MachinePart.Condition condition;
 
     private String hsn;
 
-    private BigDecimal taxRate;
+    private String taxRateCode;
 
     private ProductStatus status;
 }

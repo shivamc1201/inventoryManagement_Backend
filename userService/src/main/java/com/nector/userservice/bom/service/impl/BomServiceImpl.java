@@ -218,7 +218,7 @@ public class BomServiceImpl implements BomService {
 
     @Override
     public BomProductionResponseDto produceFinishedProduct(BomProductionRequestDto requestDto) {
-        log.info("Producing finished product: {} with quantity: {}", 
+        log.info("Producing finished product: {} with quantity: {}",
                 requestDto.getFinishedProductName(), requestDto.getQuantity());
 
         BillOfMaterial bom = billOfMaterialRepository
@@ -234,50 +234,54 @@ public class BomServiceImpl implements BomService {
         BigDecimal bomOutputQuantity = bom.getOutputQuantity();
 
         BigDecimal ratio = requestedQuantity.divide(bomOutputQuantity, 4, RoundingMode.HALF_UP);
-        log.debug("Production ratio calculated: {} (requested: {}, BOM output: {})", 
+        log.debug("Production ratio calculated: {} (requested: {}, BOM output: {})",
                 ratio, requestedQuantity, bomOutputQuantity);
 
-        List<BomProductionResponseDto.RawMaterialConsumptionDto> consumptions = 
+        List<BomProductionResponseDto.RawMaterialConsumptionDto> consumptions =
                 new java.util.ArrayList<>();
 
         for (BomComponent component : bom.getComponents()) {
             BigDecimal requiredQuantity = component.getQuantity().multiply(ratio)
                     .setScale(4, RoundingMode.HALF_UP);
 
-            RawProduct rawProduct = rawProductRepository.findById(component.getRawMaterialId())
+            // Use findActiveById to ensure we only work with active raw products
+            RawProduct rawProduct = rawProductRepository.findActiveById(component.getRawMaterialId())
                     .orElseThrow(() -> new RawProductNotFoundException(component.getRawMaterialId()));
 
-            if (rawProduct.getQuantity() == null) {
-                rawProduct.setQuantity(0);
-            }
+            // Use BigDecimal for exact quantity tracking
+            BigDecimal currentQty = rawProduct.getQuantity() != null ? rawProduct.getQuantity() : BigDecimal.ZERO;
 
-            int requiredInt = requiredQuantity.intValue();
-            if (rawProduct.getQuantity() < requiredInt) {
+            if (currentQty.compareTo(requiredQuantity) < 0) {
                 throw new InsufficientStockException(
-                        String.format("Insufficient stock for raw material '%s'. Required: %s %s, Available: %d %s",
-                                rawProduct.getName(), requiredQuantity, component.getUnit(), 
-                                rawProduct.getQuantity(), rawProduct.getUnitName() != null ? rawProduct.getUnitName() : component.getUnit()));
+                        String.format("Insufficient stock for raw material '%s'. Required: %s %s, Available: %s %s",
+                                rawProduct.getName(), requiredQuantity, component.getUnit(),
+                                currentQty, rawProduct.getUnitName() != null ? rawProduct.getUnitName() : component.getUnit()));
             }
 
-            rawProduct.setQuantity(rawProduct.getQuantity() - requiredInt);
+            // Calculate new quantity with exact decimal math (no rounding)
+            BigDecimal newQuantity = currentQty.subtract(requiredQuantity);
+
+            rawProduct.setQuantity(newQuantity);
             rawProductRepository.save(rawProduct);
             log.info("Deducted {} {} from raw material: {} (ID: {}). New stock: {}",
-                    requiredInt, component.getUnit(), rawProduct.getName(), 
+                    requiredQuantity, component.getUnit(), rawProduct.getName(),
                     rawProduct.getId(), rawProduct.getQuantity());
 
             consumptions.add(BomProductionResponseDto.RawMaterialConsumptionDto.builder()
                     .rawMaterialId(rawProduct.getId())
                     .rawMaterialName(rawProduct.getName())
                     .quantityRequired(requiredQuantity)
-                    .quantityAvailable(BigDecimal.valueOf(rawProduct.getQuantity() + requiredInt))
+                    .quantityAvailable(currentQty)
                     .unit(component.getUnit())
-                    .newStock(rawProduct.getQuantity())
+                    .newStock(newQuantity)
                     .build());
         }
 
-        int requestedInt = requestedQuantity.intValue();
-        int newFinishedProductStock = (finishedProduct.getQuantity() != null ? finishedProduct.getQuantity() : 0) + requestedInt;
-        finishedProduct.setQuantity(newFinishedProductStock);
+        // Handle finished product stock with BigDecimal
+        BigDecimal currentFinishedQty = finishedProduct.getQuantity() != null ?
+                BigDecimal.valueOf(finishedProduct.getQuantity()) : BigDecimal.ZERO;
+        BigDecimal newFinishedProductStock = currentFinishedQty.add(requestedQuantity);
+        finishedProduct.setQuantity(newFinishedProductStock.intValue());
 
         if (requestDto.getMinimumThreshold() != null) {
             finishedProduct.setMinimumThreshold(requestDto.getMinimumThreshold());
@@ -287,7 +291,7 @@ public class BomServiceImpl implements BomService {
 
         finishedProductRepository.save(finishedProduct);
         log.info("Added {} {} of finished product: {}. New stock: {}",
-                requestedInt, bom.getOutputUnit(), finishedProduct.getName(), newFinishedProductStock);
+                requestedQuantity, bom.getOutputUnit(), finishedProduct.getName(), newFinishedProductStock);
 
         return BomProductionResponseDto.builder()
                 .bomId(bom.getId())
@@ -295,7 +299,7 @@ public class BomServiceImpl implements BomService {
                 .finishedProductId(finishedProduct.getId())
                 .quantityProduced(requestedQuantity)
                 .outputUnit(bom.getOutputUnit())
-                .finishedProductNewStock(newFinishedProductStock)
+                .finishedProductNewStock(newFinishedProductStock.intValue())
                 .minimumThreshold(finishedProduct.getMinimumThreshold())
                 .rawMaterialsConsumed(consumptions)
                 .productionTime(Instant.now())

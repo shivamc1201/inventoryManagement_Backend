@@ -122,14 +122,14 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
     
     @Override
     @Transactional
-    public PromotionalItemResponse increaseStock(Long id, Integer quantity) {
+    public PromotionalItemResponse increaseStock(Long id, BigDecimal quantity) {
         log.info("Increasing stock for promotional item ID: {} by quantity: {}", id, quantity);
         
         PromotionalItem item = promotionalItemRepository.findActiveById(id)
             .orElseThrow(() -> new PromotionalItemNotFoundException(id));
         
-        int currentQty = item.getQuantity() != null ? item.getQuantity() : 0;
-        item.setQuantity(currentQty + quantity);
+        BigDecimal currentQty = BigDecimal.valueOf(item.getQuantity() != null ? item.getQuantity() : 0);
+        item.setQuantity(currentQty.add(quantity).intValue());
         PromotionalItem updatedItem = promotionalItemRepository.save(item);
         
         log.info("Stock increased successfully for promotional item ID: {}", id);
@@ -138,18 +138,18 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
     
     @Override
     @Transactional
-    public PromotionalItemResponse decreaseStock(Long id, Integer quantity) {
+    public PromotionalItemResponse decreaseStock(Long id, BigDecimal quantity) {
         log.info("Decreasing stock for promotional item ID: {} by quantity: {}", id, quantity);
         
         PromotionalItem item = promotionalItemRepository.findActiveById(id)
             .orElseThrow(() -> new PromotionalItemNotFoundException(id));
         
-        int currentQty = item.getQuantity() != null ? item.getQuantity() : 0;
-        if (currentQty < quantity) {
+        BigDecimal currentQty = BigDecimal.valueOf(item.getQuantity() != null ? item.getQuantity() : 0);
+        if (currentQty.compareTo(quantity) < 0) {
             throw new InsufficientStockException(item.getItemCode(), quantity, currentQty);
         }
         
-        item.setQuantity(currentQty - quantity);
+        item.setQuantity(currentQty.subtract(quantity).intValue());
         PromotionalItem updatedItem = promotionalItemRepository.save(item);
         
         int updatedQty = updatedItem.getQuantity() != null ? updatedItem.getQuantity() : 0;

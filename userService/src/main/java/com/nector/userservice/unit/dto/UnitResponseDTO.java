@@ -26,8 +26,8 @@ public class UnitResponseDTO {
     private String status;
     private String unitStatus;
     private BigDecimal price;
-    private Integer quantity;
-    private Integer minimumThreshold;
+    private BigDecimal quantity;
+    private BigDecimal minimumThreshold;
     private Boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

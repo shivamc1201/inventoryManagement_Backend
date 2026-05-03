@@ -127,8 +127,8 @@ public class UnitService {
         dto.setUnitDescription(unit.getUnitDescription());
         dto.setUnitStatus(unit.getUnitStatus());
         dto.setPrice(unit.getPrice());
-        dto.setQuantity(unit.getQuantity());
-        dto.setMinimumThreshold(unit.getMinimumThreshold());
+        dto.setQuantity(unit.getQuantity() != null ? new java.math.BigDecimal(unit.getQuantity()) : null);
+        dto.setMinimumThreshold(unit.getMinimumThreshold() != null ? new java.math.BigDecimal(unit.getMinimumThreshold()) : null);
         dto.setActive(unit.getActive());
         dto.setCreatedAt(unit.getCreatedAt());
         dto.setUpdatedAt(unit.getUpdatedAt());

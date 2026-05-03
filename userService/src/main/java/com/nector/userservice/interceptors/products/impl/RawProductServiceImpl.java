@@ -120,14 +120,14 @@ public class RawProductServiceImpl implements RawProductService {
     
     @Override
     @Transactional
-    public RawProductResponse increaseStock(Long id, Integer quantity) {
+    public RawProductResponse increaseStock(Long id, BigDecimal quantity) {
         log.info("Increasing stock for raw product ID: {} by quantity: {}", id, quantity);
         
         RawProduct product = rawProductRepository.findActiveById(id)
             .orElseThrow(() -> new RawProductNotFoundException(id));
         
-        int currentQty = product.getQuantity() != null ? product.getQuantity() : 0;
-        product.setQuantity(currentQty + quantity);
+        BigDecimal currentQty = product.getQuantity() != null ? product.getQuantity() : BigDecimal.ZERO;
+        product.setQuantity(currentQty.add(quantity));
         RawProduct updatedProduct = rawProductRepository.save(product);
         
         log.info("Stock increased successfully for raw product ID: {}", id);
@@ -136,23 +136,23 @@ public class RawProductServiceImpl implements RawProductService {
     
     @Override
     @Transactional
-    public RawProductResponse decreaseStock(Long id, Integer quantity) {
+    public RawProductResponse decreaseStock(Long id, BigDecimal quantity) {
         log.info("Decreasing stock for raw product ID: {} by quantity: {}", id, quantity);
         
         RawProduct product = rawProductRepository.findActiveById(id)
             .orElseThrow(() -> new RawProductNotFoundException(id));
         
-        int currentQty = product.getQuantity() != null ? product.getQuantity() : 0;
-        if (currentQty < quantity) {
+        BigDecimal currentQty = product.getQuantity() != null ? product.getQuantity() : BigDecimal.ZERO;
+        if (currentQty.compareTo(quantity) < 0) {
             throw new InsufficientStockException(product.getMaterialCode(), quantity, currentQty);
         }
         
-        product.setQuantity(currentQty - quantity);
+        product.setQuantity(currentQty.subtract(quantity));
         RawProduct updatedProduct = rawProductRepository.save(product);
         
-        int updatedQty = updatedProduct.getQuantity() != null ? updatedProduct.getQuantity() : 0;
-        int threshold = updatedProduct.getMinimumThreshold() != null ? updatedProduct.getMinimumThreshold() : 0;
-        if (updatedQty <= threshold) {
+        BigDecimal updatedQty = updatedProduct.getQuantity() != null ? updatedProduct.getQuantity() : BigDecimal.ZERO;
+        BigDecimal threshold = updatedProduct.getMinimumThreshold() != null ? updatedProduct.getMinimumThreshold() : BigDecimal.ZERO;
+        if (updatedQty.compareTo(threshold) <= 0) {
             log.warn("ALERT: Raw product {} (ID: {}) stock is below minimum threshold. Current: {}, Threshold: {}", 
                 updatedProduct.getMaterialCode(), id, updatedProduct.getQuantity(), updatedProduct.getMinimumThreshold());
         }
@@ -179,24 +179,23 @@ public class RawProductServiceImpl implements RawProductService {
         response.setUnit(product.getUnit());
         response.setQuantity(product.getQuantity());
         response.setPrice(product.getPrice());
-        
+
         // Set per item price same as price
         BigDecimal perItemPrice = product.getPrice() != null ? product.getPrice() : BigDecimal.ZERO;
         response.setPerItemPrice(perItemPrice);
-        
+
         response.setMinimumThreshold(product.getMinimumThreshold());
         response.setHsn(product.getHsn());
         response.setTaxRate(product.getTaxRate());
         response.setActive(product.getActive());
-        int qty = product.getQuantity() != null ? product.getQuantity() : 0;
-        int minThreshold = product.getMinimumThreshold() != null ? product.getMinimumThreshold() : 0;
-        response.setLowStock(qty <= minThreshold);
+        BigDecimal qty = product.getQuantity() != null ? product.getQuantity() : BigDecimal.ZERO;
+        BigDecimal minThreshold = product.getMinimumThreshold() != null ? product.getMinimumThreshold() : BigDecimal.ZERO;
+        response.setLowStock(qty.compareTo(minThreshold) <= 0);
         response.setCreatedAt(product.getCreatedAt());
         response.setUpdatedAt(product.getUpdatedAt());
         response.setVendorId(product.getVendorId());
         response.setVendorName(product.getVendorName());
         response.setTransportName(product.getTransportName());
-        response.setDriverName(product.getDriverName());
         response.setDriverName(product.getDriverName());
         response.setDriverMobile(product.getDriverMobile());
         response.setStatus(product.getStatus());

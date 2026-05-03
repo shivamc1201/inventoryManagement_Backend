@@ -12,7 +12,7 @@ public class ItemResponse {
     private String description;
     private String sku;
     private BigDecimal price;
-    private Integer quantity;
+    private BigDecimal quantity;
     private Boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

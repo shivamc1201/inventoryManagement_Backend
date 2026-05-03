@@ -57,11 +57,11 @@ public class RawProduct {
     @Column(precision = 10, scale = 2)
     private BigDecimal price;
     
-    @Column
-    private Integer quantity;
+    @Column(precision = 19, scale = 4)
+    private BigDecimal quantity;
     
-    @Column
-    private Integer minimumThreshold;
+    @Column(precision = 19, scale = 4)
+    private BigDecimal minimumThreshold;
     
     @Column(length = 50)
     private String hsn;

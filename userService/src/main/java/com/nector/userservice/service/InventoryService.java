@@ -12,6 +12,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -94,13 +95,14 @@ public class InventoryService {
     }
     
     @Transactional
-    public ItemResponse increaseStock(Long id, Integer quantity) {
+    public ItemResponse increaseStock(Long id, BigDecimal quantity) {
         log.info("Increasing stock for item ID: {} by quantity: {}", id, quantity);
         
         FinishedProduct finishedProduct = finishedProductRepository.findActiveById(id)
             .orElseThrow(() -> new ItemNotFoundException(id));
         
-        finishedProduct.setQuantity(finishedProduct.getQuantity() + quantity);
+        BigDecimal currentQty = BigDecimal.valueOf(finishedProduct.getQuantity() != null ? finishedProduct.getQuantity() : 0);
+        finishedProduct.setQuantity(currentQty.add(quantity).intValue());
         FinishedProduct updatedItem = finishedProductRepository.save(finishedProduct);
         
         log.info("Stock increased successfully for item ID: {}", id);
@@ -108,17 +110,18 @@ public class InventoryService {
     }
     
     @Transactional
-    public ItemResponse decreaseStock(Long id, Integer quantity) {
+    public ItemResponse decreaseStock(Long id, BigDecimal quantity) {
         log.info("Decreasing stock for item ID: {} by quantity: {}", id, quantity);
         
         FinishedProduct finishedProduct = finishedProductRepository.findActiveById(id)
             .orElseThrow(() -> new ItemNotFoundException(id));
         
-        if (finishedProduct.getQuantity() < quantity) {
-            throw new InsufficientStockException(finishedProduct.getSku(), quantity, finishedProduct.getQuantity());
+        BigDecimal currentQty = BigDecimal.valueOf(finishedProduct.getQuantity() != null ? finishedProduct.getQuantity() : 0);
+        if (currentQty.compareTo(quantity) < 0) {
+            throw new InsufficientStockException(finishedProduct.getSku(), quantity, currentQty);
         }
         
-        finishedProduct.setQuantity(finishedProduct.getQuantity() - quantity);
+        finishedProduct.setQuantity(currentQty.subtract(quantity).intValue());
         FinishedProduct updatedItem = finishedProductRepository.save(finishedProduct);
         
         log.info("Stock decreased successfully for item ID: {}", id);
@@ -248,7 +251,7 @@ public class InventoryService {
         response.setDescription(finishedProduct.getDescription());
         response.setSku(finishedProduct.getSku());
         response.setPrice(finishedProduct.getPrice());
-        response.setQuantity(finishedProduct.getQuantity());
+        response.setQuantity(finishedProduct.getQuantity() != null ? BigDecimal.valueOf(finishedProduct.getQuantity()) : null);
         response.setActive(finishedProduct.getActive());
         response.setCreatedAt(finishedProduct.getCreatedAt());
         response.setUpdatedAt(finishedProduct.getUpdatedAt());

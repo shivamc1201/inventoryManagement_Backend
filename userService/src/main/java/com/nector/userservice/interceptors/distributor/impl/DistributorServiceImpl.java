@@ -201,7 +201,21 @@ public class DistributorServiceImpl implements DistributorService {
                     ItemConfirmationEntity entity = new ItemConfirmationEntity();
                     entity.setOrderConfirmation(confirmation);
                     entity.setItemId(item.getItemId());
-                    entity.setSku(item.getSku());
+                    
+                    // Auto-populate SKU from FinishedProduct if not provided in request
+                    String sku = item.getSku();
+                    if (sku == null || sku.trim().isEmpty()) {
+                        sku = finishedProductRepository.findById(item.getItemId())
+                                .map(product -> product.getSku())
+                                .orElse(null);
+                        if (sku == null) {
+                            log.warn("SKU not found for itemId: {}. Order confirmation may have incomplete data.", item.getItemId());
+                        } else {
+                            log.info("Auto-populated SKU '{}' for itemId: {}", sku, item.getItemId());
+                        }
+                    }
+                    entity.setSku(sku);
+                    
                     entity.setDispatchedQuantity(item.getDispatchedQuantity());
                     entity.setReceivedQuantity(item.getReceivedQuantity());
                     entity.setCondition(item.getCondition());

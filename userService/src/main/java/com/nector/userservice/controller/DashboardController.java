@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Map;
 
 @RestController
@@ -78,14 +80,17 @@ public class DashboardController {
         Long totalOrders;
         BigDecimal totalAmount;
 
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = now.atTime(LocalTime.MAX);
+
         if (salespersonId != null) {
             // Filter by specific salesperson - only count GDN_GENERATED orders
-            totalOrders = orderRepository.countOrdersBySalespersonAndStatusBetweenDates(salespersonId, OrderStatus.GDN_GENERATED, startDate, now);
-            totalAmount = orderRepository.getTotalAmountBySalespersonAndStatusBetweenDates(salespersonId, OrderStatus.GDN_GENERATED, startDate, now);
+            totalOrders = orderRepository.countOrdersBySalespersonAndStatusBetweenDates(salespersonId, OrderStatus.GDN_GENERATED, startDateTime, endDateTime);
+            totalAmount = orderRepository.getTotalAmountBySalespersonAndStatusBetweenDates(salespersonId, OrderStatus.GDN_GENERATED, startDateTime, endDateTime);
         } else {
             // Get all GDN_GENERATED orders
-            totalOrders = orderRepository.countOrdersByStatusBetweenDates(OrderStatus.GDN_GENERATED, startDate, now);
-            totalAmount = orderRepository.getTotalAmountByStatusBetweenDates(OrderStatus.GDN_GENERATED, startDate, now);
+            totalOrders = orderRepository.countOrdersByStatusBetweenDates(OrderStatus.GDN_GENERATED, startDateTime, endDateTime);
+            totalAmount = orderRepository.getTotalAmountByStatusBetweenDates(OrderStatus.GDN_GENERATED, startDateTime, endDateTime);
         }
 
         // Handle null values

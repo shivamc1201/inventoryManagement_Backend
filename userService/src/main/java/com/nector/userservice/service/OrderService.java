@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +36,9 @@ public class OrderService {
 
     public List<OrderResponse> getOrdersWithFilters(OrderStatus status, Long salespersonId,
                                                    Long distributorId, LocalDate dateFrom, LocalDate dateTo) {
-        List<OrderWithSalesPerson> orders = orderRepository.findWithFilters(status, salespersonId, distributorId, dateFrom, dateTo);
+        LocalDateTime dateFromTime = dateFrom != null ? dateFrom.atStartOfDay() : null;
+        LocalDateTime dateToTime = dateTo != null ? dateTo.atTime(LocalTime.MAX) : null;
+        List<OrderWithSalesPerson> orders = orderRepository.findWithFilters(status, salespersonId, distributorId, dateFromTime, dateToTime);
         return orders.stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
@@ -55,7 +59,9 @@ public class OrderService {
         log.info("Getting orders for salesperson IDs: {}", allSalespersonIds);
         
         // Get orders for all these salespersons
-        List<OrderWithSalesPerson> orders = orderRepository.findBySalespersonIds(allSalespersonIds, status, dateFrom, dateTo);
+        LocalDateTime dateFromTime = dateFrom != null ? dateFrom.atStartOfDay() : null;
+        LocalDateTime dateToTime = dateTo != null ? dateTo.atTime(LocalTime.MAX) : null;
+        List<OrderWithSalesPerson> orders = orderRepository.findBySalespersonIds(allSalespersonIds, status, dateFromTime, dateToTime);
         
         return orders.stream()
                 .map(this::convertToResponse)

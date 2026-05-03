@@ -104,8 +104,9 @@ public class DealerSaleService {
         }
 
         // Check distributor's received complete orders for stock availability
+        // Using findByDistributorIdWithItems to eagerly fetch itemConfirmations with JOIN FETCH
         List<OrderConfirmation> distributorOrders = orderConfirmationRepository
-                .findByDistributorIdOrderByConfirmedAtDesc(distributorId);
+                .findByDistributorIdWithItems(distributorId);
 
         List<OrderConfirmation> receivedCompleteOrders = distributorOrders.stream()
                 .filter(order -> order.getStatus() == OrderConfirmationRequest.ConfirmationStatus.RECEIVED_COMPLETE)

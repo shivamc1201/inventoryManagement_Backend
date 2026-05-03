@@ -40,12 +40,20 @@ public class DashboardService {
         Map<String, BigDecimal> regionSales = getSalesByRegion(startDate, now);
         Map<String, BigDecimal> categorySales = getSalesByCategory(startDate, now);
 
+        // Get total GDN orders and amount for the selected period
+        Long totalOrders = orderRepository.countGdnOrdersBetweenDates(startDate.atStartOfDay(), now.atTime(LocalTime.MAX));
+        BigDecimal totalAmount = orderRepository.sumGdnAmountBetweenDates(startDate.atStartOfDay(), now.atTime(LocalTime.MAX));
+        totalOrders = totalOrders != null ? totalOrders : 0L;
+        totalAmount = totalAmount != null ? totalAmount : BigDecimal.ZERO;
+
         DashboardResponse response = new DashboardResponse();
         response.setYearToDate(yearToDate);
         response.setMonthToDate(monthToDate);
         response.setWeekToDate(weekToDate);
         response.setSalesByRegion(regionSales);
         response.setSalesByCategory(categorySales);
+        response.setTotalOrders(totalOrders);
+        response.setTotalAmount(totalAmount);
 
         log.info("Exiting getDashboardData() with response for period: {}", period);
         return response;
@@ -99,7 +107,7 @@ public class DashboardService {
                             }
                             // Handle null zone by providing a default value
                             String zone = salesPerson.getZone();
-                            return zone != null && !zone.trim().isEmpty() ? zone : "Unassigned";
+                            return zone != null && !zone.trim().isEmpty() ? zone.toUpperCase() : "UNASSIGNED";
                         },
                         Collectors.mapping(
                                 order -> order.getTotalCartAmount() != null ? order.getTotalCartAmount() : BigDecimal.ZERO,

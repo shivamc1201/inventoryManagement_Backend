@@ -17,9 +17,9 @@ public class RawProductRequest {
 
     private BigDecimal price;
 
-    private Integer quantity;
+    private BigDecimal quantity;
 
-    private Integer minimumThreshold;
+    private BigDecimal minimumThreshold;
 
     private String hsn;
 

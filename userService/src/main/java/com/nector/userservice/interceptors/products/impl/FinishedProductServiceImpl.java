@@ -149,18 +149,18 @@ public class FinishedProductServiceImpl implements FinishedProductService {
     
     @Override
     @Transactional
-    public FinishedProductResponse increaseStock(Long id, Integer quantity) {
+    public FinishedProductResponse increaseStock(Long id, BigDecimal quantity) {
         log.info("Increasing stock for finished product ID: {} by quantity: {}", id, quantity);
         
-        if (quantity == null || quantity < 0) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Quantity must be a non-negative number");
         }
         
         FinishedProduct product = finishedProductRepository.findActiveById(id)
             .orElseThrow(() -> new FinishedProductNotFoundException(id));
         
-        int currentQty = product.getQuantity() != null ? product.getQuantity() : 0;
-        product.setQuantity(currentQty + quantity);
+        BigDecimal currentQty = BigDecimal.valueOf(product.getQuantity() != null ? product.getQuantity() : 0);
+        product.setQuantity(currentQty.add(quantity).intValue());
         FinishedProduct updatedProduct = finishedProductRepository.save(product);
         
         log.info("Stock increased successfully for finished product ID: {}", id);
@@ -169,22 +169,22 @@ public class FinishedProductServiceImpl implements FinishedProductService {
     
     @Override
     @Transactional
-    public FinishedProductResponse decreaseStock(Long id, Integer quantity) {
+    public FinishedProductResponse decreaseStock(Long id, BigDecimal quantity) {
         log.info("Decreasing stock for finished product ID: {} by quantity: {}", id, quantity);
         
-        if (quantity == null || quantity < 0) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Quantity must be a non-negative number");
         }
         
         FinishedProduct product = finishedProductRepository.findActiveById(id)
             .orElseThrow(() -> new FinishedProductNotFoundException(id));
         
-        int currentQty = product.getQuantity() != null ? product.getQuantity() : 0;
-        if (currentQty < quantity) {
+        BigDecimal currentQty = BigDecimal.valueOf(product.getQuantity() != null ? product.getQuantity() : 0);
+        if (currentQty.compareTo(quantity) < 0) {
             throw new InsufficientStockException(product.getSku(), quantity, currentQty);
         }
         
-        product.setQuantity(currentQty - quantity);
+        product.setQuantity(currentQty.subtract(quantity).intValue());
         FinishedProduct updatedProduct = finishedProductRepository.save(product);
         
         if (updatedProduct.getQuantity() <= (updatedProduct.getMinimumThreshold() != null ? updatedProduct.getMinimumThreshold() : 0)) {

@@ -13,10 +13,10 @@ public class RawProductResponse {
     private String name;
     private String materialCode;
     private Unit unit;
-    private Integer quantity;
+    private BigDecimal quantity;
     private BigDecimal price;
     private BigDecimal perItemPrice;
-    private Integer minimumThreshold;
+    private BigDecimal minimumThreshold;
     private String hsn;
     private BigDecimal taxRate;
     private Boolean active;

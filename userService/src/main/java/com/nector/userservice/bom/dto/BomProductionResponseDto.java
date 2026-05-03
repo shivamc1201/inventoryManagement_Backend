@@ -36,6 +36,6 @@ public class BomProductionResponseDto {
         private BigDecimal quantityRequired;
         private BigDecimal quantityAvailable;
         private String unit;
-        private Integer newStock;
+        private BigDecimal newStock;
     }
 }

@@ -119,14 +119,14 @@ public class ScrapItemServiceImpl implements ScrapItemService {
     
     @Override
     @Transactional
-    public ScrapItemResponse increaseStock(Long id, Integer quantity) {
+    public ScrapItemResponse increaseStock(Long id, BigDecimal quantity) {
         log.info("Increasing stock for scrap item ID: {} by quantity: {}", id, quantity);
         
         ScrapItem item = scrapItemRepository.findActiveById(id)
             .orElseThrow(() -> new ScrapItemNotFoundException(id));
         
-        int currentQty = item.getQuantity() != null ? item.getQuantity() : 0;
-        item.setQuantity(currentQty + quantity);
+        BigDecimal currentQty = BigDecimal.valueOf(item.getQuantity() != null ? item.getQuantity() : 0);
+        item.setQuantity(currentQty.add(quantity).intValue());
         ScrapItem updatedItem = scrapItemRepository.save(item);
         
         log.info("Stock increased successfully for scrap item ID: {}", id);
@@ -135,18 +135,18 @@ public class ScrapItemServiceImpl implements ScrapItemService {
     
     @Override
     @Transactional
-    public ScrapItemResponse decreaseStock(Long id, Integer quantity) {
+    public ScrapItemResponse decreaseStock(Long id, BigDecimal quantity) {
         log.info("Decreasing stock for scrap item ID: {} by quantity: {}", id, quantity);
         
         ScrapItem item = scrapItemRepository.findActiveById(id)
             .orElseThrow(() -> new ScrapItemNotFoundException(id));
         
-        int currentQty = item.getQuantity() != null ? item.getQuantity() : 0;
-        if (currentQty < quantity) {
+        BigDecimal currentQty = BigDecimal.valueOf(item.getQuantity() != null ? item.getQuantity() : 0);
+        if (currentQty.compareTo(quantity) < 0) {
             throw new InsufficientStockException(item.getItemCode(), quantity, currentQty);
         }
         
-        item.setQuantity(currentQty - quantity);
+        item.setQuantity(currentQty.subtract(quantity).intValue());
         ScrapItem updatedItem = scrapItemRepository.save(item);
         
         int updatedQty = updatedItem.getQuantity() != null ? updatedItem.getQuantity() : 0;

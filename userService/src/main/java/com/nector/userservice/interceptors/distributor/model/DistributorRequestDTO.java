@@ -80,9 +80,11 @@ public class DistributorRequestDTO {
     @Schema(description = "Bank guarantee number", example = "BG123456789")
     private String bankGuaranteeNumber;
 
-    @Schema(description = "Credit limit", example = "500000.00")
-    @JsonDeserialize(using = BigDecimalDeserializer.class)
-    private java.math.BigDecimal creditLimit;
+    @Schema(description = "Credit amount (limit value)", example = "100000")
+    private BigDecimal creditAmount;
+
+    @Schema(description = "Credit limit enabled (true/false)", example = "true")
+    private Boolean creditLimit;
 
     @Schema(description = "Credit balance", example = "450000.00")
     @JsonDeserialize(using = BigDecimalDeserializer.class)

@@ -5,6 +5,8 @@ import com.nector.userservice.interceptors.distributor.model.DistributorRequestD
 import com.nector.userservice.interceptors.distributor.model.DistributorResponseDTO;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+
 @Component
 public class DistributorMapper {
     
@@ -30,9 +32,14 @@ public class DistributorMapper {
         distributor.setAccountNumber(dto.getAccountNumber());
         distributor.setIfsc(dto.getIfsc());
         distributor.setBankGuaranteeNumber(dto.getBankGuaranteeNumber());
-        distributor.setCreditLimit(dto.getCreditLimit());
+
+        // Handle credit limit: if creditLimit is true, use creditAmount; otherwise 0
+        BigDecimal creditLimitValue = (dto.getCreditLimit() != null && dto.getCreditLimit())
+                ? dto.getCreditAmount()
+                : BigDecimal.ZERO;
+        distributor.setCreditLimit(creditLimitValue);
         // Set initial credit balance to the same value as credit limit
-        distributor.setCreditBalance(dto.getCreditLimit());
+        distributor.setCreditBalance(creditLimitValue);
         distributor.setBgExpiryDate(dto.getBgExpiryDate());
         distributor.setDistrict(dto.getDistrict());
         distributor.setState(dto.getState());
@@ -98,8 +105,13 @@ public class DistributorMapper {
         entity.setPassword(dto.getPassword());
         entity.setUsername(dto.getUsername());
         entity.setBankGuaranteeNumber(dto.getBankGuaranteeNumber());
-        entity.setCreditLimit(dto.getCreditLimit());
-        entity.setCreditBalance(dto.getCreditBalance());
+
+        // Handle credit limit: if creditLimit is true, use creditAmount; otherwise 0
+        BigDecimal creditLimitValue = (dto.getCreditLimit() != null && dto.getCreditLimit())
+                ? dto.getCreditAmount()
+                : BigDecimal.ZERO;
+        entity.setCreditLimit(creditLimitValue);
+        entity.setCreditBalance(creditLimitValue);
         entity.setBgExpiryDate(dto.getBgExpiryDate());
         entity.setDistrict(dto.getDistrict());
         entity.setState(dto.getState());

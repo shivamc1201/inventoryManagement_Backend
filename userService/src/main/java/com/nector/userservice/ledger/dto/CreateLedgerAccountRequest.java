@@ -1,5 +1,7 @@
 package com.nector.userservice.ledger.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.nector.userservice.util.BigDecimalDeserializer;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
@@ -26,11 +28,13 @@ public class CreateLedgerAccountRequest {
 
     @DecimalMin(value = "0.00", message = "Credit limit cannot be negative")
     @Digits(integer = 15, fraction = 4, message = "Credit limit must have at most 15 integer digits and 4 decimal places")
+    @JsonDeserialize(using = BigDecimalDeserializer.class)
     private BigDecimal creditLimit = BigDecimal.ZERO;
 
     // Optional opening balance
     @DecimalMin(value = "0.00", message = "Opening balance cannot be negative")
     @Digits(integer = 15, fraction = 4, message = "Opening balance must have at most 15 integer digits and 4 decimal places")
+    @JsonDeserialize(using = BigDecimalDeserializer.class)
     private BigDecimal openingBalance;
 
     @Size(max = 500, message = "Opening balance description cannot exceed 500 characters")

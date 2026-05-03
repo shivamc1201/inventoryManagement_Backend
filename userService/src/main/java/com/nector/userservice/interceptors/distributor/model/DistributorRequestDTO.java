@@ -1,6 +1,8 @@
 package com.nector.userservice.interceptors.distributor.model;
 
 import com.nector.userservice.enums.SalesRole;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.nector.userservice.util.BigDecimalDeserializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.Data;
@@ -79,9 +81,11 @@ public class DistributorRequestDTO {
     private String bankGuaranteeNumber;
 
     @Schema(description = "Credit limit", example = "500000.00")
+    @JsonDeserialize(using = BigDecimalDeserializer.class)
     private java.math.BigDecimal creditLimit;
 
     @Schema(description = "Credit balance", example = "450000.00")
+    @JsonDeserialize(using = BigDecimalDeserializer.class)
     private java.math.BigDecimal creditBalance;
 
     @Schema(description = "Bank guarantee expiry date", example = "2025-12-31")

@@ -55,4 +55,7 @@ public interface DealerRepository extends JpaRepository<Dealer, Long> {
     // Find dealers without salesperson assignment
     @Query("SELECT d FROM Dealer d WHERE d.distributorId = :distributorId AND d.salespersonId IS NULL AND d.isActive = true")
     List<Dealer> findUnassignedDealersByDistributor(@Param("distributorId") Long distributorId);
+
+    @Query("SELECT COUNT(d) FROM Dealer d WHERE d.isActive = true")
+    long countAllActiveDealers();
 }

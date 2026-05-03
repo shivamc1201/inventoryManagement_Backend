@@ -23,4 +23,7 @@ public interface DistributorRepository extends JpaRepository<Distributor, Long> 
     long countByMonthAndYear(@Param("month") int month, @Param("year") int year);
 
     List<Distributor> findBySalespersonId(Long salespersonId);
+
+    @Query("SELECT COUNT(d) FROM Distributor d")
+    long countAllDistributors();
 }

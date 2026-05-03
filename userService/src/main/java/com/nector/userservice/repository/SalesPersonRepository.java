@@ -56,4 +56,7 @@ public interface SalesPersonRepository extends JpaRepository<SalesPerson, Long> 
 
     boolean existsByUsernameAndIdNot(String username, long l);
     Optional<SalesPerson> findByUsername(String username);
+
+    @Query("SELECT COUNT(sp) FROM SalesPerson sp WHERE sp.active = true")
+    long countActiveSalesPersons();
 }

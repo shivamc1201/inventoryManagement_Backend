@@ -13,19 +13,29 @@ public class DashboardResponse {
     private Map<String, BigDecimal> salesByCategory;
     private Long totalOrders;
     private BigDecimal totalAmount;
-    
+    private UserStats userStats;
+
     @Data
     public static class SalesMetrics {
         private BigDecimal totalSales;
         private Long transactionCount;
         private BigDecimal averageOrderValue;
-        
+
         public SalesMetrics(BigDecimal totalSales, Long transactionCount) {
             this.totalSales = totalSales;
             this.transactionCount = transactionCount;
-            this.averageOrderValue = transactionCount > 0 ? 
-                totalSales.divide(BigDecimal.valueOf(transactionCount), 2, java.math.RoundingMode.HALF_UP) : 
+            this.averageOrderValue = transactionCount > 0 ?
+                totalSales.divide(BigDecimal.valueOf(transactionCount), 2, java.math.RoundingMode.HALF_UP) :
                 BigDecimal.ZERO;
         }
+    }
+
+    @Data
+    public static class UserStats {
+        private Long users;
+        private Long salespersons;
+        private Long distributors;
+        private Long dealers;
+        private Long totalUsers;
     }
 }

@@ -1,8 +1,11 @@
 package com.nector.userservice.service;
 
 import com.nector.userservice.dto.DashboardResponse;
+import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
+import com.nector.userservice.repository.DealerRepository;
 import com.nector.userservice.repository.OrderRepository;
 import com.nector.userservice.repository.SalesPersonRepository;
+import com.nector.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,6 +27,9 @@ public class DashboardService {
 
     private final OrderRepository orderRepository;
     private final SalesPersonRepository salesPersonRepository;
+    private final UserRepository userRepository;
+    private final DistributorRepository distributorRepository;
+    private final DealerRepository dealerRepository;
 
     @Transactional(readOnly = true)
     public DashboardResponse getDashboardData(String period) {
@@ -46,6 +52,9 @@ public class DashboardService {
         totalOrders = totalOrders != null ? totalOrders : 0L;
         totalAmount = totalAmount != null ? totalAmount : BigDecimal.ZERO;
 
+        // Get user stats
+        DashboardResponse.UserStats userStats = getUserStats();
+
         DashboardResponse response = new DashboardResponse();
         response.setYearToDate(yearToDate);
         response.setMonthToDate(monthToDate);
@@ -54,9 +63,31 @@ public class DashboardService {
         response.setSalesByCategory(categorySales);
         response.setTotalOrders(totalOrders);
         response.setTotalAmount(totalAmount);
+        response.setUserStats(userStats);
 
         log.info("Exiting getDashboardData() with response for period: {}", period);
         return response;
+    }
+
+    private DashboardResponse.UserStats getUserStats() {
+        log.debug("Entering getUserStats()");
+
+        long users = userRepository.countAllUsers();
+        long salespersons = salesPersonRepository.countActiveSalesPersons();
+        long distributors = distributorRepository.countAllDistributors();
+        long dealers = dealerRepository.countAllActiveDealers();
+        long totalUsers = users + salespersons + distributors + dealers;
+
+        DashboardResponse.UserStats stats = new DashboardResponse.UserStats();
+        stats.setUsers(users);
+        stats.setSalespersons(salespersons);
+        stats.setDistributors(distributors);
+        stats.setDealers(dealers);
+        stats.setTotalUsers(totalUsers);
+
+        log.debug("Exiting getUserStats() - users: {}, salespersons: {}, distributors: {}, dealers: {}, total: {}",
+                users, salespersons, distributors, dealers, totalUsers);
+        return stats;
     }
 
     private DashboardResponse.SalesMetrics getSalesMetrics(LocalDate start, LocalDate end) {

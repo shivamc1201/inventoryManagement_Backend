@@ -35,4 +35,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("DELETE FROM UserApproval ua WHERE ua.user.id = :userId")
     void deleteUserApprovalsByUserId(@Param("userId") Long userId);
 
+    @Query("SELECT COUNT(u) FROM User u")
+    long countAllUsers();
+
 }

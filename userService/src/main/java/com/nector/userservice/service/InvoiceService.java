@@ -379,10 +379,10 @@ public class InvoiceService {
 
         invoice.setItems(items);
 
-        // Calculate totals
+        // Calculate totals - no tax, grand total equals subtotal
         double subtotal = items.stream().mapToDouble(InvoiceItem::getAmount).sum();
-        double taxAmount = subtotal * 0.18; // 18% GST
-        double grandTotal = subtotal + taxAmount;
+        double taxAmount = 0.0; // No tax calculation
+        double grandTotal = subtotal; // Same as subtotal, no tax added
         int totalQuantity = items.stream().mapToInt(InvoiceItem::getQuantity).sum();
 
         invoice.setSubtotal(subtotal);
@@ -403,6 +403,7 @@ public class InvoiceService {
     private String generateHtmlFromTemplate(Invoice invoice) {
         Context context = new Context();
         context.setVariable("invoice", invoice);
+        context.setVariable("logoPath", "../static/logo.png"); // Path to logo relative to templates directory
         return templateEngine.process("invoice", context);
     }
 

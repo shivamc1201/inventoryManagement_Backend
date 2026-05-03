@@ -289,7 +289,7 @@ public class GdnService {
                 gdnItem.setItemId(cartItem.getItem().getId());
                 gdnItem.setItemDescription(cartItem.getItem().getName());
                 gdnItem.setNoOfUnitsDispatch(cartItem.getQuantity());
-                gdnItem.setWeightPerUnit(BigDecimal.valueOf(1.0)); // Default weight per unit
+                gdnItem.setWeightPerUnit(getWeightPerUnit(cartItem.getItem()));
                 return gdnItem;
             })
             .collect(Collectors.toList());
@@ -477,7 +477,7 @@ public class GdnService {
         }
         
         gdnItem.setNoOfUnitsDispatch(verifiedItem.getDispatchQuantity());
-        gdnItem.setWeightPerUnit(BigDecimal.valueOf(1.0)); // Default weight per unit
+        gdnItem.setWeightPerUnit(getWeightPerUnit(cartItem != null ? cartItem.getItem() : null, dbItem != null ? dbItem.getItemName() : null));
         return gdnItem;
     }
     
@@ -1002,6 +1002,59 @@ public class GdnService {
             log.error("Failed to revert money to distributor ledger for order {}: {}", orderId, e.getMessage());
             throw new RuntimeException("Failed to revert money: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Get weight per unit from FinishedProduct, with fallback to extracting from name.
+     * Returns 1.0 as default if no weight can be determined.
+     */
+    private BigDecimal getWeightPerUnit(com.nector.userservice.model.FinishedProduct product) {
+        return getWeightPerUnit(product, product != null ? product.getName() : null);
+    }
+
+    /**
+     * Get weight per unit from FinishedProduct, with fallback to extracting from product name.
+     * Returns 1.0 as default if no weight can be determined.
+     */
+    private BigDecimal getWeightPerUnit(com.nector.userservice.model.FinishedProduct product, String productName) {
+        // First try to get weight from product entity
+        if (product != null && product.getWeight() != null && product.getWeight().compareTo(BigDecimal.ZERO) > 0) {
+            return product.getWeight();
+        }
+
+        // Fallback: try to extract weight from product name (e.g., "MANKA Mash 20 Kg" -> 20)
+        if (productName != null && !productName.isEmpty()) {
+            BigDecimal extractedWeight = extractWeightFromName(productName);
+            if (extractedWeight != null) {
+                return extractedWeight;
+            }
+        }
+
+        // Default fallback
+        log.warn("Could not determine weight for product: {}, using default 1.0", productName);
+        return BigDecimal.ONE;
+    }
+
+    /**
+     * Extract weight value from product name.
+     * Looks for patterns like "20 Kg", "50 Kg" in the name.
+     */
+    private BigDecimal extractWeightFromName(String productName) {
+        if (productName == null || productName.isEmpty()) {
+            return null;
+        }
+        try {
+            String[] words = productName.split(" ");
+            for (int i = 0; i < words.length - 1; i++) {
+                if (words[i].matches("\\d+(\\.\\d+)?") &&
+                    (words[i + 1].equalsIgnoreCase("Kg") || words[i + 1].equalsIgnoreCase("KG"))) {
+                    return new BigDecimal(words[i]);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Failed to extract weight from product name: {}", productName);
+        }
+        return null;
     }
 
 }

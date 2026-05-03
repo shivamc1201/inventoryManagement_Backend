@@ -1,5 +1,6 @@
 package com.nector.userservice.service;
 
+import com.nector.userservice.dispatch.repository.GdnRepository;
 import com.nector.userservice.dto.VolumeAnalyticsResponse;
 import com.nector.userservice.repository.OrderRepository;
 import com.nector.userservice.repository.SalesPersonRepository;
@@ -15,6 +16,7 @@ import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,6 +26,7 @@ public class VolumeAnalyticsService {
 
     private final OrderRepository orderRepository;
     private final SalesPersonRepository salesPersonRepository;
+    private final GdnRepository gdnRepository;
 
     @Transactional(readOnly = true)
     public VolumeAnalyticsResponse getVolumeAnalyticsData(String period, Long salespersonId, Long distributorId) {
@@ -35,7 +38,6 @@ public class VolumeAnalyticsService {
         LocalDate startDate = getStartDate(now, period);
 
         VolumeAnalyticsResponse.VolumeMetrics monthToDate = getVolumeMetrics(startDate, now, salespersonId, distributorId);
-        VolumeAnalyticsResponse.VolumeMetrics weekToDate = getVolumeMetrics(now.minusWeeks(1), now, salespersonId, distributorId);
         VolumeAnalyticsResponse.VolumeMetrics yearToDate = getVolumeMetrics(now.withDayOfYear(1), now, salespersonId, distributorId);
 
         Map<String, Long> regionVolume = getVolumeByRegion(startDate, now, salespersonId, distributorId);
@@ -60,7 +62,6 @@ public class VolumeAnalyticsService {
         VolumeAnalyticsResponse response = new VolumeAnalyticsResponse();
         response.setYearToDate(yearToDate);
         response.setMonthToDate(monthToDate);
-        response.setWeekToDate(weekToDate);
         response.setVolumeByRegion(regionVolume);
         response.setVolumeByCategory(categoryVolume);
         response.setTotalOrders(totalOrders);
@@ -76,26 +77,26 @@ public class VolumeAnalyticsService {
                 start, end, salespersonId, distributorId);
 
         Long totalTransactions;
-        Long totalQuantity;
+        BigDecimal totalVolumeKg;
 
         // Only count GDN_GENERATED orders for volume analytics
         if (salespersonId != null) {
             totalTransactions = orderRepository.countGdnOrdersBySalespersonBetweenDates(salespersonId, toDateTime(start), toEndOfDay(end));
-            totalQuantity = getTotalQuantityBySalesperson(start, end, salespersonId);
+            totalVolumeKg = getTotalWeightKgBySalesperson(start, end, salespersonId);
         } else if (distributorId != null) {
             totalTransactions = orderRepository.countGdnOrdersByDistributorBetweenDates(distributorId, toDateTime(start), toEndOfDay(end));
-            totalQuantity = getTotalQuantityByDistributor(start, end, distributorId);
+            totalVolumeKg = getTotalWeightKgByDistributor(start, end, distributorId);
         } else {
             totalTransactions = orderRepository.countGdnOrdersBetweenDates(toDateTime(start), toEndOfDay(end));
-            totalQuantity = getTotalQuantityBetweenDates(start, end);
+            totalVolumeKg = getTotalWeightKgBetweenDates(start, end);
         }
 
         // Handle null values
         totalTransactions = totalTransactions != null ? totalTransactions : 0L;
-        totalQuantity = totalQuantity != null ? totalQuantity : 0L;
+        totalVolumeKg = totalVolumeKg != null ? totalVolumeKg : BigDecimal.ZERO;
 
-        VolumeAnalyticsResponse.VolumeMetrics metrics = new VolumeAnalyticsResponse.VolumeMetrics(totalTransactions, totalQuantity);
-        log.debug("Exiting getVolumeMetrics() with totalTransactions: {}, totalQuantity: {}", totalTransactions, totalQuantity);
+        VolumeAnalyticsResponse.VolumeMetrics metrics = new VolumeAnalyticsResponse.VolumeMetrics(totalTransactions, totalVolumeKg);
+        log.debug("Exiting getVolumeMetrics() with totalTransactions: {}, totalVolumeKg: {}", totalTransactions, totalVolumeKg);
         return metrics;
     }
 
@@ -169,31 +170,44 @@ public class VolumeAnalyticsService {
         return categoryVolume;
     }
 
-    private Long getTotalQuantityBetweenDates(LocalDate start, LocalDate end) {
-        log.debug("Getting total quantity between {} and {}", start, end);
+    private BigDecimal getTotalWeightKgBetweenDates(LocalDate start, LocalDate end) {
+        log.debug("Getting total weight between {} and {}", start, end);
 
-        // Only count GDN_GENERATED orders
+        // Get GDN_GENERATED orders and sum their totalWeight from GDN records
         var orders = orderRepository.findGdnOrdersByCreatedAtBetween(toDateTime(start), toEndOfDay(end));
 
-        // For now, we'll count each order as 1 unit
-        // In a real implementation, this would sum actual product quantities from order_items
-        return (long) orders.size();
+        return orders.stream()
+                .map(order -> gdnRepository.findByOrderId(order.getId()))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .map(gdn -> gdn.getTotalWeight() != null ? gdn.getTotalWeight() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private Long getTotalQuantityBySalesperson(LocalDate start, LocalDate end, Long salespersonId) {
-        log.debug("Getting total quantity for salesperson {} between {} and {}", salespersonId, start, end);
+    private BigDecimal getTotalWeightKgBySalesperson(LocalDate start, LocalDate end, Long salespersonId) {
+        log.debug("Getting total weight for salesperson {} between {} and {}", salespersonId, start, end);
 
-        // Only count GDN_GENERATED orders
         var orders = orderRepository.findGdnOrdersBySalespersonAndCreatedAtBetween(salespersonId, toDateTime(start), toEndOfDay(end));
-        return (long) orders.size();
+
+        return orders.stream()
+                .map(order -> gdnRepository.findByOrderId(order.getId()))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .map(gdn -> gdn.getTotalWeight() != null ? gdn.getTotalWeight() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private Long getTotalQuantityByDistributor(LocalDate start, LocalDate end, Long distributorId) {
-        log.debug("Getting total quantity for distributor {} between {} and {}", distributorId, start, end);
+    private BigDecimal getTotalWeightKgByDistributor(LocalDate start, LocalDate end, Long distributorId) {
+        log.debug("Getting total weight for distributor {} between {} and {}", distributorId, start, end);
 
-        // Only count GDN_GENERATED orders
         var orders = orderRepository.findGdnOrdersByDistributorAndCreatedAtBetween(distributorId, toDateTime(start), toEndOfDay(end));
-        return (long) orders.size();
+
+        return orders.stream()
+                .map(order -> gdnRepository.findByOrderId(order.getId()))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .map(gdn -> gdn.getTotalWeight() != null ? gdn.getTotalWeight() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private LocalDateTime toDateTime(LocalDate date) {

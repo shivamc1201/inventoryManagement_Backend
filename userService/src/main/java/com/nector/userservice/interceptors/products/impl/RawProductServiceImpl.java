@@ -180,12 +180,8 @@ public class RawProductServiceImpl implements RawProductService {
         response.setQuantity(product.getQuantity());
         response.setPrice(product.getPrice());
         
-        // Calculate per item price (price / quantity)
-        BigDecimal perItemPrice = BigDecimal.ZERO;
-        if (product.getQuantity() != null && product.getQuantity() > 0 && product.getPrice() != null) {
-            perItemPrice = product.getPrice()
-                .divide(BigDecimal.valueOf(product.getQuantity()), 2, RoundingMode.HALF_UP);
-        }
+        // Set per item price same as price
+        BigDecimal perItemPrice = product.getPrice() != null ? product.getPrice() : BigDecimal.ZERO;
         response.setPerItemPrice(perItemPrice);
         
         response.setMinimumThreshold(product.getMinimumThreshold());

@@ -2,6 +2,8 @@ package com.nector.userservice.interceptors.distributor.repository;
 
 import com.nector.userservice.interceptors.distributor.model.OrderConfirmation;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -12,4 +14,7 @@ public interface OrderConfirmationRepository extends JpaRepository<OrderConfirma
     Optional<OrderConfirmation> findByOrderId(Long orderId);
     List<OrderConfirmation> findByDistributorIdOrderByConfirmedAtDesc(Long distributorId);
     boolean existsByOrderId(Long orderId);
+
+    @Query("SELECT oc FROM OrderConfirmation oc LEFT JOIN FETCH oc.itemConfirmations WHERE oc.distributorId = :distributorId ORDER BY oc.confirmedAt DESC")
+    List<OrderConfirmation> findByDistributorIdWithItems(@Param("distributorId") Long distributorId);
 }

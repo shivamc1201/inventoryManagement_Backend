@@ -21,6 +21,7 @@ import com.nector.userservice.model.User;
 import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.repository.DealerLedgerTransactionRepository;
 import com.nector.userservice.repository.DistributorLedgerRepository;
+import com.nector.userservice.repository.FinishedProductRepository;
 import com.nector.userservice.repository.ItemRepository;
 import com.nector.userservice.service.InvoiceService;
 import com.nector.userservice.service.JwtService;
@@ -53,6 +54,7 @@ public class DistributorServiceImpl implements DistributorService {
     private final LedgerAccountService ledgerAccountService;
     private final OrderConfirmationRepository orderConfirmationRepository;
     private final ItemRepository itemRepository;
+    private final FinishedProductRepository finishedProductRepository;
     private final JwtService jwtService;
     private final UserRepository userRepository;
     private final SalesPersonRepository salesPersonRepository;
@@ -487,8 +489,8 @@ public class DistributorServiceImpl implements DistributorService {
         Distributor distributor = distributorRepository.findById(distributorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Distributor not found with ID: " + distributorId));
 
-        // Get all order confirmations for this distributor
-        List<OrderConfirmation> orderConfirmations = orderConfirmationRepository.findByDistributorIdOrderByConfirmedAtDesc(distributorId);
+        // Get all order confirmations for this distributor with items eagerly loaded
+        List<OrderConfirmation> orderConfirmations = orderConfirmationRepository.findByDistributorIdWithItems(distributorId);
 
         // Aggregate stock by item using received quantities from order confirmations
         Map<Long, DistributorStockResponse.StockItem> stockMap = new HashMap<>();
@@ -505,13 +507,19 @@ public class DistributorServiceImpl implements DistributorService {
                         newStockItem.setItemSku(itemConfirmation.getSku());
                         newStockItem.setTotalQuantity(0);
                         newStockItem.setTotalValue(BigDecimal.ZERO);
-                        
-                        // Get item details from repository
-                        itemRepository.findById(itemId).ifPresent(item -> {
-                            newStockItem.setItemName(item.getName());
-                            newStockItem.setUnitPrice(item.getPrice());
+
+                        // Get item details from FinishedProduct repository
+                        finishedProductRepository.findById(itemId).ifPresent(product -> {
+                            newStockItem.setItemName(product.getName());
+                            newStockItem.setUnitPrice(product.getPrice());
+                            // Set unit type - use unitType field if available, otherwise use unit enum
+                            if (product.getUnitType() != null && !product.getUnitType().isEmpty()) {
+                                newStockItem.setUnitType(product.getUnitType());
+                            } else if (product.getUnit() != null) {
+                                newStockItem.setUnitType(product.getUnit().name());
+                            }
                         });
-                        
+
                         stockItem = newStockItem;
                         stockMap.put(itemId, stockItem);
                     }

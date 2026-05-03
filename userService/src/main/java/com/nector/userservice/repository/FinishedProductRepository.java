@@ -26,4 +26,8 @@ public interface FinishedProductRepository extends JpaRepository<FinishedProduct
     boolean existsByUnitCode(String unitCode);
     
     Optional<FinishedProduct> findByUnitCode(String unitCode);
+
+    List<FinishedProduct> findByNameContainingIgnoreCaseAndActiveTrue(String name);
+
+    Optional<FinishedProduct> findByNameIgnoreCaseAndActiveTrue(String name);
 }

@@ -78,10 +78,6 @@ public class DistributorServiceImpl implements DistributorService {
             throw new IllegalArgumentException(
                     "Distributor with PanNumber already exists: " + request.getPanNumber());
         }
-        if (distributorRepository.existsByGstNumber(request.getGstNumber())) {
-            throw new IllegalArgumentException(
-                    "Distributor with GstNumber already exists: " + request.getGstNumber());
-        }
 
         // Validate salesperson assignment
         if (request.getSalespersonId() != null) {

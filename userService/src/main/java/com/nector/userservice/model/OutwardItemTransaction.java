@@ -59,6 +59,12 @@ public class OutwardItemTransaction {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    @Column(length = 100)
+    private String referenceNumber;
+
+    @Column(length = 200)
+    private String issuedTo;
+
     public enum ItemType {
         SPARE_PARTS, PROMOTIONAL_ITEMS, SCRAP_MATERIAL
     }

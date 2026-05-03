@@ -29,4 +29,8 @@ public class OutwardItemResponse {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    private String referenceNumber;
+
+    private String issuedTo;
 }

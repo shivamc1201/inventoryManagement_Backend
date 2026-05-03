@@ -17,6 +17,7 @@ import com.nector.userservice.repository.DealerLedgerTransactionRepository;
 import com.nector.userservice.repository.DealerOrderRepository;
 import com.nector.userservice.repository.DealerRepository;
 import com.nector.userservice.repository.DealerSaleRepository;
+import com.nector.userservice.repository.FinishedProductRepository;
 import com.nector.userservice.interceptors.distributor.model.OrderConfirmation;
 import com.nector.userservice.interceptors.distributor.model.OrderConfirmationRequest;
 import com.nector.userservice.interceptors.distributor.repository.OrderConfirmationRepository;
@@ -42,6 +43,7 @@ public class DealerSaleService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final OrderConfirmationRepository orderConfirmationRepository;
+    private final FinishedProductRepository finishedProductRepository;
 
     @Transactional
     public DealerSale createDealerSale(DealerSaleRequest request, Long distributorId) {
@@ -88,12 +90,18 @@ public class DealerSaleService {
 
     @Transactional
     public DealerOrder createDealerOrder(DealerOrderRequest request, Long distributorId) {
-        log.info("Creating dealer order for dealer: {} and distributor: {} with SKU: {} and quantity: {}",
-                request.getDealerId(), distributorId, request.getSku(), request.getQuantity());
+        log.info("Creating dealer order for dealer: {} and distributor: {} with itemId: {} SKU: {} and quantity: {}",
+                request.getDealerId(), distributorId, request.getItemId(), request.getSku(), request.getQuantity());
 
         // Verify dealer exists and belongs to distributor
         Dealer dealer = dealerRepository.findByIdAndDistributorId(request.getDealerId(), distributorId)
                 .orElseThrow(() -> new BusinessException("Dealer not found or access denied"));
+
+        // Resolve SKU from itemId or itemName if not provided directly
+        String resolvedSku = resolveSku(request);
+        if (resolvedSku == null) {
+            throw new BusinessException("Unable to resolve product SKU. Please provide itemId, sku, or itemName.");
+        }
 
         // Check distributor's received complete orders for stock availability
         List<OrderConfirmation> distributorOrders = orderConfirmationRepository
@@ -107,32 +115,32 @@ public class DealerSaleService {
             throw new BusinessException("Distributor has no received complete orders. Cannot process dealer order.");
         }
 
-        // Calculate available stock from received complete orders for the requested SKU
+        // Calculate available stock from received complete orders for the resolved SKU
         int availableStock = receivedCompleteOrders.stream()
                 .flatMap(order -> order.getItemConfirmations().stream())
-                .filter(item -> request.getSku().equalsIgnoreCase(item.getSku()))
+                .filter(item -> resolvedSku.equalsIgnoreCase(item.getSku()))
                 .mapToInt(item -> item.getReceivedQuantity() != null ? item.getReceivedQuantity() : 0)
                 .sum();
 
         if (availableStock <= 0) {
             throw new BusinessException(
-                    "Product with SKU '" + request.getSku() + "' not found in distributor's received stock. Distributor must receive stock from company first.");
+                    "Product with SKU '" + resolvedSku + "' not found in distributor's received stock. Distributor must receive stock from company first.");
         }
 
         // Check if sufficient quantity available
         if (availableStock < request.getQuantity()) {
             throw new BusinessException(
-                    "Insufficient stock for SKU '" + request.getSku() + "'. Available: " + availableStock + ", Requested: " + request.getQuantity());
+                    "Insufficient stock for SKU '" + resolvedSku + "'. Available: " + availableStock + ", Requested: " + request.getQuantity());
         }
 
         log.info("Distributor {} has available stock for SKU '{}': {} units from {} received complete orders",
-                distributorId, request.getSku(), availableStock, receivedCompleteOrders.size());
+                distributorId, resolvedSku, availableStock, receivedCompleteOrders.size());
 
         // Create the order
         DealerOrder order = new DealerOrder();
         order.setDealerId(request.getDealerId());
         order.setDistributorId(distributorId);
-        order.setSku(request.getSku());
+        order.setSku(resolvedSku);
         order.setItemName(request.getItemName());
         order.setQuantity(request.getQuantity());
         order.setAmount(request.getAmount());
@@ -167,6 +175,30 @@ public class DealerSaleService {
         // Delete the sale
         dealerSaleRepository.delete(sale);
         log.info("Deleted dealer sale with ID: {}", saleId);
+    }
+
+    private String resolveSku(DealerOrderRequest request) {
+        // If SKU is directly provided, use it
+        if (request.getSku() != null && !request.getSku().trim().isEmpty()) {
+            return request.getSku().trim();
+        }
+
+        // If itemId is provided, fetch SKU from FinishedProduct
+        if (request.getItemId() != null) {
+            return finishedProductRepository.findById(request.getItemId())
+                    .map(product -> product.getSku())
+                    .orElseThrow(() -> new BusinessException("Product not found with ID: " + request.getItemId()));
+        }
+
+        // If itemName is provided, lookup product by name and get SKU
+        if (request.getItemName() != null && !request.getItemName().trim().isEmpty()) {
+            String productName = request.getItemName().trim();
+            return finishedProductRepository.findByNameIgnoreCaseAndActiveTrue(productName)
+                    .map(product -> product.getSku())
+                    .orElseThrow(() -> new BusinessException("Product not found with name: " + productName));
+        }
+
+        return null;
     }
 
     private void  createSaleLedgerEntry(DealerSale sale, Dealer dealer) {

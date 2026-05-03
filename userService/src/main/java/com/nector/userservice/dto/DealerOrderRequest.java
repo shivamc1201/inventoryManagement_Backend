@@ -15,6 +15,8 @@ public class DealerOrderRequest {
 
     private Long dealerId;
 
+    private Long itemId;
+
     private String sku;
 
     @Size(max = 200, message = "Item name cannot exceed 200 characters")

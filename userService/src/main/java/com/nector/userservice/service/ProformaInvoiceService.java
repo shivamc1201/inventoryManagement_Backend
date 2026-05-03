@@ -5,6 +5,7 @@ import com.nector.userservice.dto.invoice.InvoiceItem;
 import com.nector.userservice.dto.invoice.ProformaInvoice;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.model.Cart;
+import com.nector.userservice.ordertracking.repository.OrderTrackingRepository;
 import com.nector.userservice.model.CartItem;
 import com.nector.userservice.model.FinishedProduct;
 import com.nector.userservice.repository.CartRepository;
@@ -40,6 +41,7 @@ public class ProformaInvoiceService {
     private final CloudinaryStorageService cloudinaryStorageService;
     private final DocumentNumberService documentNumberService;
     private final DistributorRepository distributorRepository;
+    private final OrderTrackingRepository orderTrackingRepository;
 
 
     @Transactional
@@ -292,7 +294,17 @@ public class ProformaInvoiceService {
         invoice.setTaxInWords("NIL");
         invoice.setTotalAltQty("");
         invoice.setDeliveryNote("");
-        invoice.setOrderNo("");
+
+        // Fetch Sales Order number from OrderTracking
+        var orderTracking = orderTrackingRepository.findByCartId(cart.getId());
+        if (orderTracking != null && orderTracking.getOrderNumber() != null) {
+            invoice.setOrderNo(orderTracking.getOrderNumber());
+            log.info("Sales Order number {} found for cart ID: {}", orderTracking.getOrderNumber(), cart.getId());
+        } else {
+            invoice.setOrderNo("");
+            log.warn("No Sales Order number found for cart ID: {}", cart.getId());
+        }
+
         invoice.setOrderDate(LocalDate.now());
         invoice.setDispatchDocNo("");
         invoice.setDeliveryNoteDate(LocalDate.now());

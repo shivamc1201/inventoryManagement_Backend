@@ -28,7 +28,7 @@ public class VolumeAnalyticsService {
         log.info("Entering getVolumeAnalyticsData() with period: {}, salespersonId: {}, distributorId: {}",
                 period, salespersonId, distributorId);
 
-        if (period == null) period = "month";
+        if (period == null) period = "all";
         LocalDate now = LocalDate.now();
         LocalDate startDate = getStartDate(now, period);
 

@@ -4,7 +4,7 @@ import com.nector.userservice.enums.OrderStatus;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class OrderResponse {
@@ -14,8 +14,8 @@ public class OrderResponse {
     private Long distributorId;
     private String address;
     private OrderStatus status;
-    private LocalDate createdAt;
-    private LocalDate updatedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private Long createdBy;
     
     // Additional fields from OrderWithSalesPerson

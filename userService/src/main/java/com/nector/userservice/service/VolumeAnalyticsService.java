@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,14 +45,14 @@ public class VolumeAnalyticsService {
         Long totalOrders;
         BigDecimal totalAmount;
         if (salespersonId != null) {
-            totalOrders = orderRepository.countGdnOrdersBySalespersonBetweenDates(salespersonId, startDate, now);
-            totalAmount = orderRepository.sumGdnAmountBySalespersonBetweenDates(salespersonId, startDate, now);
+            totalOrders = orderRepository.countGdnOrdersBySalespersonBetweenDates(salespersonId, toDateTime(startDate), toEndOfDay(now));
+            totalAmount = orderRepository.sumGdnAmountBySalespersonBetweenDates(salespersonId, toDateTime(startDate), toEndOfDay(now));
         } else if (distributorId != null) {
-            totalOrders = orderRepository.countGdnOrdersByDistributorBetweenDates(distributorId, startDate, now);
-            totalAmount = orderRepository.sumGdnAmountByDistributorBetweenDates(distributorId, startDate, now);
+            totalOrders = orderRepository.countGdnOrdersByDistributorBetweenDates(distributorId, toDateTime(startDate), toEndOfDay(now));
+            totalAmount = orderRepository.sumGdnAmountByDistributorBetweenDates(distributorId, toDateTime(startDate), toEndOfDay(now));
         } else {
-            totalOrders = orderRepository.countGdnOrdersBetweenDates(startDate, now);
-            totalAmount = orderRepository.sumGdnAmountBetweenDates(startDate, now);
+            totalOrders = orderRepository.countGdnOrdersBetweenDates(toDateTime(startDate), toEndOfDay(now));
+            totalAmount = orderRepository.sumGdnAmountBetweenDates(toDateTime(startDate), toEndOfDay(now));
         }
         totalOrders = totalOrders != null ? totalOrders : 0L;
         totalAmount = totalAmount != null ? totalAmount : BigDecimal.ZERO;
@@ -78,13 +80,13 @@ public class VolumeAnalyticsService {
 
         // Only count GDN_GENERATED orders for volume analytics
         if (salespersonId != null) {
-            totalTransactions = orderRepository.countGdnOrdersBySalespersonBetweenDates(salespersonId, start, end);
+            totalTransactions = orderRepository.countGdnOrdersBySalespersonBetweenDates(salespersonId, toDateTime(start), toEndOfDay(end));
             totalQuantity = getTotalQuantityBySalesperson(start, end, salespersonId);
         } else if (distributorId != null) {
-            totalTransactions = orderRepository.countGdnOrdersByDistributorBetweenDates(distributorId, start, end);
+            totalTransactions = orderRepository.countGdnOrdersByDistributorBetweenDates(distributorId, toDateTime(start), toEndOfDay(end));
             totalQuantity = getTotalQuantityByDistributor(start, end, distributorId);
         } else {
-            totalTransactions = orderRepository.countGdnOrdersBetweenDates(start, end);
+            totalTransactions = orderRepository.countGdnOrdersBetweenDates(toDateTime(start), toEndOfDay(end));
             totalQuantity = getTotalQuantityBetweenDates(start, end);
         }
 
@@ -122,11 +124,11 @@ public class VolumeAnalyticsService {
         List<com.nector.userservice.model.OrderWithSalesPerson> orders;
 
         if (salespersonId != null) {
-            orders = orderRepository.findGdnOrdersBySalespersonAndCreatedAtBetween(salespersonId, startDate, endDate);
+            orders = orderRepository.findGdnOrdersBySalespersonAndCreatedAtBetween(salespersonId, toDateTime(startDate), toEndOfDay(endDate));
         } else if (distributorId != null) {
-            orders = orderRepository.findGdnOrdersByDistributorAndCreatedAtBetween(distributorId, startDate, endDate);
+            orders = orderRepository.findGdnOrdersByDistributorAndCreatedAtBetween(distributorId, toDateTime(startDate), toEndOfDay(endDate));
         } else {
-            orders = orderRepository.findGdnOrdersByCreatedAtBetween(startDate, endDate);
+            orders = orderRepository.findGdnOrdersByCreatedAtBetween(toDateTime(startDate), toEndOfDay(endDate));
         }
 
         return orders.stream()
@@ -156,11 +158,11 @@ public class VolumeAnalyticsService {
 
         // Only count GDN_GENERATED orders for category volume
         if (salespersonId != null) {
-            totalTransactions = orderRepository.countGdnOrdersBySalespersonBetweenDates(salespersonId, startDate, endDate);
+            totalTransactions = orderRepository.countGdnOrdersBySalespersonBetweenDates(salespersonId, toDateTime(startDate), toEndOfDay(endDate));
         } else if (distributorId != null) {
-            totalTransactions = orderRepository.countGdnOrdersByDistributorBetweenDates(distributorId, startDate, endDate);
+            totalTransactions = orderRepository.countGdnOrdersByDistributorBetweenDates(distributorId, toDateTime(startDate), toEndOfDay(endDate));
         } else {
-            totalTransactions = orderRepository.countGdnOrdersBetweenDates(startDate, endDate);
+            totalTransactions = orderRepository.countGdnOrdersBetweenDates(toDateTime(startDate), toEndOfDay(endDate));
         }
 
         categoryVolume.put("General", totalTransactions != null ? totalTransactions : 0L);
@@ -171,7 +173,7 @@ public class VolumeAnalyticsService {
         log.debug("Getting total quantity between {} and {}", start, end);
 
         // Only count GDN_GENERATED orders
-        var orders = orderRepository.findGdnOrdersByCreatedAtBetween(start, end);
+        var orders = orderRepository.findGdnOrdersByCreatedAtBetween(toDateTime(start), toEndOfDay(end));
 
         // For now, we'll count each order as 1 unit
         // In a real implementation, this would sum actual product quantities from order_items
@@ -182,7 +184,7 @@ public class VolumeAnalyticsService {
         log.debug("Getting total quantity for salesperson {} between {} and {}", salespersonId, start, end);
 
         // Only count GDN_GENERATED orders
-        var orders = orderRepository.findGdnOrdersBySalespersonAndCreatedAtBetween(salespersonId, start, end);
+        var orders = orderRepository.findGdnOrdersBySalespersonAndCreatedAtBetween(salespersonId, toDateTime(start), toEndOfDay(end));
         return (long) orders.size();
     }
 
@@ -190,7 +192,15 @@ public class VolumeAnalyticsService {
         log.debug("Getting total quantity for distributor {} between {} and {}", distributorId, start, end);
 
         // Only count GDN_GENERATED orders
-        var orders = orderRepository.findGdnOrdersByDistributorAndCreatedAtBetween(distributorId, start, end);
+        var orders = orderRepository.findGdnOrdersByDistributorAndCreatedAtBetween(distributorId, toDateTime(start), toEndOfDay(end));
         return (long) orders.size();
+    }
+
+    private LocalDateTime toDateTime(LocalDate date) {
+        return date.atStartOfDay();
+    }
+
+    private LocalDateTime toEndOfDay(LocalDate date) {
+        return date.atTime(LocalTime.MAX);
     }
 }

@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Service
 @RequiredArgsConstructor
@@ -35,8 +37,10 @@ public class DistributorDashboardService {
             totalAmount = orderRepository.getTotalAmountByDistributorAndStatus(distributorId, OrderStatus.GDN_GENERATED);
         } else {
             // Get all GDN_GENERATED orders with date filtering (only when no distributorId is specified)
-            totalOrders = orderRepository.countOrdersByStatusBetweenDates(OrderStatus.GDN_GENERATED, startDate, now);
-            totalAmount = orderRepository.getTotalAmountByStatusBetweenDates(OrderStatus.GDN_GENERATED, startDate, now);
+            LocalDateTime startDateTime = startDate.atStartOfDay();
+            LocalDateTime endDateTime = now.atTime(LocalTime.MAX);
+            totalOrders = orderRepository.countOrdersByStatusBetweenDates(OrderStatus.GDN_GENERATED, startDateTime, endDateTime);
+            totalAmount = orderRepository.getTotalAmountByStatusBetweenDates(OrderStatus.GDN_GENERATED, startDateTime, endDateTime);
         }
         
         // Handle null values

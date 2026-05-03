@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,8 +54,8 @@ public class DashboardService {
     private DashboardResponse.SalesMetrics getSalesMetrics(LocalDate start, LocalDate end) {
         log.debug("Entering getSalesMetrics() from {} to {}", start, end);
 
-        BigDecimal totalSales = orderRepository.getTotalAmountBetweenDates(start, end);
-        Long transactionCount = orderRepository.countOrdersBetweenDates(start, end);
+        BigDecimal totalSales = orderRepository.getTotalAmountBetweenDates(start.atStartOfDay(), end.atTime(LocalTime.MAX));
+        Long transactionCount = orderRepository.countOrdersBetweenDates(start.atStartOfDay(), end.atTime(LocalTime.MAX));
 
         // Handle null values
         totalSales = totalSales != null ? totalSales : BigDecimal.ZERO;
@@ -85,7 +87,7 @@ public class DashboardService {
         log.debug("Getting sales by region from {} to {}", startDate, endDate);
 
         // Get all orders in the date range and group by salesperson region
-        var orders = orderRepository.findByCreatedAtBetween(startDate, endDate);
+        List<com.nector.userservice.model.OrderWithSalesPerson> orders = orderRepository.findByCreatedAtBetween(startDate.atStartOfDay(), endDate.atTime(LocalTime.MAX));
 
         return orders.stream()
                 .filter(order -> order.getSalespersonId() != null)
@@ -112,7 +114,7 @@ public class DashboardService {
         // Since carts table doesn't have product category, we'll return a placeholder
         // In a real implementation, this would come from order_items or products table
         Map<String, BigDecimal> categorySales = new HashMap<>();
-        BigDecimal totalAmount = orderRepository.getTotalAmountBetweenDates(startDate, endDate);
+        BigDecimal totalAmount = orderRepository.getTotalAmountBetweenDates(startDate.atStartOfDay(), endDate.atTime(LocalTime.MAX));
         categorySales.put("General", totalAmount != null ? totalAmount : BigDecimal.ZERO);
         return categorySales;
     }

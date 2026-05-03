@@ -11,6 +11,8 @@ public class DashboardResponse {
     private SalesMetrics weekToDate;
     private Map<String, BigDecimal> salesByRegion;
     private Map<String, BigDecimal> salesByCategory;
+    private Long totalOrders;
+    private BigDecimal totalAmount;
     
     @Data
     public static class SalesMetrics {

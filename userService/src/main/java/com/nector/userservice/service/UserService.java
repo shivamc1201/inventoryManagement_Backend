@@ -43,6 +43,10 @@ public class UserService {
         Optional.ofNullable(req.getCountry()).ifPresent(user::setCountry);
         Optional.ofNullable(req.getZip()).ifPresent(user::setZip);
         Optional.ofNullable(req.getRoleType()).ifPresent(user::setRoleType);
+        Optional.ofNullable(req.getPassword()).ifPresent(password -> {
+            user.setPassword(password);
+            user.setPasswordSetDate(java.time.LocalDateTime.now());
+        });
 
         User updatedUser = userRepository.save(user);
         log.info("Exiting updateUser() - User updated successfully for userId: {}", userId);

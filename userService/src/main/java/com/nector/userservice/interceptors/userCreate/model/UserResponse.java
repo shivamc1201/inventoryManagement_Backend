@@ -32,6 +32,7 @@ public class UserResponse {
     private LocalDateTime lastLoginTime;
     private boolean isLoggedIn;
     private LocalDateTime passwordSetDate;
+    private String password;
     private String employeeRollNo;
     private RoleType roleType;
     // Optional: expose roles only if required

@@ -114,6 +114,7 @@ public class UserPermissionController {
         response.setLastLoginTime(savedUser.getLastLoginTime());
         response.setLoggedIn(savedUser.isLoggedIn());
         response.setPasswordSetDate(savedUser.getPasswordSetDate());
+        response.setPassword(savedUser.getPassword());
         response.setEmployeeRollNo(savedUser.getEmployeeRollNo());
         return response;
     }
@@ -130,7 +131,7 @@ public class UserPermissionController {
         User updatedUser = userService.updateUser(userId, request);
 
         return ResponseEntity.ok(
-                Map.of("message", "User updated successfully", "username", updatedUser.getUsername(), "status", updatedUser.getStatus())
+                Map.of("message", "User updated successfully", "username", updatedUser.getUsername(), "status", updatedUser.getStatus(), "password", updatedUser.getPassword())
         );
     }
 

@@ -834,7 +834,8 @@ public class PaymentService {
                 distributorName, 
                 cart.getDistributorId(), 
                 orderNumber, 
-                totalAmount
+                totalAmount,
+                cart.getDeliveryBy()
             );
             
             log.info("Successfully created order tracking for cart: {}", cartId);

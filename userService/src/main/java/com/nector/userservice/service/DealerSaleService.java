@@ -18,9 +18,6 @@ import com.nector.userservice.repository.DealerOrderRepository;
 import com.nector.userservice.repository.DealerRepository;
 import com.nector.userservice.repository.DealerSaleRepository;
 import com.nector.userservice.repository.FinishedProductRepository;
-import com.nector.userservice.interceptors.distributor.model.OrderConfirmation;
-import com.nector.userservice.interceptors.distributor.model.OrderConfirmationRequest;
-import com.nector.userservice.interceptors.distributor.repository.OrderConfirmationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -42,8 +39,8 @@ public class DealerSaleService {
     private final DealerOrderRepository dealerOrderRepository;
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
-    private final OrderConfirmationRepository orderConfirmationRepository;
     private final FinishedProductRepository finishedProductRepository;
+    private final DistributorStockService distributorStockService;
 
     @Transactional
     public DealerSale createDealerSale(DealerSaleRequest request, Long distributorId) {
@@ -103,29 +100,12 @@ public class DealerSaleService {
             throw new BusinessException("Unable to resolve product SKU. Please provide itemId, sku, or itemName.");
         }
 
-        // Check distributor's received complete orders for stock availability
-        // Using findByDistributorIdWithItems to eagerly fetch itemConfirmations with JOIN FETCH
-        List<OrderConfirmation> distributorOrders = orderConfirmationRepository
-                .findByDistributorIdWithItems(distributorId);
-
-        List<OrderConfirmation> receivedCompleteOrders = distributorOrders.stream()
-                .filter(order -> order.getStatus() == OrderConfirmationRequest.ConfirmationStatus.RECEIVED_COMPLETE)
-                .toList();
-
-        if (receivedCompleteOrders.isEmpty()) {
-            throw new BusinessException("Distributor has no received complete orders. Cannot process dealer order.");
-        }
-
-        // Calculate available stock from received complete orders for the resolved SKU
-        int availableStock = receivedCompleteOrders.stream()
-                .flatMap(order -> order.getItemConfirmations().stream())
-                .filter(item -> resolvedSku.equalsIgnoreCase(item.getSku()))
-                .mapToInt(item -> item.getReceivedQuantity() != null ? item.getReceivedQuantity() : 0)
-                .sum();
+        // Check current stock from DistributorStock entity (which tracks +received and -sold)
+        Integer availableStock = distributorStockService.getStockQuantity(distributorId, resolvedSku);
 
         if (availableStock <= 0) {
             throw new BusinessException(
-                    "Product with SKU '" + resolvedSku + "' not found in distributor's received stock. Distributor must receive stock from company first.");
+                    "Product with SKU '" + resolvedSku + "' not found in distributor's stock. Distributor must receive stock from company first.");
         }
 
         // Check if sufficient quantity available
@@ -134,8 +114,8 @@ public class DealerSaleService {
                     "Insufficient stock for SKU '" + resolvedSku + "'. Available: " + availableStock + ", Requested: " + request.getQuantity());
         }
 
-        log.info("Distributor {} has available stock for SKU '{}': {} units from {} received complete orders",
-                distributorId, resolvedSku, availableStock, receivedCompleteOrders.size());
+        log.info("Distributor {} has available stock for SKU '{}': {} units",
+                distributorId, resolvedSku, availableStock);
 
         // Create the order
         DealerOrder order = new DealerOrder();
@@ -149,6 +129,17 @@ public class DealerSaleService {
 
         DealerOrder savedOrder = dealerOrderRepository.save(order);
         log.info("Created dealer order with ID: {}", savedOrder.getId());
+
+        // Reduce stock from distributor inventory (- stock operation after billing dealer)
+        try {
+            distributorStockService.reduceStock(distributorId, resolvedSku, request.getQuantity());
+            log.info("Reduced {} units of SKU: {} from distributor {} stock after dealer billing", 
+                request.getQuantity(), resolvedSku, distributorId);
+        } catch (Exception e) {
+            log.error("Failed to reduce stock for dealer order {}: {}", savedOrder.getId(), e.getMessage());
+            // Don't fail the order creation, but log the error
+            // The stock discrepancy can be reconciled later
+        }
 
         return savedOrder;
     }

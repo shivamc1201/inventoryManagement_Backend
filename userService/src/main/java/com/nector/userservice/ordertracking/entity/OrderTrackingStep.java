@@ -37,6 +37,9 @@ public class OrderTrackingStep {
     @Column(nullable = false, length = 20)
     private StepStatus status;
 
+    @Column(name = "delivery_by")
+    private String deliveryBy;
+
     @Column(name = "step_date")
     private LocalDate stepDate;
 

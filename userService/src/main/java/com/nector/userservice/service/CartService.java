@@ -265,6 +265,9 @@ public class CartService {
         // Set dismiss reason if present
         response.setDismissReason(cart.getDismissReason());
 
+        // Set deliveryBy if present
+        response.setDeliveryBy(cart.getDeliveryBy());
+
         // Calculate total cart amount
         BigDecimal totalAmount = cartItemResponses.stream()
                 .map(CartItemResponse::getTotalPrice)
@@ -609,6 +612,7 @@ public class CartService {
         // Save the address and update status
         long cartSaveStart = System.currentTimeMillis();
         cart.setAddress(request.getAddress());
+        cart.setDeliveryBy(request.getDeliveryBy());
         cart.setStatus(Cart.CartStatus.PLACED);
         Cart updatedCart = cartRepository.save(cart);
         
@@ -696,6 +700,7 @@ public class CartService {
         BigDecimal volumeInTons = totalWeight.divide(BigDecimal.valueOf(1000), 6, BigDecimal.ROUND_HALF_UP);
         response.setVolumeInTons(volumeInTons);
         response.setTotalCartWeightKg(totalWeight);
+        response.setDeliveryBy(cart.getDeliveryBy());
 
         return response;
     }

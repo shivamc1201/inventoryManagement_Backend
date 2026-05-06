@@ -188,7 +188,7 @@ public class OrderTrackingService {
             .createdBy(req.getCreatedBy())
             .build();
 
-        order.setSteps(buildDefaultSteps(order));
+        order.setSteps(buildDefaultSteps(order, req.getDeliveryBy()));
         return toDTO(orderRepo.save(order));
     }
 
@@ -196,7 +196,8 @@ public class OrderTrackingService {
 
     @Transactional
     public OrderTrackingDTO createFromCart(Long cartId, String distributorName, Long distributorId, 
-                                          String orderNumber, java.math.BigDecimal totalAmount) {
+                                          String orderNumber, java.math.BigDecimal totalAmount,
+                                          String deliveryBy) {
         long startTime = System.currentTimeMillis();
         log.info("[TIMING] Creating OrderTracking from cart {} for distributor {}", cartId, distributorId);
         
@@ -210,7 +211,7 @@ public class OrderTrackingService {
             .build();
 
         long stepsStart = System.currentTimeMillis();
-        order.setSteps(buildDefaultSteps(order));
+        order.setSteps(buildDefaultSteps(order, deliveryBy));
         log.info("[TIMING] buildDefaultSteps took {} ms", System.currentTimeMillis() - stepsStart);
 
         long saveStart = System.currentTimeMillis();
@@ -267,6 +268,7 @@ public class OrderTrackingService {
             .stepSequence(s.getStepSequence())
             .label(s.getLabel())
             .status(s.getStatus().getValue())      // lowercase for frontend
+            .deliveryBy(s.getDeliveryBy())
             .date(s.getStepDate() != null ? s.getStepDate().toString() : null)
             .remarks(s.getRemarks())
             .assignedPerson(person)
@@ -283,7 +285,7 @@ public class OrderTrackingService {
      * Step 4 (PI), Step 9 (GDN) get hasDownload = true.
      * Step 11 gets hasAction = true.
      */
-    private List<OrderTrackingStep> buildDefaultSteps(OrderTracking order) {
+    private List<OrderTrackingStep> buildDefaultSteps(OrderTracking order, String deliveryBy) {
         long startTime = System.currentTimeMillis();
         record StepDef(String label, boolean hasDownload, String downloadLabel, boolean hasAction) {}
 
@@ -319,7 +321,8 @@ public class OrderTrackingService {
                 stepBuilder
                     .assignedPersonId(order.getDistributorId())
                     .assignedPersonName(order.getDistributorName())
-                    .assignedPersonRole("DISTRIBUTOR");
+                    .assignedPersonRole("DISTRIBUTOR")
+                    .deliveryBy(deliveryBy);
                     
                 long distLookupStart = System.currentTimeMillis();
                 distributorRepository.findById(order.getDistributorId()).ifPresent(distributor -> {

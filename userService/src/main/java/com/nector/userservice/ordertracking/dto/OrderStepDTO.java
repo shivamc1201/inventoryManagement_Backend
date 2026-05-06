@@ -11,6 +11,7 @@ public class OrderStepDTO {
     private Integer stepSequence;       // 1–11
     private String label;
     private String status;              // "completed"|"pending"|"cancelled"|"in-progress"
+    private String deliveryBy;
     private String date;               // "yyyy-MM-dd" or null
     private String remarks;
     private AssignedPersonDTO assignedPerson;   // null if no one assigned

@@ -24,4 +24,5 @@ public class CartResponse {
 //    private BigDecimal totalWeight;
     private BigDecimal volumeInTons;
     private BigDecimal totalCartWeightKg;
+    private String deliveryBy;
 }

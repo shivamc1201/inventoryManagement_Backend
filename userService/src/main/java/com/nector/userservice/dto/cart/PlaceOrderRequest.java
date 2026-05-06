@@ -11,4 +11,6 @@ public class PlaceOrderRequest {
 
     @NotNull(message = "Address is required")
     private String address;
+
+    private String deliveryBy;
 }

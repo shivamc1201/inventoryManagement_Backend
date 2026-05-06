@@ -27,6 +27,7 @@ import com.nector.userservice.service.InvoiceService;
 import com.nector.userservice.service.JwtService;
 import com.nector.userservice.ordertracking.service.OrderTrackingService;
 import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
+import com.nector.userservice.service.DistributorStockService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -63,6 +64,7 @@ public class DistributorServiceImpl implements DistributorService {
     private final DistributorLedgerRepository distributorLedgerRepository;
     private final InvoiceService invoiceService;
     private final OrderTrackingService orderTrackingService;
+    private final DistributorStockService distributorStockService;
     
     @Override
     public DistributorResponseDTO createDistributor(DistributorRequestDTO request) {
@@ -228,6 +230,30 @@ public class DistributorServiceImpl implements DistributorService {
         
         OrderConfirmation savedConfirmation = orderConfirmationRepository.save(confirmation);
         log.info("Order confirmation saved with ID: {}", savedConfirmation.getId());
+        
+        // Add received stock to distributor inventory (+ stock operation)
+        if (savedConfirmation.getItemConfirmations() != null) {
+            for (ItemConfirmationEntity itemConfirmation : savedConfirmation.getItemConfirmations()) {
+                if (itemConfirmation.getReceivedQuantity() != null && itemConfirmation.getReceivedQuantity() > 0) {
+                    try {
+                        distributorStockService.addStock(
+                            distributorId,
+                            itemConfirmation.getItemId(),
+                            itemConfirmation.getSku(),
+                            itemConfirmation.getReceivedQuantity()
+                        );
+                        log.info("Added {} units of SKU: {} to distributor {} stock", 
+                            itemConfirmation.getReceivedQuantity(), 
+                            itemConfirmation.getSku(), 
+                            distributorId);
+                    } catch (Exception e) {
+                        log.error("Failed to add stock for itemId: {} - {}", 
+                            itemConfirmation.getItemId(), e.getMessage());
+                        // Continue with other items, don't fail the entire confirmation
+                    }
+                }
+            }
+        }
         
         // Check if order has short or damaged remarks
         boolean hasShortOrDamaged = hasShortOrDamagedRemarks(request);
@@ -497,80 +523,59 @@ public class DistributorServiceImpl implements DistributorService {
     @Override
     @Transactional(readOnly = true)
     public DistributorStockResponse getDistributorStock(Long distributorId) {
-        log.info("Calculating stock for distributor: {}", distributorId);
+        log.info("Fetching stock for distributor: {}", distributorId);
 
         // Validate distributor exists
         Distributor distributor = distributorRepository.findById(distributorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Distributor not found with ID: " + distributorId));
 
-        // Get all order confirmations for this distributor with items eagerly loaded
-        List<OrderConfirmation> orderConfirmations = orderConfirmationRepository.findByDistributorIdWithItems(distributorId);
+        // Get all current stock from DistributorStock entity (already accounts for +received and -sold)
+        List<com.nector.userservice.model.DistributorStock> stocks = 
+                distributorStockService.getStocksByDistributorId(distributorId);
 
-        // Aggregate stock by item using received quantities from order confirmations
-        Map<Long, DistributorStockResponse.StockItem> stockMap = new HashMap<>();
-
-        for (OrderConfirmation confirmation : orderConfirmations) {
-            if (confirmation.getItemConfirmations() != null) {
-                for (ItemConfirmationEntity itemConfirmation : confirmation.getItemConfirmations()) {
-                    Long itemId = itemConfirmation.getItemId();
-                    DistributorStockResponse.StockItem stockItem = stockMap.get(itemId);
-
-                    if (stockItem == null) {
-                        DistributorStockResponse.StockItem newStockItem = new DistributorStockResponse.StockItem();
-                        newStockItem.setItemId(itemId);
-                        newStockItem.setItemSku(itemConfirmation.getSku());
-                        newStockItem.setTotalQuantity(0);
-                        newStockItem.setTotalValue(BigDecimal.ZERO);
-
-                        // Get item details from FinishedProduct repository
-                        finishedProductRepository.findById(itemId).ifPresent(product -> {
-                            newStockItem.setItemName(product.getName());
-                            newStockItem.setUnitPrice(product.getPrice());
-                            // Set unit type - use unitType field if available, otherwise use unit enum
-                            if (product.getUnitType() != null && !product.getUnitType().isEmpty()) {
-                                newStockItem.setUnitType(product.getUnitType());
-                            } else if (product.getUnit() != null) {
-                                newStockItem.setUnitType(product.getUnit().name());
-                            }
-                        });
-
-                        stockItem = newStockItem;
-                        stockMap.put(itemId, stockItem);
+        // Map to response StockItem
+        List<DistributorStockResponse.StockItem> stockItems = stocks.stream()
+            .filter(stock -> stock.getQuantity() > 0) // Only show items with positive quantity
+            .map(stock -> {
+                DistributorStockResponse.StockItem item = new DistributorStockResponse.StockItem();
+                item.setItemId(stock.getItemId());
+                item.setItemSku(stock.getSku());
+                item.setItemName(stock.getItemName());
+                item.setTotalQuantity(stock.getQuantity());
+                item.setUnitType(stock.getUnitType());
+                
+                // Calculate total value using current price
+                finishedProductRepository.findById(stock.getItemId()).ifPresent(product -> {
+                    item.setUnitPrice(product.getPrice());
+                    if (product.getPrice() != null) {
+                        item.setTotalValue(product.getPrice().multiply(BigDecimal.valueOf(stock.getQuantity())));
                     }
-
-                    // Add received quantity to existing stock
-                    int newQuantity = stockItem.getTotalQuantity() + itemConfirmation.getReceivedQuantity();
-                    stockItem.setTotalQuantity(newQuantity);
-
-                    // Calculate total value (using current price from item repository)
-                    if (stockItem.getUnitPrice() != null) {
-                        BigDecimal itemValue = stockItem.getUnitPrice().multiply(BigDecimal.valueOf(itemConfirmation.getReceivedQuantity()));
-                        stockItem.setTotalValue(stockItem.getTotalValue().add(itemValue));
-                    }
-                }
-            }
-        }
+                });
+                
+                return item;
+            })
+            .collect(Collectors.toList());
 
         // Build response
         DistributorStockResponse response = new DistributorStockResponse();
         response.setDistributorId(distributorId);
         response.setDistributorName(distributor.getFirstName() + " " + distributor.getLastName());
-        response.setTotalUniqueItems(stockMap.size());
-        response.setStockItems(new ArrayList<>(stockMap.values()));
+        response.setTotalUniqueItems(stockItems.size());
+        response.setStockItems(stockItems);
 
         // Calculate totals
-        int totalQuantity = stockMap.values().stream()
+        int totalQuantity = stockItems.stream()
                 .mapToInt(DistributorStockResponse.StockItem::getTotalQuantity)
                 .sum();
         response.setTotalQuantity(totalQuantity);
 
-        BigDecimal totalStockValue = stockMap.values().stream()
+        BigDecimal totalStockValue = stockItems.stream()
                 .map(DistributorStockResponse.StockItem::getTotalValue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         response.setTotalStockValue(totalStockValue);
         response.setLastUpdated(LocalDateTime.now());
 
-        log.info("Stock calculated for distributor {}: {} unique items, {} total quantity from order confirmations",
+        log.info("Stock fetched for distributor {}: {} unique items, {} total quantity (after dealer billing deductions)",
                 distributorId, response.getTotalUniqueItems(), response.getTotalQuantity());
 
         return response;

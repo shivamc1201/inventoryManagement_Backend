@@ -31,6 +31,9 @@ public class Cart {
     @Column(name = "address")
     private String address;
 
+    @Column(name = "delivery_by")
+    private String deliveryBy;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private CartStatus status = CartStatus.ACTIVE;

@@ -25,4 +25,7 @@ public class UpdateStepRequest {
     // Action response (for step 11)
     private boolean hasAction;
     private String actionResponse; // "yes" | "no" | null
+    
+    // Delivery person name
+    private String deliveryBy;
 }

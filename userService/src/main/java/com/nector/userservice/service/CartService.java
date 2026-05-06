@@ -648,12 +648,31 @@ public class CartService {
     private void createOrderTrackingSync(Cart cart) {
         try {
             // Check if OrderTracking already exists for this cart
-            if (orderTrackingService.getOrderRepository().findByCartId(cart.getId()) == null) {
+            com.nector.userservice.ordertracking.entity.OrderTracking existingOrder = 
+                orderTrackingService.getOrderRepository().findByCartId(cart.getId());
+            
+            if (existingOrder == null) {
                 // Delegate to PaymentService which generates SO number properly
                 paymentService.createOrderTrackingFromCart(cart.getId());
                 log.info("OrderTracking record created for cart {}", cart.getId());
             } else {
-                log.info("OrderTracking record already exists for cart {}, skipping creation", cart.getId());
+                // Order tracking exists - update deliveryBy on first step if cart has deliveryBy
+                if (cart.getDeliveryBy() != null) {
+                    try {
+                        com.nector.userservice.ordertracking.dto.UpdateStepRequest request = 
+                            new com.nector.userservice.ordertracking.dto.UpdateStepRequest();
+                        request.setDeliveryBy(cart.getDeliveryBy());
+                        
+                        orderTrackingService.updateStepBySequence(existingOrder.getId(), 1, request);
+                        log.info("Updated deliveryBy '{}' for existing OrderTracking orderId={} cartId={}", 
+                            cart.getDeliveryBy(), existingOrder.getId(), cart.getId());
+                    } catch (Exception updateEx) {
+                        log.error("Failed to update deliveryBy for existing OrderTracking orderId={} cartId={}: {}",
+                            existingOrder.getId(), cart.getId(), updateEx.getMessage());
+                    }
+                } else {
+                    log.info("OrderTracking record already exists for cart {}, skipping creation", cart.getId());
+                }
             }
         } catch (Exception e) {
             log.error("Failed to create OrderTracking record for cart {}: {}", 

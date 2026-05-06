@@ -124,6 +124,10 @@ public class OrderTrackingService {
         step.setHasAction(req.isHasAction());
         if (req.getActionResponse() != null)
             step.setActionResponse(req.getActionResponse());
+        
+        // Update deliveryBy if provided
+        if (req.getDeliveryBy() != null)
+            step.setDeliveryBy(req.getDeliveryBy());
 
         // If this step is now completed or cancelled,
         // advance the next step to IN_PROGRESS automatically

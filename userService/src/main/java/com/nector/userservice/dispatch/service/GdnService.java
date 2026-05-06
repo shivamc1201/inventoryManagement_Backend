@@ -15,6 +15,7 @@ import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.service.InventoryService;
 import com.nector.userservice.service.HtmlToPdfService;
 import com.nector.userservice.ordertracking.service.OrderTrackingService;
+import com.nector.userservice.ordertracking.repository.OrderTrackingStepRepository;
 import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
 import com.nector.userservice.repository.UserRepository;
 import com.nector.userservice.service.RbacService;
@@ -57,6 +58,7 @@ public class GdnService {
     private final TemplateEngine templateEngine;
     private final CloudinaryStorageService cloudinaryStorageService;
     private final OrderTrackingService orderTrackingService;
+    private final OrderTrackingStepRepository orderTrackingStepRepository;
     private final UserRepository userRepository;
     private final RbacService rbacService;
     private final DistributorRepository distributorRepository;
@@ -944,6 +946,26 @@ public class GdnService {
                 .map(this::convertToCartItemDto)
                 .collect(Collectors.toList());
         dto.setCartItems(itemDtos);
+
+        // Set deliveryBy from cart, or fetch from order tracking step 1 if not present
+        String deliveryBy = cart.getDeliveryBy();
+        if (deliveryBy == null && cart.getStatus().ordinal() >= Cart.CartStatus.PLACED.ordinal()) {
+            try {
+                var orderTracking = orderTrackingService.getOrderRepository().findByCartId(cart.getId());
+                if (orderTracking != null) {
+                    var step1 = orderTrackingStepRepository
+                        .findByOrderIdAndStepSequence(orderTracking.getId(), 1)
+                        .orElse(null);
+                    if (step1 != null) {
+                        deliveryBy = step1.getDeliveryBy();
+                        log.debug("Fetched deliveryBy '{}' from order tracking for cart {}", deliveryBy, cart.getId());
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("Could not fetch deliveryBy from order tracking for cart {}: {}", cart.getId(), e.getMessage());
+            }
+        }
+        dto.setDeliveryBy(deliveryBy);
 
         return dto;
     }

@@ -17,4 +17,5 @@ public class CartDto {
     private List<CartItemDto> cartItems;
     private Long salespersonId;
     private String salespersonName;
+    private String deliveryBy;
 }

@@ -23,6 +23,7 @@ import com.nector.userservice.model.SalesPerson;
 import com.nector.userservice.service.SalesHierarchyValidationService;
 import com.nector.userservice.service.PaymentService;
 import com.nector.userservice.ordertracking.service.OrderTrackingService;
+import com.nector.userservice.ordertracking.repository.OrderTrackingStepRepository;
 import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,6 +51,7 @@ public class CartService {
     private final SalesPersonRepository salesPersonRepository;
     private final SalesHierarchyValidationService salesHierarchyValidationService;
     private final OrderTrackingService orderTrackingService;
+    private final OrderTrackingStepRepository orderTrackingStepRepository;
     private final HtmlToPdfService htmlToPdfService;
     private final @org.springframework.context.annotation.Lazy PaymentService paymentService;
 
@@ -265,8 +267,25 @@ public class CartService {
         // Set dismiss reason if present
         response.setDismissReason(cart.getDismissReason());
 
-        // Set deliveryBy if present
-        response.setDeliveryBy(cart.getDeliveryBy());
+        // Set deliveryBy from cart, or fetch from order tracking step 1 if not present
+        String deliveryBy = cart.getDeliveryBy();
+        if (deliveryBy == null && cart.getStatus().ordinal() >= Cart.CartStatus.PLACED.ordinal()) {
+            try {
+                var orderTracking = orderTrackingService.getOrderRepository().findByCartId(cart.getId());
+                if (orderTracking != null) {
+                    var step1 = orderTrackingStepRepository
+                        .findByOrderIdAndStepSequence(orderTracking.getId(), 1)
+                        .orElse(null);
+                    if (step1 != null) {
+                        deliveryBy = step1.getDeliveryBy();
+                        log.debug("Fetched deliveryBy '{}' from order tracking for cart {}", deliveryBy, cart.getId());
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Could not fetch deliveryBy from order tracking for cart {}: {}", cart.getId(), e.getMessage());
+            }
+        }
+        response.setDeliveryBy(deliveryBy);
 
         // Calculate total cart amount
         BigDecimal totalAmount = cartItemResponses.stream()
@@ -719,7 +738,25 @@ public class CartService {
         BigDecimal volumeInTons = totalWeight.divide(BigDecimal.valueOf(1000), 6, BigDecimal.ROUND_HALF_UP);
         response.setVolumeInTons(volumeInTons);
         response.setTotalCartWeightKg(totalWeight);
-        response.setDeliveryBy(cart.getDeliveryBy());
+        
+        // Set deliveryBy from cart, or fetch from order tracking step 1 if not present
+        String deliveryBy = cart.getDeliveryBy();
+        if (deliveryBy == null && cart.getStatus().ordinal() >= Cart.CartStatus.PLACED.ordinal()) {
+            try {
+                var orderTracking = orderTrackingService.getOrderRepository().findByCartId(cart.getId());
+                if (orderTracking != null) {
+                    var step1 = orderTrackingStepRepository
+                        .findByOrderIdAndStepSequence(orderTracking.getId(), 1)
+                        .orElse(null);
+                    if (step1 != null) {
+                        deliveryBy = step1.getDeliveryBy();
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("Could not fetch deliveryBy from order tracking for cart {}: {}", cart.getId(), e.getMessage());
+            }
+        }
+        response.setDeliveryBy(deliveryBy);
 
         return response;
     }
@@ -1010,6 +1047,26 @@ public class CartService {
         BigDecimal totalWeight = cart.calculateTotalWeight();
         BigDecimal volumeInTons = totalWeight.divide(BigDecimal.valueOf(1000), 6, BigDecimal.ROUND_HALF_UP);
         response.setVolumeInTons(volumeInTons);
+        response.setTotalCartWeightKg(totalWeight);
+        
+        // Set deliveryBy from cart, or fetch from order tracking step 1 if not present
+        String deliveryBy = cart.getDeliveryBy();
+        if (deliveryBy == null && cart.getStatus().ordinal() >= Cart.CartStatus.PLACED.ordinal()) {
+            try {
+                var orderTracking = orderTrackingService.getOrderRepository().findByCartId(cart.getId());
+                if (orderTracking != null) {
+                    var step1 = orderTrackingStepRepository
+                        .findByOrderIdAndStepSequence(orderTracking.getId(), 1)
+                        .orElse(null);
+                    if (step1 != null) {
+                        deliveryBy = step1.getDeliveryBy();
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("Could not fetch deliveryBy from order tracking for cart {}: {}", cart.getId(), e.getMessage());
+            }
+        }
+        response.setDeliveryBy(deliveryBy);
 
         return response;
     }

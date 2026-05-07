@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        @page { size: 210mm 148mm; margin: 6mm 10mm; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 8px;
+            color: #000;
+            background: #fff;
+        }
+
+        /* ── HEADER ── */
+        .header {
+            width: 100%;
+            border-bottom: 1.5px solid #000;
+            padding-bottom: 3px;
+            margin-bottom: 4px;
+        }
+        .header-title { font-size: 13px; font-weight: bold; color: #1a3c6e; }
+        .header-sub   { font-size: 7px; color: #555; margin-top: 1px; }
+        .header-right { text-align: right; font-size: 7px; color: #333; }
+
+        /* ── DEALER INFO ── */
+        .info-box {
+            width: 100%;
+            border: 1px solid #ccc;
+            padding: 3px 6px;
+            margin-bottom: 4px;
+            background: #f9f9f9;
+        }
+        .info-box table { width: 100%; border: none; }
+        .info-box td { border: none !important; padding: 1px 4px !important; font-size: 7px; }
+        .info-label { color: #666; }
+        .info-value { font-weight: bold; color: #000; }
+
+        /* ── KPI SUMMARY ── */
+        .kpi-row { width: 100%; margin-bottom: 4px; }
+        .kpi-row table { width: 100%; border-collapse: collapse; }
+        .kpi-box { border: 1px solid #ddd; padding: 3px 5px; text-align: center; background: #fff; width: 25%; }
+        .kpi-label { font-size: 6px; color: #888; text-transform: uppercase; }
+        .kpi-value { font-size: 9px; font-weight: bold; margin-top: 1px; }
+        .kpi-debit .kpi-value   { color: #c0392b; }
+        .kpi-credit .kpi-value  { color: #27ae60; }
+        .kpi-net .kpi-value     { color: #2980b9; }
+        .kpi-closing .kpi-value { color: #8e44ad; }
+
+        /* ── TRANSACTION TABLE ── */
+        .txn-table { width: 100%; border-collapse: collapse; font-size: 7px; }
+        .txn-table thead tr { background: #1a3c6e; color: #fff; }
+        .txn-table thead th { padding: 3px 4px; text-align: left; font-weight: bold; border: 1px solid #1a3c6e; }
+        .txn-table tbody tr:nth-child(even) { background: #f5f8ff; }
+        .txn-table tbody td { padding: 2px 4px; border: 1px solid #ddd; vertical-align: top; }
+        .debit-cell   { color: #c0392b; font-weight: bold; }
+        .credit-cell  { color: #27ae60; font-weight: bold; }
+        .balance-cell { color: #2980b9; font-weight: bold; }
+
+        /* ── TOTAL ROW ── */
+        .total-row td {
+            background: #1a3c6e !important;
+            color: #fff !important;
+            font-weight: bold;
+            padding: 2px 4px;
+            border: 1px solid #1a3c6e;
+        }
+
+        /* ── FOOTER ── */
+        .footer { margin-top: 4px; border-top: 1px solid #ccc; padding-top: 2px; font-size: 6px; color: #888; text-align: center; }
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+    <table style="width:100%; border:none;">
+        <tr>
+            <td style="border:none; padding:0;">
+                <div class="header-title">Dealer Ledger</div>
+                <div class="header-sub">Track Transactions, Purchases &amp; Sales</div>
+            </td>
+            <td class="header-right" style="border:none; padding:0;">
+                <div>Generated: <strong th:text="${generatedDate}"></strong></div>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<!-- DEALER INFO -->
+<div class="info-box">
+    <table>
+        <tr>
+            <td class="info-label">Dealer Name</td>
+            <td class="info-value" th:text="${dealer.fullName}"></td>
+            <td class="info-label">Dealer ID</td>
+            <td class="info-value" th:text="${dealer.id}"></td>
+            <td class="info-label">Phone</td>
+            <td class="info-value" th:text="${dealer.phone}"></td>
+        </tr>
+        <tr>
+            <td class="info-label">Address</td>
+            <td colspan="5" class="info-value" th:text="${dealer.address}"></td>
+        </tr>
+    </table>
+</div>
+
+<!-- KPI SUMMARY -->
+<div class="kpi-row">
+    <table>
+        <tr>
+            <td class="kpi-box kpi-debit">
+                <div class="kpi-label">Total Debits</div>
+                <div class="kpi-value">&#8377;<span th:text="${totalDebitsDisplay}"></span></div>
+            </td>
+            <td class="kpi-box kpi-credit">
+                <div class="kpi-label">Total Credits</div>
+                <div class="kpi-value">&#8377;<span th:text="${totalCreditsDisplay}"></span></div>
+            </td>
+            <td class="kpi-box kpi-net">
+                <div class="kpi-label">Net Balance</div>
+                <div class="kpi-value">&#8377;<span th:text="${netBalanceDisplay}"></span></div>
+            </td>
+            <td class="kpi-box kpi-closing">
+                <div class="kpi-label">Closing Balance</div>
+                <div class="kpi-value">&#8377;<span th:text="${closingBalanceDisplay}"></span></div>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<!-- TRANSACTIONS TABLE -->
+<table class="txn-table">
+    <thead>
+        <tr>
+            <th style="width:8%">Date</th>
+            <th style="width:28%">Description</th>
+            <th style="width:12%">Reference</th>
+            <th style="width:8%">Type</th>
+            <th style="width:10%">Category</th>
+            <th style="width:12%">Debit (&#8377;)</th>
+            <th style="width:12%">Credit (&#8377;)</th>
+            <th style="width:10%">Balance (&#8377;)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr th:if="${transactions.isEmpty()}">
+            <td colspan="8" style="text-align:center; color:#888; padding:14px;">No transactions found</td>
+        </tr>
+        <tr th:each="txn : ${transactions}">
+            <td th:text="${txn.formattedDate}"></td>
+            <td th:text="${txn.description}"></td>
+            <td th:text="${txn.reference}"></td>
+            <td th:text="${txn.type}"></td>
+            <td th:text="${txn.category}"></td>
+            <td class="debit-cell" th:text="${txn.debitDisplay}"></td>
+            <td class="credit-cell" th:text="${txn.creditDisplay}"></td>
+            <td class="balance-cell" th:text="${txn.balanceDisplay}"></td>
+        </tr>
+    </tbody>
+    <tfoot>
+        <tr class="total-row">
+            <td colspan="5">TOTAL</td>
+            <td th:text="${totalDebitsDisplay}"></td>
+            <td th:text="${totalCreditsDisplay}"></td>
+            <td th:text="${closingBalanceDisplay}"></td>
+        </tr>
+    </tfoot>
+</table>
+
+<!-- FOOTER -->
+<div class="footer">
+    This is a system-generated document. | Dealer Ledger Report
+</div>
+
+</body>
+</html>
+

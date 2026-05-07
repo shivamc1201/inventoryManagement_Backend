@@ -17,6 +17,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -211,6 +214,27 @@ public class DealerLedgerController {
         }
         
         return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/download-pdf")
+    @Operation(summary = "Download dealer ledger PDF", description = "Generate and download a PDF of all ledger transactions for a dealer")
+    public ResponseEntity<byte[]> downloadLedgerPdf(
+            @Parameter(description = "Dealer ID")
+            @RequestParam Long dealerId) {
+        try {
+            byte[] pdfBytes = dealerLedgerService.generateLedgerPdf(dealerId);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment",
+                    "dealer-ledger-" + dealerId + ".pdf");
+            headers.setContentLength(pdfBytes.length);
+
+            return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Error generating ledger PDF for dealer: {}", dealerId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     private Long getDistributorIdFromUser(UserDetails userDetails) {

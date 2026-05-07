@@ -15,12 +15,16 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,6 +34,8 @@ public class DealerLedgerService {
 
     private final DealerLedgerTransactionRepository ledgerTransactionRepository;
     private final DealerRepository dealerRepository;
+    private final HtmlToPdfService htmlToPdfService;
+    private final TemplateEngine templateEngine;
 
     @Transactional
     public void initializeOpeningBalance(Long dealerId, Long distributorId, BigDecimal openingBalance) {
@@ -188,6 +194,67 @@ public class DealerLedgerService {
             default:
                 return previousBalance;
         }
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] generateLedgerPdf(Long dealerId) {
+        log.info("Generating ledger PDF for dealer: {}", dealerId);
+
+        Dealer dealer = dealerRepository.findById(dealerId)
+                .orElseThrow(() -> new BusinessException("Dealer not found with id: " + dealerId));
+
+        List<DealerLedgerTransaction> transactions =
+                ledgerTransactionRepository.findByDealerIdOrderByDateAscCreatedAtAsc(dealerId);
+
+        DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("dd MMM yyyy");
+
+        List<com.nector.userservice.dto.LedgerPdfRowDto> rows = transactions.stream().map(t -> {
+            com.nector.userservice.dto.LedgerPdfRowDto row = new com.nector.userservice.dto.LedgerPdfRowDto();
+            row.setFormattedDate(t.getDate() != null ? t.getDate().format(dateFmt) : "");
+            row.setDescription(t.getDescription());
+            row.setReference(t.getReference());
+            row.setType(t.getType() != null ? t.getType().name() : "");
+            row.setCategory(t.getCategory() != null ? t.getCategory().name() : "");
+            row.setDebit(t.getDebit());
+            row.setCredit(t.getCredit());
+            row.setBalance(t.getBalance());
+            row.setDebitDisplay(t.getDebit() != null && t.getDebit().compareTo(BigDecimal.ZERO) != 0
+                    ? String.format("%,.2f", t.getDebit()) : "-");
+            row.setCreditDisplay(t.getCredit() != null && t.getCredit().compareTo(BigDecimal.ZERO) != 0
+                    ? String.format("%,.2f", t.getCredit()) : "-");
+            row.setBalanceDisplay(t.getBalance() != null ? String.format("%,.2f", t.getBalance()) : "0.00");
+            return row;
+        }).collect(Collectors.toList());
+
+        BigDecimal totalDebits = transactions.stream()
+                .map(DealerLedgerTransaction::getDebit)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalCredits = transactions.stream()
+                .map(DealerLedgerTransaction::getCredit)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal closingBalance = transactions.isEmpty() ? BigDecimal.ZERO
+                : transactions.get(transactions.size() - 1).getBalance();
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("dealer", dealer);
+        data.put("transactions", rows);
+        data.put("totalDebits", totalDebits);
+        data.put("totalCredits", totalCredits);
+        data.put("closingBalance", closingBalance);
+        data.put("netBalance", totalCredits.subtract(totalDebits));
+        data.put("totalDebitsDisplay", String.format("%,.2f", totalDebits));
+        data.put("totalCreditsDisplay", String.format("%,.2f", totalCredits));
+        data.put("closingBalanceDisplay", String.format("%,.2f", closingBalance));
+        data.put("netBalanceDisplay", String.format("%,.2f", totalCredits.subtract(totalDebits)));
+        data.put("generatedDate", LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy")));
+
+        Context context = new Context();
+        context.setVariables(data);
+
+        String html = templateEngine.process("dealer-ledger", context);
+        return htmlToPdfService.convertHtmlToPdf(html);
     }
 
     private String generateTransactionId() {

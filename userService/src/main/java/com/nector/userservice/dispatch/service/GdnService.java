@@ -355,11 +355,13 @@ public class GdnService {
                 step10Request.setStatus("completed");
                 step10Request.setRemarks("Order is on the way via " + request.getTransportName() + " (" + request.getVehicleNo() + ")");
                 step10Request.setDate(java.time.LocalDate.now().toString());
-                
-                // Add assigned person (logistics team) information
-                setCurrentUserDetails(step10Request);
-                step10Request.setAssignedPersonRole("LOGISTICS_MANAGER");
-                
+
+                // Add assigned person (driver) information - use driver details for this step
+                step10Request.setAssignedPersonName(request.getDriverName());
+                step10Request.setAssignedPersonRole("DRIVER");
+                step10Request.setAssignedPersonPhone(request.getDriverMobile());
+                step10Request.setAssignedPersonEmail("driver@company.com"); // Generic driver email
+
                 orderTrackingService.updateStepBySequence(order.getId(), 10, step10Request);
 
                 log.info("Order tracking Steps 8, 9, 10 updated for order {}", orderId);

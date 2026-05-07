@@ -66,6 +66,9 @@ public interface DealerLedgerTransactionRepository extends JpaRepository<DealerL
     List<DealerLedgerTransaction> findByDealerIdAndDistributorIdAndTypeOrderByDateDescCreatedAtDesc(
             Long dealerId, Long distributorId, LedgerTransactionType type);
 
+    // All transactions for a dealer (any distributor) - used for PDF generation
+    List<DealerLedgerTransaction> findByDealerIdOrderByDateAscCreatedAtAsc(Long dealerId);
+
     // Distributor overview
     @Query("SELECT dlt.dealerId, d.fullName, dlt.balance FROM DealerLedgerTransaction dlt " +
            "JOIN Dealer d ON dlt.dealerId = d.id WHERE dlt.distributorId = :distributorId AND " +

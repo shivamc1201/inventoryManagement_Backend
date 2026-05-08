@@ -7,6 +7,7 @@ import com.nector.userservice.interceptors.distributor.repository.DistributorRep
 import com.nector.userservice.model.Cart;
 import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.repository.OrderRepository;
+import com.nector.userservice.repository.PaymentApprovalRepository;
 import com.nector.userservice.repository.SalesPersonRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,7 @@ public class VolumeAnalyticsService {
     private final GdnRepository gdnRepository;
     private final DistributorRepository distributorRepository;
     private final CartRepository cartRepository;
+    private final PaymentApprovalRepository paymentApprovalRepository;
 
     @Transactional(readOnly = true)
     public VolumeAnalyticsResponse getVolumeAnalyticsData(String period, Long salespersonId, Long distributorId) {
@@ -100,6 +102,16 @@ public class VolumeAnalyticsService {
         response.setTotalAmountMonthly(totalAmountMonthly);
         response.setTotalAmountYearly(totalAmountYearly);
         response.setPeriod(period);
+
+        // Calculate collection amounts from approved payments (only when distributorId is provided)
+        if (distributorId != null) {
+            BigDecimal collectionMonthly = paymentApprovalRepository.sumApprovedPaymentsByDistributorAndDateRange(
+                    distributorId, toDateTime(monthStart), toEndOfDay(now));
+            BigDecimal collectionYearly = paymentApprovalRepository.sumApprovedPaymentsByDistributorAndDateRange(
+                    distributorId, toDateTime(yearStart), toEndOfDay(now));
+            response.setCollectionMonthly(collectionMonthly != null ? collectionMonthly : BigDecimal.ZERO);
+            response.setCollectionYearly(collectionYearly != null ? collectionYearly : BigDecimal.ZERO);
+        }
 
         // Compute totalOutstanding = creditLimit - creditBalance for the given distributor
         if (distributorId != null) {

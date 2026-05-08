@@ -21,6 +21,10 @@ public class VolumeAnalyticsResponse {
     private BigDecimal totalAmountMonthly;
     private BigDecimal totalAmountYearly;
 
+    // Collection amounts from approved payments (MTD and YTD)
+    private BigDecimal collectionMonthly;
+    private BigDecimal collectionYearly;
+
     // Outstanding amount = creditLimit - creditBalance (only when distributorId is provided)
     private BigDecimal totalOutstanding;
 

@@ -26,4 +26,6 @@ AddressResponse getDistributorAddress(Long distributorId);
     List<DistributorResponseDTO> getDistributorsBySalespersonId(Long salespersonId);
 
     DistributorStockResponse getDistributorStock(Long distributorId);
+
+    java.util.Map<String, Long> getDispatchReport(Long distributorId);
 }

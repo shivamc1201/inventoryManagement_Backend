@@ -244,4 +244,19 @@ public class DistributorController {
         }
     }
 
+    @GetMapping("/{distributorId}/dispatch-report")
+    @Operation(summary = "Get dispatch report", description = "Get pending, dispatched and delivered order counts for a distributor")
+    public ResponseEntity<?> getDispatchReport(@PathVariable Long distributorId) {
+        log.info("Fetching dispatch report for distributor: {}", distributorId);
+        try {
+            Map<String, Long> report = distributorService.getDispatchReport(distributorId);
+            return ResponseEntity.ok(report);
+        } catch (Exception e) {
+            log.error("Error fetching dispatch report for distributor {}: {}", distributorId, e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
 }

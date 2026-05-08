@@ -17,6 +17,9 @@ public class VolumeAnalyticsResponse {
     private BigDecimal totalAmount;
     private String period;
 
+    // Outstanding amount = creditLimit - creditBalance (only when distributorId is provided)
+    private BigDecimal totalOutstanding;
+
     @Data
     public static class VolumeMetrics {
         private Long totalTransactions;

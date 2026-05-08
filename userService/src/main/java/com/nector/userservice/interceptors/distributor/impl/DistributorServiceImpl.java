@@ -580,4 +580,35 @@ public class DistributorServiceImpl implements DistributorService {
 
         return response;
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Long> getDispatchReport(Long distributorId) {
+        log.info("Fetching dispatch report for distributor: {}", distributorId);
+
+        List<Cart.CartStatus> excludedForPending = List.of(Cart.CartStatus.GDN_GENERATED, Cart.CartStatus.DISMISSED);
+
+        List<Cart> allCarts = cartRepository.findByDistributorIdAndStatusIn(distributorId,
+                Arrays.asList(Cart.CartStatus.values()));
+
+        long pending = allCarts.stream()
+                .filter(c -> !excludedForPending.contains(c.getStatus()))
+                .count();
+
+        long dispatched = allCarts.stream()
+                .filter(c -> c.getStatus() == Cart.CartStatus.GDN_GENERATED)
+                .count();
+
+        long delivered = orderConfirmationRepository.findByDistributorIdOrderByConfirmedAtDesc(distributorId).size();
+
+        Map<String, Long> report = new LinkedHashMap<>();
+        report.put("pending", pending);
+        report.put("dispatched", dispatched);
+        report.put("delivered", delivered);
+
+        log.info("Dispatch report for distributor {}: pending={}, dispatched={}, delivered={}",
+                distributorId, pending, dispatched, delivered);
+
+        return report;
+    }
 }

@@ -2,6 +2,7 @@ package com.nector.userservice.service;
 
 import com.nector.userservice.dispatch.repository.GdnRepository;
 import com.nector.userservice.dto.VolumeAnalyticsResponse;
+import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.repository.OrderRepository;
 import com.nector.userservice.repository.SalesPersonRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class VolumeAnalyticsService {
     private final OrderRepository orderRepository;
     private final SalesPersonRepository salesPersonRepository;
     private final GdnRepository gdnRepository;
+    private final DistributorRepository distributorRepository;
 
     @Transactional(readOnly = true)
     public VolumeAnalyticsResponse getVolumeAnalyticsData(String period, Long salespersonId, Long distributorId) {
@@ -67,6 +69,15 @@ public class VolumeAnalyticsService {
         response.setTotalOrders(totalOrders);
         response.setTotalAmount(totalAmount);
         response.setPeriod(period);
+
+        // Compute totalOutstanding = creditLimit - creditBalance for the given distributor
+        if (distributorId != null) {
+            distributorRepository.findById(distributorId).ifPresent(distributor -> {
+                BigDecimal creditLimit = distributor.getCreditLimit() != null ? distributor.getCreditLimit() : BigDecimal.ZERO;
+                BigDecimal creditBalance = distributor.getCreditBalance() != null ? distributor.getCreditBalance() : BigDecimal.ZERO;
+                response.setTotalOutstanding(creditLimit.subtract(creditBalance));
+            });
+        }
 
         log.info("Exiting getVolumeAnalyticsData() with response for period: {}", period);
         return response;

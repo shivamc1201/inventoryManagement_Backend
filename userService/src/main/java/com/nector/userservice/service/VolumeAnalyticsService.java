@@ -61,6 +61,30 @@ public class VolumeAnalyticsService {
         totalOrders = totalOrders != null ? totalOrders : 0L;
         totalAmount = totalAmount != null ? totalAmount : BigDecimal.ZERO;
 
+        // Monthly total (current month MTD)
+        LocalDate monthStart = now.withDayOfMonth(1);
+        BigDecimal totalAmountMonthly;
+        if (salespersonId != null) {
+            totalAmountMonthly = orderRepository.sumGdnAmountBySalespersonBetweenDates(salespersonId, toDateTime(monthStart), toEndOfDay(now));
+        } else if (distributorId != null) {
+            totalAmountMonthly = orderRepository.sumGdnAmountByDistributorBetweenDates(distributorId, toDateTime(monthStart), toEndOfDay(now));
+        } else {
+            totalAmountMonthly = orderRepository.sumGdnAmountBetweenDates(toDateTime(monthStart), toEndOfDay(now));
+        }
+        totalAmountMonthly = totalAmountMonthly != null ? totalAmountMonthly : BigDecimal.ZERO;
+
+        // Yearly total (current year YTD)
+        LocalDate yearStart = now.withDayOfYear(1);
+        BigDecimal totalAmountYearly;
+        if (salespersonId != null) {
+            totalAmountYearly = orderRepository.sumGdnAmountBySalespersonBetweenDates(salespersonId, toDateTime(yearStart), toEndOfDay(now));
+        } else if (distributorId != null) {
+            totalAmountYearly = orderRepository.sumGdnAmountByDistributorBetweenDates(distributorId, toDateTime(yearStart), toEndOfDay(now));
+        } else {
+            totalAmountYearly = orderRepository.sumGdnAmountBetweenDates(toDateTime(yearStart), toEndOfDay(now));
+        }
+        totalAmountYearly = totalAmountYearly != null ? totalAmountYearly : BigDecimal.ZERO;
+
         VolumeAnalyticsResponse response = new VolumeAnalyticsResponse();
         response.setYearToDate(yearToDate);
         response.setMonthToDate(monthToDate);
@@ -68,6 +92,8 @@ public class VolumeAnalyticsService {
         response.setVolumeByCategory(categoryVolume);
         response.setTotalOrders(totalOrders);
         response.setTotalAmount(totalAmount);
+        response.setTotalAmountMonthly(totalAmountMonthly);
+        response.setTotalAmountYearly(totalAmountYearly);
         response.setPeriod(period);
 
         // Compute totalOutstanding = creditLimit - creditBalance for the given distributor

@@ -17,6 +17,10 @@ public class VolumeAnalyticsResponse {
     private BigDecimal totalAmount;
     private String period;
 
+    // Monthly (current month MTD) and yearly (current year YTD) totals filtered by distributorId/salespersonId
+    private BigDecimal totalAmountMonthly;
+    private BigDecimal totalAmountYearly;
+
     // Outstanding amount = creditLimit - creditBalance (only when distributorId is provided)
     private BigDecimal totalOutstanding;
 

@@ -130,6 +130,9 @@ public class DealerSaleService {
         DealerOrder savedOrder = dealerOrderRepository.save(order);
         log.info("Created dealer order with ID: {}", savedOrder.getId());
 
+        // Create corresponding ledger entry for the order
+        createOrderLedgerEntry(savedOrder, dealer);
+
         // Reduce stock from distributor inventory (- stock operation after billing dealer)
         try {
             distributorStockService.reduceStock(distributorId, resolvedSku, request.getQuantity());
@@ -193,7 +196,37 @@ public class DealerSaleService {
         return null;
     }
 
-    private void  createSaleLedgerEntry(DealerSale sale, Dealer dealer) {
+    private void createOrderLedgerEntry(DealerOrder order, Dealer dealer) {
+        log.info("Creating ledger entry for order ID: {}", order.getId());
+
+        // Get latest balance with pessimistic lock
+        BigDecimal previousBalance = ledgerTransactionRepository
+                .findLatestByDealerIdAndDistributorIdForUpdate(order.getDealerId(), order.getDistributorId())
+                .map(DealerLedgerTransaction::getBalance)
+                .orElse(BigDecimal.ZERO);
+
+        // Calculate new balance (order amount increases dealer's debt to distributor)
+        BigDecimal newBalance = previousBalance.add(order.getAmount());
+
+        // Create ledger transaction
+        DealerLedgerTransaction transaction = new DealerLedgerTransaction();
+        transaction.setId(generateTransactionId());
+        transaction.setDealerId(order.getDealerId());
+        transaction.setDistributorId(order.getDistributorId());
+        transaction.setDate(order.getDate());
+        transaction.setDescription("Order of " + order.getItemName() + " (SKU: " + order.getSku() + ") Qty: " + order.getQuantity());
+        transaction.setReference("ORDER-" + order.getId());
+        transaction.setType(LedgerTransactionType.DEBIT);
+        transaction.setDebit(order.getAmount());
+        transaction.setCredit(BigDecimal.ZERO);
+        transaction.setBalance(newBalance);
+        transaction.setCategory(LedgerTransactionCategory.Purchase);
+
+        ledgerTransactionRepository.save(transaction);
+        log.info("Created ledger transaction with ID: {} for order ID: {}", transaction.getId(), order.getId());
+    }
+
+    private void createSaleLedgerEntry(DealerSale sale, Dealer dealer) {
         log.info("Creating ledger entry for sale ID: {}", sale.getId());
 
         // Get latest balance with pessimistic lock

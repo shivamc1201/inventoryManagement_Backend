@@ -24,6 +24,14 @@ public class VolumeAnalyticsResponse {
     // Outstanding amount = creditLimit - creditBalance (only when distributorId is provided)
     private BigDecimal totalOutstanding;
 
+    // Sales dashboard: process orders = GDN_GENERATED carts, pending orders = non-GDN/non-DISMISSED carts
+    private Long salesOrders;
+    private Long salesPendingOrders;
+
+    // Distributor counts for the given salesperson
+    private Long activeDistributors;
+    private Long inactiveDistributors;
+
     @Data
     public static class VolumeMetrics {
         private Long totalTransactions;

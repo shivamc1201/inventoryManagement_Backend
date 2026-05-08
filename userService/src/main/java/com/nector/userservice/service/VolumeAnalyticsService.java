@@ -2,7 +2,10 @@ package com.nector.userservice.service;
 
 import com.nector.userservice.dispatch.repository.GdnRepository;
 import com.nector.userservice.dto.VolumeAnalyticsResponse;
+import com.nector.userservice.interceptors.distributor.model.DistributorStatus;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
+import com.nector.userservice.model.Cart;
+import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.repository.OrderRepository;
 import com.nector.userservice.repository.SalesPersonRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +33,7 @@ public class VolumeAnalyticsService {
     private final SalesPersonRepository salesPersonRepository;
     private final GdnRepository gdnRepository;
     private final DistributorRepository distributorRepository;
+    private final CartRepository cartRepository;
 
     @Transactional(readOnly = true)
     public VolumeAnalyticsResponse getVolumeAnalyticsData(String period, Long salespersonId, Long distributorId) {
@@ -103,6 +108,26 @@ public class VolumeAnalyticsService {
                 BigDecimal creditBalance = distributor.getCreditBalance() != null ? distributor.getCreditBalance() : BigDecimal.ZERO;
                 response.setTotalOutstanding(creditLimit.subtract(creditBalance));
             });
+        }
+
+        // Populate cart-based order counts and distributor counts for salesperson
+        if (salespersonId != null) {
+            // Process orders = carts with GDN_GENERATED status
+            Long salesOrders = cartRepository.countBySalespersonIdAndStatus(salespersonId, Cart.CartStatus.GDN_GENERATED);
+            response.setSalesOrders(salesOrders != null ? salesOrders : 0L);
+
+            // Pending orders = carts NOT in GDN_GENERATED or DISMISSED
+            Long salesPendingOrders = cartRepository.countBySalespersonIdAndStatusNotIn(
+                    salespersonId,
+                    Arrays.asList(Cart.CartStatus.GDN_GENERATED, Cart.CartStatus.DISMISSED)
+            );
+            response.setSalesPendingOrders(salesPendingOrders != null ? salesPendingOrders : 0L);
+
+            // Active and inactive distributors assigned to this salesperson
+            Long activeDistributors = distributorRepository.countBySalespersonIdAndStatus(salespersonId, DistributorStatus.ACTIVE);
+            Long inactiveDistributors = distributorRepository.countBySalespersonIdAndStatus(salespersonId, DistributorStatus.INACTIVE);
+            response.setActiveDistributors(activeDistributors != null ? activeDistributors : 0L);
+            response.setInactiveDistributors(inactiveDistributors != null ? inactiveDistributors : 0L);
         }
 
         log.info("Exiting getVolumeAnalyticsData() with response for period: {}", period);

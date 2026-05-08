@@ -30,4 +30,10 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
     List<Cart> findBySalespersonIdInAndStatus(List<Long> salespersonIds, Cart.CartStatus status);
 
     List<Cart> findByDistributorIdAndStatusIn(Long distributorId, List<Cart.CartStatus> statuses);
+
+    @Query("SELECT COUNT(c) FROM Cart c WHERE c.salespersonId = :salespersonId AND c.status = :status")
+    Long countBySalespersonIdAndStatus(@Param("salespersonId") Long salespersonId, @Param("status") Cart.CartStatus status);
+
+    @Query("SELECT COUNT(c) FROM Cart c WHERE c.salespersonId = :salespersonId AND c.status NOT IN :excludedStatuses")
+    Long countBySalespersonIdAndStatusNotIn(@Param("salespersonId") Long salespersonId, @Param("excludedStatuses") List<Cart.CartStatus> excludedStatuses);
 }

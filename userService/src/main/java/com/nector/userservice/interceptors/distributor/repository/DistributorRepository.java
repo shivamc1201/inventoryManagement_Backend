@@ -1,6 +1,7 @@
 package com.nector.userservice.interceptors.distributor.repository;
 
 import com.nector.userservice.interceptors.distributor.model.Distributor;
+import com.nector.userservice.interceptors.distributor.model.DistributorStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,6 +24,14 @@ public interface DistributorRepository extends JpaRepository<Distributor, Long> 
     long countByMonthAndYear(@Param("month") int month, @Param("year") int year);
 
     List<Distributor> findBySalespersonId(Long salespersonId);
+
+    Long countBySalespersonIdAndStatus(Long salespersonId, DistributorStatus status);
+
+    @Query("SELECT COUNT(d) FROM Distributor d WHERE d.salespersonId = :salespersonId AND d.status = 'ACTIVE'")
+    Long countActiveBySalespersonId(@Param("salespersonId") Long salespersonId);
+
+    @Query("SELECT COUNT(d) FROM Distributor d WHERE d.salespersonId = :salespersonId AND d.status = 'INACTIVE'")
+    Long countInactiveBySalespersonId(@Param("salespersonId") Long salespersonId);
 
     @Query("SELECT COUNT(d) FROM Distributor d")
     long countAllDistributors();

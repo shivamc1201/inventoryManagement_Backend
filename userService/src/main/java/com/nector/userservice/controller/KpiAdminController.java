@@ -198,8 +198,16 @@ public class KpiAdminController {
     @Operation(summary = "Employee-wise Report", description = "Get KPI report for a specific employee")
     public ResponseEntity<List<KpiAssignmentResponse>> getEmployeeReport(
             @Parameter(description = "Employee ID") @PathVariable Long employeeId) {
-        
+
         List<KpiAssignmentResponse> response = assignmentService.getAssignmentsByEmployee(employeeId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/report/all-assignments")
+    @Operation(summary = "Get All Assignments", description = "Get all KPI assignments for all employees")
+    public ResponseEntity<List<KpiAssignmentResponse>> getAllAssignments() {
+
+        List<KpiAssignmentResponse> response = assignmentService.getAllAssignments();
         return ResponseEntity.ok(response);
     }
 

@@ -299,6 +299,15 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
 
     @Override
     @Transactional(readOnly = true)
+    public List<KpiAssignmentResponse> getAllAssignments() {
+        return assignmentRepository.findAll()
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public EmployeeKpiDashboardResponse getEmployeeDashboard(Long employeeId) {
         log.info("Generating dashboard for employee: {}", employeeId);
         

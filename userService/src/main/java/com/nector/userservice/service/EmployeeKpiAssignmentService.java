@@ -31,6 +31,8 @@ public interface EmployeeKpiAssignmentService {
 
     Page<KpiAssignmentResponse> getAllAssignments(KpiReportFilterRequest filter, Pageable pageable);
 
+    List<KpiAssignmentResponse> getAllAssignments();
+
     EmployeeKpiDashboardResponse getEmployeeDashboard(Long employeeId);
 
     void expireOldAssignments();

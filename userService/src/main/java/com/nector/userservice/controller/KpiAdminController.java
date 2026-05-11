@@ -80,16 +80,9 @@ public class KpiAdminController {
     }
 
     @GetMapping("/master")
-    @Operation(summary = "Get All KPIs", description = "Get all active KPI masters with pagination")
-    public ResponseEntity<Page<KpiMasterResponse>> getAllKpis(
-            @Parameter(description = "Page number") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
-            @Parameter(description = "Sort field") @RequestParam(defaultValue = "createdAt") String sortBy,
-            @Parameter(description = "Sort direction") @RequestParam(defaultValue = "DESC") String direction) {
-        
-        Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
-        Pageable pageable = PageRequest.of(page, size, sort);
-        Page<KpiMasterResponse> response = kpiMasterService.getAllActiveKpis(pageable);
+    @Operation(summary = "Get All KPIs", description = "Get all active KPI masters")
+    public ResponseEntity<List<KpiMasterResponse>> getAllKpis() {
+        List<KpiMasterResponse> response = kpiMasterService.getAllActiveKpis();
         return ResponseEntity.ok(response);
     }
 

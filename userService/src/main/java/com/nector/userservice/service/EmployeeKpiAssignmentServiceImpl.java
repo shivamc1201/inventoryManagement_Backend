@@ -2,6 +2,7 @@ package com.nector.userservice.service;
 
 import com.nector.userservice.dto.*;
 import com.nector.userservice.enums.KPIStatus;
+import com.nector.userservice.exception.BusinessException;
 import com.nector.userservice.exception.KpiAssignmentException;
 import com.nector.userservice.exception.KpiNotFoundException;
 import com.nector.userservice.model.EmployeeKpiAssignment;
@@ -9,6 +10,7 @@ import com.nector.userservice.model.KpiMaster;
 import com.nector.userservice.repository.EmployeeKpiAssignmentRepository;
 import com.nector.userservice.repository.KpiMasterRepository;
 import com.nector.userservice.util.KpiCalculator;
+import com.nector.userservice.util.KpiGradeCalculator;
 import com.nector.userservice.validator.KpiValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -227,6 +230,44 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
 
     @Override
     @Transactional
+    public List<KpiAssignmentResponse> bulkUpdateProgress(KpiBulkProgressUpdateRequest request) {
+        log.info("=== BULK UPDATE PROGRESS START ===");
+        log.info("Bulk updating progress for employee ID: {} with {} assignments", 
+                request.getEmployeeId(), request.getAssignments().size());
+        
+        List<KpiAssignmentResponse> responses = new ArrayList<>();
+        
+        for (KpiBulkProgressUpdateRequest.KpiProgressUpdateItem item : request.getAssignments()) {
+            log.info("--- Processing assignment ID: {} ---", item.getAssignmentId());
+            log.info("Request achieved value: {}", item.getAchievedValue());
+            
+            EmployeeKpiAssignment assignment = assignmentRepository.findById(item.getAssignmentId())
+                    .orElseThrow(() -> new KpiNotFoundException("Assignment not found with ID: " + item.getAssignmentId()));
+            
+            // Validate that the assignment belongs to the specified employee
+            if (!assignment.getEmployeeId().equals(request.getEmployeeId())) {
+                throw new BusinessException("Assignment ID " + item.getAssignmentId() + 
+                        " does not belong to employee ID " + request.getEmployeeId());
+            }
+            
+            // Update achieved value and recalculate
+            assignment.updateAchievedValue(item.getAchievedValue());
+            
+            EmployeeKpiAssignment updated = assignmentRepository.save(assignment);
+            responses.add(mapToResponse(updated));
+            
+            log.info("Updated progress for assignment ID: {}. New status: {}, Score: {}%", 
+                    updated.getId(), updated.getStatus(), updated.getScorePercentage());
+        }
+        
+        log.info("Successfully updated {} assignments for employee ID: {}", 
+                responses.size(), request.getEmployeeId());
+        
+        return responses;
+    }
+
+    @Override
+    @Transactional
     public void deleteAssignment(Long id) {
         log.info("Deleting assignment ID: {}", id);
         
@@ -388,6 +429,18 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
         return weightage != null ? weightage : 0;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<KpiAssignmentWithGradeResponse> getAssignmentsWithGrades(Long employeeId) {
+        log.info("Getting assignments with grades for employee ID: {}", employeeId);
+        
+        List<EmployeeKpiAssignment> assignments = assignmentRepository.findByEmployeeId(employeeId);
+        
+        return assignments.stream()
+                .map(this::mapToResponseWithGrade)
+                .collect(Collectors.toList());
+    }
+
     private KpiAssignmentResponse mapToResponse(EmployeeKpiAssignment assignment) {
         // Try to get from loaded entity, otherwise fetch from repository
         KpiMaster kpi = assignment.getKpiMaster();
@@ -429,6 +482,61 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
                 .assignedBy(assignment.getAssignedBy())
                 .createdAt(assignment.getCreatedAt())
                 .updatedAt(assignment.getUpdatedAt())
+                .build();
+    }
+
+    private KpiAssignmentWithGradeResponse mapToResponseWithGrade(EmployeeKpiAssignment assignment) {
+        // Try to get from loaded entity, otherwise fetch from repository
+        KpiMaster kpi = assignment.getKpiMaster();
+        if (kpi == null && assignment.getKpiId() != null) {
+            kpi = kpiMasterRepository.findById(assignment.getKpiId()).orElse(null);
+        }
+        
+        KpiMasterResponse kpiMasterResponse = null;
+        if (kpi != null) {
+            kpiMasterResponse = KpiMasterResponse.builder()
+                    .id(kpi.getId())
+                    .kpiCode(kpi.getKpiCode())
+                    .kpiName(kpi.getKpiName())
+                    .description(kpi.getDescription())
+                    .kpiCategory(kpi.getKpiCategory())
+                    .measurementUnit(kpi.getMeasurementUnit())
+                    .defaultWeightage(kpi.getDefaultWeightage())
+                    .frequency(kpi.getFrequency())
+                    .isActive(kpi.getIsActive())
+                    .createdBy(kpi.getCreatedBy())
+                    .createdAt(kpi.getCreatedAt())
+                    .updatedAt(kpi.getUpdatedAt())
+                    .build();
+        }
+
+        // Calculate grade and meaning
+        KpiGradeCalculator.GradeResult gradeResult = KpiGradeCalculator.calculateGrade(assignment.getScorePercentage());
+
+        return KpiAssignmentWithGradeResponse.builder()
+                .id(assignment.getId())
+                .employeeId(assignment.getEmployeeId())
+                .employeeName(assignment.getEmployeeName())
+                .designation(assignment.getDesignation())
+                .roleName(assignment.getRoleName())
+                .kpiId(assignment.getKpiId())
+                .kpiCode(kpi != null ? kpi.getKpiCode() : null)
+                .kpiName(kpi != null ? kpi.getKpiName() : null)
+                .kpiMaster(kpi)
+                .targetValue(assignment.getTargetValue())
+                .achievedValue(assignment.getAchievedValue())
+                .weightage(assignment.getWeightage())
+                .scorePercentage(assignment.getScorePercentage())
+                .weightedScore(assignment.getWeightedScore())
+                .startDate(assignment.getStartDate() != null ? assignment.getStartDate().toString() : null)
+                .endDate(assignment.getEndDate() != null ? assignment.getEndDate().toString() : null)
+                .status(assignment.getStatus() != null ? assignment.getStatus().toString() : null)
+                .remarks(assignment.getRemarks())
+                .assignedBy(assignment.getAssignedBy())
+                .createdAt(assignment.getCreatedAt())
+                .updatedAt(assignment.getUpdatedAt())
+                .grade(gradeResult.getGrade())
+                .gradeMeaning(gradeResult.getMeaning())
                 .build();
     }
 }

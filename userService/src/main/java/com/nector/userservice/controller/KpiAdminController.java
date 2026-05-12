@@ -20,8 +20,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -43,10 +41,9 @@ public class KpiAdminController {
     @PostMapping("/create")
     @Operation(summary = "Create KPI/KRA Master", description = "Create a new KPI or KRA definition")
     public ResponseEntity<KpiMasterResponse> createKpi(
-            @Valid @RequestBody KpiMasterCreateRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @Valid @RequestBody KpiMasterCreateRequest request) {
         
-        Long createdBy = extractUserId(userDetails);
+        Long createdBy = 1L; // Default user ID
         KpiMasterResponse response = kpiMasterService.createKpi(request, createdBy);
         return ResponseEntity.ok(response);
     }
@@ -118,10 +115,9 @@ public class KpiAdminController {
     @PostMapping("/assign")
     @Operation(summary = "Assign KPI to Employee", description = "Assign a KPI to an employee with target and weightage")
     public ResponseEntity<KpiAssignmentResponse> assignKpi(
-            @Valid @RequestBody KpiAssignmentRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @Valid @RequestBody KpiAssignmentRequest request) {
         
-        Long assignedBy = extractUserId(userDetails);
+        Long assignedBy = 1L; // Default user ID
         KpiAssignmentResponse response = assignmentService.assignKpiToEmployee(request, assignedBy);
         return ResponseEntity.ok(response);
     }
@@ -129,10 +125,9 @@ public class KpiAdminController {
     @PostMapping("/assign/bulk")
     @Operation(summary = "Bulk Assign KPIs to Employee", description = "Assign multiple KPIs to an employee at once with weightage validation")
     public ResponseEntity<KpiBulkAssignmentResponse> bulkAssignKpis(
-            @Valid @RequestBody KpiBulkAssignmentRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @Valid @RequestBody KpiBulkAssignmentRequest request) {
         
-        Long assignedBy = extractUserId(userDetails);
+        Long assignedBy = 1L; // Default user ID
         KpiBulkAssignmentResponse response = assignmentService.bulkAssignKpisToEmployee(request, assignedBy);
         return ResponseEntity.ok(response);
     }
@@ -304,9 +299,4 @@ public class KpiAdminController {
                 .body(pdfData);
     }
 
-    private Long extractUserId(UserDetails userDetails) {
-        // Implement based on your UserDetails implementation
-        // This is a placeholder - adjust based on your actual user principal structure
-        return 1L;
-    }
 }

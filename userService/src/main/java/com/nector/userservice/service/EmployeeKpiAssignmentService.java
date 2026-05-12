@@ -17,6 +17,8 @@ public interface EmployeeKpiAssignmentService {
 
     KpiAssignmentResponse updateProgress(KpiProgressUpdateRequest request);
 
+    List<KpiAssignmentResponse> bulkUpdateProgress(KpiBulkProgressUpdateRequest request);
+
     void deleteAssignment(Long id);
 
     KpiAssignmentResponse getAssignmentById(Long id);
@@ -28,6 +30,8 @@ public interface EmployeeKpiAssignmentService {
     List<KpiAssignmentResponse> getAssignmentsByEmployeeAndStatus(Long employeeId, KPIStatus status);
 
     List<KpiAssignmentResponse> getCurrentActiveAssignments(Long employeeId);
+
+    List<KpiAssignmentWithGradeResponse> getAssignmentsWithGrades(Long employeeId);
 
     Page<KpiAssignmentResponse> getAllAssignments(KpiReportFilterRequest filter, Pageable pageable);
 

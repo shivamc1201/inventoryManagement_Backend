@@ -14,6 +14,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -27,7 +28,7 @@ import java.util.Arrays;
 public class SecurityConfig {
     
     private final CustomUserDetailsService userDetailsService;
-    // private final JwtAuthenticationFilter jwtAuthFilter; // Uncomment when enabling JWT
+    private final JwtAuthenticationFilter jwtAuthFilter; // Uncomment when enabling JWT
 
     @Bean
     public BCryptPasswordEncoder bCryptPasswordEncoder() {
@@ -72,16 +73,15 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .anyRequest().permitAll()
-                // Uncomment below for authentication
-                // .requestMatchers("/api/auth/**", "/api/jwt/**", "/api/public/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                // .requestMatchers("/api/permissions/current-user").authenticated()
-                // .requestMatchers("/api/secured/**").authenticated()
-                // .anyRequest().authenticated()
+                .requestMatchers("/api/auth/**", "/api/jwt/**", "/api/public/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .requestMatchers("/api/admin/kra-kpi/**").permitAll()
+                .requestMatchers("/api/employee/kra-kpi/**").permitAll()
+                .requestMatchers("/api/permissions/current-user").authenticated()
+                .requestMatchers("/api/secured/**").authenticated()
+                .anyRequest().authenticated()
             )
-            // Uncomment below for authentication
-            // .authenticationProvider(authenticationProvider())
-            // .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            .authenticationProvider(authenticationProvider())
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
             ;
             
         return http.build();

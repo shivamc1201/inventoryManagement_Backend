@@ -32,7 +32,6 @@ public class Dealer {
     @Column(name = "full_name")
     private String fullName;
 
-    @Pattern(regexp = "^[6-9]\\d{9}$", message = "Phone must be a valid 10-digit Indian mobile number")
     @Column(length = 20)
     private String phone;
 

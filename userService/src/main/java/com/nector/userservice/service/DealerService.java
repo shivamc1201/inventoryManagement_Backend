@@ -28,6 +28,7 @@ public class DealerService {
     private final DealerLedgerService dealerLedgerService;
     private final DistributorRepository distributorRepository;
     private final SalesPersonRepository salesPersonRepository;
+    private final EmployeeKpiAssignmentService employeeKpiAssignmentService;
 
     @Transactional
     public DealerResponse createDealer(DealerCreateRequest request, Long distributorId, Long salespersonId) {
@@ -58,6 +59,20 @@ public class DealerService {
 
         Dealer savedDealer = dealerRepository.save(dealer);
         log.info("Created dealer with ID: {}", savedDealer.getId());
+
+        // Auto-update Dealer Onboard KPI for the salesperson
+        try {
+            if (salespersonId != null) {
+                employeeKpiAssignmentService.autoUpdateKpiAchieved(
+                        salespersonId,
+                        "Dealer Onboard",
+                        java.math.BigDecimal.ONE
+                );
+                log.info("Auto-updated 'Dealer Onboard' KPI for salesperson {}", salespersonId);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to auto-update 'Dealer Onboard' KPI for salesperson {}: {}", salespersonId, e.getMessage());
+        }
 
         // Auto-initialize opening balance for the dealer
         BigDecimal openingBalance = request.getOpeningBalance() != null ? request.getOpeningBalance() : BigDecimal.ZERO;

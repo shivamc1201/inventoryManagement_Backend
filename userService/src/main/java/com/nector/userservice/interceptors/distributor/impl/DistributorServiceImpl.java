@@ -65,6 +65,7 @@ public class DistributorServiceImpl implements DistributorService {
     private final InvoiceService invoiceService;
     private final OrderTrackingService orderTrackingService;
     private final DistributorStockService distributorStockService;
+    private final com.nector.userservice.service.EmployeeKpiAssignmentService employeeKpiAssignmentService;
     
     @Override
     public DistributorResponseDTO createDistributor(DistributorRequestDTO request) {
@@ -120,6 +121,22 @@ public class DistributorServiceImpl implements DistributorService {
         }
 
         log.info("Distributor created successfully with ID: {}", savedDistributor.getId());
+
+        // Auto-update Distributor Onboard KPI for the salesperson
+        try {
+            if (request.getSalespersonId() != null) {
+                employeeKpiAssignmentService.autoUpdateKpiAchieved(
+                        request.getSalespersonId(),
+                        "Distributor Onboard",
+                        java.math.BigDecimal.ONE
+                );
+                log.info("Auto-updated 'Distributor Onboard' KPI for salesperson {}", request.getSalespersonId());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to auto-update 'Distributor Onboard' KPI for salesperson {}: {}",
+                    request.getSalespersonId(), e.getMessage());
+        }
+
         return distributorMapper.toResponseDTO(savedDistributor);
     }
 

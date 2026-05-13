@@ -64,6 +64,7 @@ public class GdnService {
     private final DistributorRepository distributorRepository;
     private final DistributorLedgerRepository distributorLedgerRepository;
     private final com.nector.userservice.service.DocumentNumberService documentNumberService;
+    private final com.nector.userservice.service.EmployeeKpiAssignmentService employeeKpiAssignmentService;
     
     /**
      * Get current user ID from security context
@@ -316,6 +317,22 @@ public class GdnService {
 
         cart.setStatus(Cart.CartStatus.GDN_GENERATED);
         cartRepository.save(cart);
+
+        // Auto-update Sales Target KPI for the salesperson
+        try {
+            if (cart.getSalespersonId() != null && cart.getTotalCartAmount() != null) {
+                employeeKpiAssignmentService.autoUpdateKpiAchieved(
+                        cart.getSalespersonId(),
+                        "Sale Target",
+                        cart.getTotalCartAmount()
+                );
+                log.info("Auto-updated 'Sale Target' KPI for salesperson {} by amount {}",
+                        cart.getSalespersonId(), cart.getTotalCartAmount());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to auto-update 'Sale Target' KPI for salesperson {}: {}",
+                    cart.getSalespersonId(), e.getMessage());
+        }
 
         // Update Order Tracking Steps 8, 9, 10
         try {

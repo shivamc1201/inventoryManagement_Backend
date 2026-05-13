@@ -115,4 +115,17 @@ public interface EmployeeKpiAssignmentRepository extends JpaRepository<EmployeeK
 
     @Query("SELECT DISTINCT eka.employeeId FROM EmployeeKpiAssignment eka WHERE eka.status = :status")
     List<Long> findDistinctEmployeeIdsByStatus(@Param("status") KPIStatus status);
+
+    /**
+     * Find active KPI assignments for an employee by EXACT KPI name match.
+     * Used for internal auto-update of: "Sale Target", "Dealer Onboard", "Distributor Onboard"
+     */
+    @Query("SELECT eka FROM EmployeeKpiAssignment eka JOIN eka.kpiMaster km " +
+           "WHERE eka.employeeId = :employeeId " +
+           "AND eka.status = 'ACTIVE' " +
+           "AND eka.startDate <= CURRENT_DATE AND eka.endDate >= CURRENT_DATE " +
+           "AND km.kpiName = :kpiName")
+    List<EmployeeKpiAssignment> findActiveByEmployeeIdAndKpiName(
+            @Param("employeeId") Long employeeId,
+            @Param("kpiName") String kpiName);
 }

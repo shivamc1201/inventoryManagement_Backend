@@ -5,6 +5,7 @@ import com.nector.userservice.enums.KPIStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface EmployeeKpiAssignmentService {
@@ -42,4 +43,14 @@ public interface EmployeeKpiAssignmentService {
     void expireOldAssignments();
 
     Integer getTotalWeightageForEmployee(Long employeeId);
+
+    /**
+     * Auto-update the achieved value for a salesperson's active KPI by EXACT kpi name.
+     * Exact names in use: "Sale Target", "Dealer Onboard", "Distributor Onboard"
+     *
+     * @param employeeId      the salesperson's employee ID
+     * @param kpiName         exact KPI name as stored in kpi_master.kpi_name
+     * @param incrementAmount the amount to ADD to the current achieved value
+     */
+    void autoUpdateKpiAchieved(Long employeeId, String kpiName, BigDecimal incrementAmount);
 }

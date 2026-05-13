@@ -430,6 +430,30 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
     }
 
     @Override
+    @Transactional
+    public void autoUpdateKpiAchieved(Long employeeId, String kpiName, BigDecimal incrementAmount) {
+        if (employeeId == null || kpiName == null || incrementAmount == null) {
+            log.warn("autoUpdateKpiAchieved called with null parameters: employeeId={}, kpiName={}, incrementAmount={}",
+                    employeeId, kpiName, incrementAmount);
+            return;
+        }
+        List<EmployeeKpiAssignment> assignments =
+                assignmentRepository.findActiveByEmployeeIdAndKpiName(employeeId, kpiName);
+        if (assignments.isEmpty()) {
+            log.info("No active KPI assignment found for employee {} with kpiName '{}'", employeeId, kpiName);
+            return;
+        }
+        for (EmployeeKpiAssignment assignment : assignments) {
+            BigDecimal current = assignment.getAchievedValue() != null ? assignment.getAchievedValue() : BigDecimal.ZERO;
+            BigDecimal newValue = current.add(incrementAmount);
+            log.info("Auto-updating KPI '{}' (assignmentId={}) for employee {}: {} -> {}",
+                    kpiName, assignment.getId(), employeeId, current, newValue);
+            assignment.updateAchievedValue(newValue);
+            assignmentRepository.save(assignment);
+        }
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<KpiAssignmentWithGradeResponse> getAssignmentsWithGrades(Long employeeId) {
         log.info("Getting assignments with grades for employee ID: {}", employeeId);

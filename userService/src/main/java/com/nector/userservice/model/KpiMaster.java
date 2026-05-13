@@ -58,6 +58,7 @@ public class KpiMaster {
     @Column(name = "is_active")
     private Boolean isActive = true;
 
+
     @Column(name = "created_by")
     private Long createdBy;
 
@@ -74,7 +75,6 @@ public class KpiMaster {
         if (isActive == null) {
             isActive = true;
         }
-        // Auto-generate kpiCode if not provided
         if (kpiCode == null || kpiCode.isBlank()) {
             kpiCode = generateKpiCode();
         }

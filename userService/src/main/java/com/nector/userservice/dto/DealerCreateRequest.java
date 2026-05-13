@@ -16,7 +16,6 @@ public class DealerCreateRequest {
     @Size(max = 100, message = "Full name cannot exceed 100 characters")
     private String fullName;
 
-    @Pattern(regexp = "^\\d{10}$", message = "Phone must be a valid 10-digit number")
     private String phone;
 
     @Size(max = 300, message = "Address cannot exceed 300 characters")

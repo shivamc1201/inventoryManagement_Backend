@@ -3,6 +3,7 @@ package com.nector.userservice.interceptors.distributor.model;
 import com.nector.userservice.enums.SalesRole;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.nector.userservice.util.BigDecimalDeserializer;
+import com.nector.userservice.util.LocalDateDeserializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.Data;
@@ -91,6 +92,7 @@ public class DistributorRequestDTO {
     private java.math.BigDecimal creditBalance;
 
     @Schema(description = "Bank guarantee expiry date", example = "2025-12-31")
+    @JsonDeserialize(using = LocalDateDeserializer.class)
     private java.time.LocalDate bgExpiryDate;
 
     @Schema(description = "District", example = "Patna")

@@ -32,7 +32,7 @@ public interface EmployeeKpiAssignmentService {
 
     List<KpiAssignmentResponse> getCurrentActiveAssignments(Long employeeId);
 
-    List<KpiAssignmentWithGradeResponse> getAssignmentsWithGrades(Long employeeId);
+    KpiAssignmentWithGradeSummaryResponse getAssignmentsWithGrades(Long employeeId);
 
     Page<KpiAssignmentResponse> getAllAssignments(KpiReportFilterRequest filter, Pageable pageable);
 

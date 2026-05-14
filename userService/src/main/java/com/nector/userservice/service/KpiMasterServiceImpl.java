@@ -38,7 +38,7 @@ public class KpiMasterServiceImpl implements KpiMasterService {
         kpi.setKpiCategory(request.getKpiCategory());
         kpi.setMeasurementUnit(request.getMeasurementUnit());
         kpi.setDefaultWeightage(request.getDefaultWeightage());
-        kpi.setFrequency(request.getFrequency());
+        kpi.setFrequency(KPIFrequency.MONTHLY); // Always monthly — KPI tracking cycle is monthly
         kpi.setIsActive(request.getIsActive());
         kpi.setCreatedBy(createdBy);
         
@@ -72,7 +72,7 @@ public class KpiMasterServiceImpl implements KpiMasterService {
             kpi.setDefaultWeightage(request.getDefaultWeightage());
         }
         if (request.getFrequency() != null) {
-            kpi.setFrequency(request.getFrequency());
+            kpi.setFrequency(KPIFrequency.MONTHLY); // Always monthly — KPI tracking cycle is monthly
         }
         if (request.getIsActive() != null) {
             kpi.setIsActive(request.getIsActive());

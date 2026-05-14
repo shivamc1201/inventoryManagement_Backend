@@ -2,6 +2,7 @@ package com.nector.userservice.service;
 
 import com.nector.userservice.dto.KpiReportFilterRequest;
 import com.nector.userservice.dto.KpiResultResponse;
+import com.nector.userservice.dto.KpiYearlySummaryResponse;
 import com.nector.userservice.enums.KPIGrade;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,4 +34,10 @@ public interface EmployeeKpiResultService {
     List<KpiResultResponse> getTopPerformers(Integer month, Integer year, int limit);
 
     List<KpiResultResponse> getTopPerformersByYear(Integer year, int limit);
+
+    /**
+     * Returns a yearly KPI summary for an employee — used for hike/increment decisions.
+     * Contains month-by-month scores + average yearly grade.
+     */
+    KpiYearlySummaryResponse getYearlySummary(Long employeeId, Integer year);
 }

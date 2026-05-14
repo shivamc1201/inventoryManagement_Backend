@@ -53,7 +53,7 @@ public class KpiMaster {
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
-    private KPIFrequency frequency;
+    private KPIFrequency frequency = KPIFrequency.MONTHLY; // Always monthly
 
     @Column(name = "is_active")
     private Boolean isActive = true;
@@ -78,6 +78,8 @@ public class KpiMaster {
         if (kpiCode == null || kpiCode.isBlank()) {
             kpiCode = generateKpiCode();
         }
+        // Always enforce monthly — KPI evaluation cycle is monthly
+        this.frequency = KPIFrequency.MONTHLY;
     }
 
     private String generateKpiCode() {

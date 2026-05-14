@@ -87,6 +87,20 @@ public class EmployeeKpiAssignment {
     @Column(length = 500)
     private String remarks;
 
+    /**
+     * Month (1-12) this KPI assignment belongs to.
+     * Auto-derived from startDate on persist/update.
+     */
+    @Column(name = "assigned_month")
+    private Integer assignedMonth;
+
+    /**
+     * Year this KPI assignment belongs to.
+     * Auto-derived from startDate on persist/update.
+     */
+    @Column(name = "assigned_year")
+    private Integer assignedYear;
+
     @Column(name = "assigned_by")
     private Long assignedBy;
 
@@ -100,22 +114,22 @@ public class EmployeeKpiAssignment {
 
     @PrePersist
     protected void onCreate() {
-        if (achievedValue == null) {
-            achievedValue = BigDecimal.ZERO;
-        }
-        if (scorePercentage == null) {
-            scorePercentage = BigDecimal.ZERO;
-        }
-        if (weightedScore == null) {
-            weightedScore = BigDecimal.ZERO;
-        }
-        if (status == null) {
-            status = KPIStatus.ACTIVE;
+        if (achievedValue == null) achievedValue = BigDecimal.ZERO;
+        if (scorePercentage == null) scorePercentage = BigDecimal.ZERO;
+        if (weightedScore == null) weightedScore = BigDecimal.ZERO;
+        if (status == null) status = KPIStatus.ACTIVE;
+        if (startDate != null) {
+            this.assignedMonth = startDate.getMonthValue();
+            this.assignedYear = startDate.getYear();
         }
     }
 
     @PreUpdate
     protected void onUpdate() {
+        if (startDate != null) {
+            this.assignedMonth = startDate.getMonthValue();
+            this.assignedYear = startDate.getYear();
+        }
         calculateScores();
         checkCompletionStatus();
     }

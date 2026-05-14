@@ -127,10 +127,50 @@ public class EmployeeKpiResultServiceImpl implements EmployeeKpiResultService {
     @Override
     @Transactional(readOnly = true)
     public List<KpiResultResponse> getResultsByEmployeeAndYear(Long employeeId, Integer year) {
-        return resultRepository.findByEmployeeIdAndYearOrderByMonthDesc(employeeId, year)
+        List<KpiResultResponse> storedResults = resultRepository.findByEmployeeIdAndYearOrderByMonthDesc(employeeId, year)
                 .stream()
                 .map(r -> mapToResponse(r, getEmployeeNameById(employeeId)))
                 .collect(Collectors.toList());
+
+        // If we are querying the current year, check if the current month snapshot exists.
+        // If not, calculate it live from active assignments so the caller always sees the current month.
+        LocalDate today = LocalDate.now();
+        if (year == today.getYear()) {
+            int currentMonth = today.getMonthValue();
+            boolean currentMonthPresent = storedResults.stream()
+                    .anyMatch(r -> r.getMonth() != null && r.getMonth() == currentMonth);
+
+            if (!currentMonthPresent) {
+                // Build a live (unsaved) snapshot for the current month
+                LocalDate monthStart = LocalDate.of(year, currentMonth, 1);
+                LocalDate monthEnd = monthStart.withDayOfMonth(monthStart.lengthOfMonth());
+
+                List<EmployeeKpiAssignment> assignments = assignmentRepository
+                        .findByEmployeeIdAndDateRange(employeeId, monthStart, monthEnd);
+
+                BigDecimal liveScore = kpiCalculator.calculateTotalWeightedScore(assignments);
+                KPIGrade liveGrade  = kpiCalculator.calculateGrade(liveScore);
+                String empName      = getEmployeeName(assignments, employeeId);
+
+                KpiResultResponse liveResult = KpiResultResponse.builder()
+                        .id(null)           // not persisted yet
+                        .employeeId(employeeId)
+                        .employeeName(empName)
+                        .month(currentMonth)
+                        .year(year)
+                        .totalScore(liveScore)
+                        .finalGrade(liveGrade)
+                        .gradeMeaning(liveGrade.getMeaning())
+                        .generatedAt(null)  // live — not generated/saved
+                        .build();
+
+                // Insert at top (most recent first)
+                storedResults = new java.util.ArrayList<>(storedResults);
+                storedResults.add(0, liveResult);
+            }
+        }
+
+        return storedResults;
     }
 
     @Override

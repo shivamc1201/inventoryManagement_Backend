@@ -482,8 +482,22 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
 
         KpiGradeCalculator.GradeResult overallGrade = KpiGradeCalculator.calculateGrade(totalWeightedScore);
 
+        // Derive KPIGrade enum from the string grade for the finalGrade field
+        com.nector.userservice.enums.KPIGrade finalGrade =
+                com.nector.userservice.enums.KPIGrade.fromScore(totalWeightedScore.doubleValue());
+
+        int currentMonth = java.time.LocalDate.now().getMonthValue();
+        int currentYear  = java.time.LocalDate.now().getYear();
+
         return KpiAssignmentWithGradeSummaryResponse.builder()
                 .kpis(kpiResponses)
+                // current month snapshot fields
+                .month(currentMonth)
+                .year(currentYear)
+                .totalScore(totalWeightedScore)
+                .finalGrade(finalGrade)
+                .finalGradeMeaning(finalGrade.getMeaning())
+                // backward-compat fields
                 .totalWeightedScore(totalWeightedScore)
                 .overallGrade(overallGrade.getGrade())
                 .overallGradeMeaning(overallGrade.getMeaning())

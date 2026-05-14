@@ -2,6 +2,7 @@ package com.nector.userservice.service;
 
 import com.nector.userservice.dto.KpiReportFilterRequest;
 import com.nector.userservice.dto.KpiResultResponse;
+import com.nector.userservice.dto.KpiYearlySummaryResponse;
 import com.nector.userservice.enums.KPIStatus;
 import com.nector.userservice.enums.KPIGrade;
 import com.nector.userservice.exception.KpiNotFoundException;
@@ -182,6 +183,61 @@ public class EmployeeKpiResultServiceImpl implements EmployeeKpiResultService {
                 .stream()
                 .map(r -> mapToResponse(r, getEmployeeNameById(r.getEmployeeId())))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public KpiYearlySummaryResponse getYearlySummary(Long employeeId, Integer year) {
+        log.info("Generating yearly KPI summary for employee {} for year {}", employeeId, year);
+
+        List<KpiResultResponse> monthlyResults = getResultsByEmployeeAndYear(employeeId, year);
+
+        if (monthlyResults.isEmpty()) {
+            String empName = getEmployeeNameById(employeeId);
+            return KpiYearlySummaryResponse.builder()
+                    .employeeId(employeeId)
+                    .employeeName(empName)
+                    .year(year)
+                    .monthlyResults(List.of())
+                    .monthsRecorded(0)
+                    .averageMonthlyScore(BigDecimal.ZERO)
+                    .yearlyGrade(KPIGrade.fromScore(0))
+                    .yearlyGradeMeaning(KPIGrade.fromScore(0).getMeaning())
+                    .bestMonthScore(BigDecimal.ZERO)
+                    .worstMonthScore(BigDecimal.ZERO)
+                    .build();
+        }
+
+        BigDecimal totalScore = monthlyResults.stream()
+                .map(r -> r.getTotalScore() != null ? r.getTotalScore() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal avgScore = totalScore.divide(
+                java.math.BigDecimal.valueOf(monthlyResults.size()), 2, java.math.RoundingMode.HALF_UP);
+
+        BigDecimal bestScore = monthlyResults.stream()
+                .map(r -> r.getTotalScore() != null ? r.getTotalScore() : BigDecimal.ZERO)
+                .max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+
+        BigDecimal worstScore = monthlyResults.stream()
+                .map(r -> r.getTotalScore() != null ? r.getTotalScore() : BigDecimal.ZERO)
+                .min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+
+        KPIGrade yearlyGrade = KPIGrade.fromScore(avgScore.doubleValue());
+        String empName = monthlyResults.get(0).getEmployeeName();
+
+        return KpiYearlySummaryResponse.builder()
+                .employeeId(employeeId)
+                .employeeName(empName)
+                .year(year)
+                .monthlyResults(monthlyResults)
+                .monthsRecorded(monthlyResults.size())
+                .averageMonthlyScore(avgScore)
+                .yearlyGrade(yearlyGrade)
+                .yearlyGradeMeaning(yearlyGrade.getMeaning())
+                .bestMonthScore(bestScore)
+                .worstMonthScore(worstScore)
+                .build();
     }
 
     private String getEmployeeNameById(Long employeeId) {

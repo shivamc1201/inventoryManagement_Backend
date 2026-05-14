@@ -74,6 +74,18 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
     public KpiBulkAssignmentResponse bulkAssignKpisToEmployee(KpiBulkAssignmentRequest request, Long assignedBy) {
         log.info("Bulk assigning {} KPIs to employee {} by user {}", 
                 request.getAssignments().size(), request.getEmployeeId(), assignedBy);
+
+        // Resolve effective dates (from month+year or explicit dates)
+        LocalDate effectiveStartDate = request.getEffectiveStartDate();
+        LocalDate effectiveEndDate = request.getEffectiveEndDate();
+
+        if (effectiveStartDate == null || effectiveEndDate == null) {
+            throw new com.nector.userservice.exception.KpiException(
+                "Either provide month+year (recommended) or explicit startDate+endDate for KPI assignment.");
+        }
+
+        log.info("Assigning KPIs for period: {} to {} (month={}, year={})",
+                effectiveStartDate, effectiveEndDate, request.getMonth(), request.getYear());
         
         // Get current weightage for employee
         Integer currentWeightage = getTotalWeightageForEmployee(request.getEmployeeId());
@@ -99,7 +111,7 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
         }
         
         // Validate date range
-        if (request.getEndDate().isBefore(request.getStartDate())) {
+        if (effectiveEndDate.isBefore(effectiveStartDate)) {
             throw KpiAssignmentException.invalidDateRange();
         }
         
@@ -117,8 +129,8 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
                     request.getEmployeeId(),
                     item.getKpiId(),
                     KPIStatus.ACTIVE,
-                    request.getStartDate(),
-                    request.getEndDate()
+                    effectiveStartDate,
+                    effectiveEndDate
             );
             
             if (overlapping.isPresent()) {
@@ -136,8 +148,8 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
             assignment.setWeightage(item.getWeightage());
             assignment.setScorePercentage(BigDecimal.ZERO);
             assignment.setWeightedScore(BigDecimal.ZERO);
-            assignment.setStartDate(request.getStartDate());
-            assignment.setEndDate(request.getEndDate());
+            assignment.setStartDate(effectiveStartDate);
+            assignment.setEndDate(effectiveEndDate);
             assignment.setStatus(KPIStatus.ACTIVE);
             assignment.setRemarks(request.getRemarks());
             assignment.setAssignedBy(assignedBy);
@@ -455,14 +467,27 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
 
     @Override
     @Transactional(readOnly = true)
-    public List<KpiAssignmentWithGradeResponse> getAssignmentsWithGrades(Long employeeId) {
+    public KpiAssignmentWithGradeSummaryResponse getAssignmentsWithGrades(Long employeeId) {
         log.info("Getting assignments with grades for employee ID: {}", employeeId);
-        
+
         List<EmployeeKpiAssignment> assignments = assignmentRepository.findByEmployeeId(employeeId);
-        
-        return assignments.stream()
+
+        List<KpiAssignmentWithGradeResponse> kpiResponses = assignments.stream()
                 .map(this::mapToResponseWithGrade)
                 .collect(Collectors.toList());
+
+        BigDecimal totalWeightedScore = kpiResponses.stream()
+                .map(r -> r.getWeightedScore() != null ? r.getWeightedScore() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        KpiGradeCalculator.GradeResult overallGrade = KpiGradeCalculator.calculateGrade(totalWeightedScore);
+
+        return KpiAssignmentWithGradeSummaryResponse.builder()
+                .kpis(kpiResponses)
+                .totalWeightedScore(totalWeightedScore)
+                .overallGrade(overallGrade.getGrade())
+                .overallGradeMeaning(overallGrade.getMeaning())
+                .build();
     }
 
     private KpiAssignmentResponse mapToResponse(EmployeeKpiAssignment assignment) {

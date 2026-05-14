@@ -118,10 +118,10 @@ public class KpiEmployeeController {
 
     @GetMapping("/results-with-grades/{employeeId}")
     @Operation(summary = "My KPI Results with Grades", description = "Get all KPI assignments with grades for an employee")
-    public ResponseEntity<List<KpiAssignmentWithGradeResponse>> getMyResultsWithGrades(
+    public ResponseEntity<KpiAssignmentWithGradeSummaryResponse> getMyResultsWithGrades(
             @Parameter(description = "Employee ID") @PathVariable Long employeeId) {
         
-        List<KpiAssignmentWithGradeResponse> response = assignmentService.getAssignmentsWithGrades(employeeId);
+        KpiAssignmentWithGradeSummaryResponse response = assignmentService.getAssignmentsWithGrades(employeeId);
         return ResponseEntity.ok(response);
     }
 
@@ -143,6 +143,17 @@ public class KpiEmployeeController {
             @Parameter(description = "Year") @PathVariable Integer year) {
         
         KpiResultResponse response = resultService.getResultByEmployeeMonthYear(employeeId, month, year);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/results/{employeeId}/yearly-summary/{year}")
+    @Operation(summary = "Yearly KPI Summary",
+               description = "Get full yearly KPI summary for an employee — month-by-month scores, average, yearly grade. Used for hike/increment decisions.")
+    public ResponseEntity<KpiYearlySummaryResponse> getYearlySummary(
+            @Parameter(description = "Employee ID") @PathVariable Long employeeId,
+            @Parameter(description = "Year (e.g. 2026)") @PathVariable Integer year) {
+
+        KpiYearlySummaryResponse response = resultService.getYearlySummary(employeeId, year);
         return ResponseEntity.ok(response);
     }
 

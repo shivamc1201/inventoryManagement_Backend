@@ -43,11 +43,33 @@ public interface EmployeeKpiAssignmentRepository extends JpaRepository<EmployeeK
     Integer sumWeightageByEmployeeIdAndStatus(@Param("employeeId") Long employeeId,
                                               @Param("status") KPIStatus status);
 
+    /**
+     * Find assignments that OVERLAP a given date range (used for monthly result generation).
+     * An assignment overlaps the month if it starts before month end AND ends after month start.
+     */
     @Query("SELECT eka FROM EmployeeKpiAssignment eka " +
-           "WHERE eka.employeeId = :employeeId AND eka.startDate >= :startDate AND eka.endDate <= :endDate")
+           "WHERE eka.employeeId = :employeeId " +
+           "AND eka.startDate <= :endDate AND eka.endDate >= :startDate")
     List<EmployeeKpiAssignment> findByEmployeeIdAndDateRange(@Param("employeeId") Long employeeId,
                                                               @Param("startDate") LocalDate startDate,
                                                               @Param("endDate") LocalDate endDate);
+
+    /**
+     * Find assignments by employee, month and year (using the stored month/year fields).
+     */
+    @Query("SELECT eka FROM EmployeeKpiAssignment eka " +
+           "WHERE eka.employeeId = :employeeId AND eka.assignedMonth = :month AND eka.assignedYear = :year")
+    List<EmployeeKpiAssignment> findByEmployeeIdAndMonthAndYear(@Param("employeeId") Long employeeId,
+                                                                 @Param("month") Integer month,
+                                                                 @Param("year") Integer year);
+
+    /**
+     * Find all assignments for a given month and year (for admin monthly reports).
+     */
+    @Query("SELECT eka FROM EmployeeKpiAssignment eka " +
+           "WHERE eka.assignedMonth = :month AND eka.assignedYear = :year")
+    List<EmployeeKpiAssignment> findAllByMonthAndYear(@Param("month") Integer month,
+                                                       @Param("year") Integer year);
 
     @Query("SELECT eka FROM EmployeeKpiAssignment eka " +
            "WHERE eka.startDate <= :endDate AND eka.endDate >= :startDate AND eka.status = :status")

@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.products.impl;
 
+import com.nector.userservice.cloudinary.CloudinaryService;
 import com.nector.userservice.exception.InsufficientStockException;
 import com.nector.userservice.exception.RawProductNotFoundException;
 import com.nector.userservice.interceptors.products.model.RawProductRequest;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -24,10 +26,17 @@ import java.util.stream.Collectors;
 public class RawProductServiceImpl implements RawProductService {
     
     private final RawProductRepository rawProductRepository;
+    private final CloudinaryService cloudinaryService;
     
     @Override
     @Transactional
     public RawProductResponse createRawProduct(RawProductRequest request) {
+        return createRawProduct(request, null);
+    }
+
+    @Override
+    @Transactional
+    public RawProductResponse createRawProduct(RawProductRequest request, MultipartFile image) {
         log.info("Creating raw product with material code: {}", request.getMaterialCode());
         
         if (request.getMaterialCode() != null && rawProductRepository.existsByMaterialCode(request.getMaterialCode())) {
@@ -48,6 +57,12 @@ public class RawProductServiceImpl implements RawProductService {
         product.setDriverMobile(request.getDriverMobile());
         product.setActive(true);
         if (request.getStatus() != null) product.setStatus(request.getStatus());
+
+        if (image != null && !image.isEmpty()) {
+            log.info("Uploading image for raw product with material code: {}", request.getMaterialCode());
+            String imageUrl = cloudinaryService.uploadImage(image);
+            product.setImageUrl(imageUrl);
+        }
         
         RawProduct savedProduct = rawProductRepository.save(product);
         log.info("Raw product created successfully with ID: {}", savedProduct.getId());
@@ -58,6 +73,12 @@ public class RawProductServiceImpl implements RawProductService {
     @Override
     @Transactional
     public RawProductResponse updateRawProduct(Long id, RawProductRequest request) {
+        return updateRawProduct(id, request, null);
+    }
+
+    @Override
+    @Transactional
+    public RawProductResponse updateRawProduct(Long id, RawProductRequest request, MultipartFile image) {
         log.info("Updating raw product with ID: {}", id);
         
         RawProduct product = rawProductRepository.findById(id)
@@ -76,6 +97,12 @@ public class RawProductServiceImpl implements RawProductService {
         product.setDriverName(request.getDriverName());
         product.setDriverMobile(request.getDriverMobile());
         if (request.getStatus() != null) product.setStatus(request.getStatus());
+
+        if (image != null && !image.isEmpty()) {
+            log.info("Uploading new image for raw product with ID: {}", id);
+            String imageUrl = cloudinaryService.uploadImage(image);
+            product.setImageUrl(imageUrl);
+        }
         
         RawProduct updatedProduct = rawProductRepository.save(product);
         log.info("Raw product updated successfully with ID: {}", updatedProduct.getId());
@@ -199,7 +226,24 @@ public class RawProductServiceImpl implements RawProductService {
         response.setDriverName(product.getDriverName());
         response.setDriverMobile(product.getDriverMobile());
         response.setStatus(product.getStatus());
+        response.setImageUrl(product.getImageUrl());
         return response;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String getRawProductImageUrl(Long id) {
+        RawProduct product = rawProductRepository.findById(id)
+                .orElseThrow(() -> new RawProductNotFoundException(id));
+        return product.getImageUrl();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String getRawProductImageUrlByMaterialCode(String materialCode) {
+        RawProduct product = rawProductRepository.findByMaterialCode(materialCode)
+                .orElseThrow(() -> new RawProductNotFoundException(0L));
+        return product.getImageUrl();
     }
 
     @Override

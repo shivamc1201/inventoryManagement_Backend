@@ -98,4 +98,7 @@ public class RawProduct {
     @Column(length = 20)
     private ProductStatus status = ProductStatus.MASTER;
 
+    @Column(length = 500)
+    private String imageUrl;
+
 }

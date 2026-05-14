@@ -29,4 +29,5 @@ public class RawProductResponse {
     private String driverName;
     private String driverMobile;
     private ProductStatus status;
+    private String imageUrl;
 }

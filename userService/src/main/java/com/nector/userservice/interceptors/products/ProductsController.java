@@ -138,10 +138,23 @@ public class ProductsController {
 
     // ==================== RAW MATERIALS ====================
 
-    @PostMapping("/raw-materials")
-    @Operation(summary = "Create raw material", description = "Creates a new raw material")
+    // JSON endpoint - Swagger and web without image
+    @PostMapping(value = "/raw-materials", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Create raw material (JSON)", description = "Creates a new raw material with JSON payload. Use this for requests without image.")
     public ResponseEntity<RawProductResponse> createRawProduct(@RequestBody RawProductRequest request) {
-        RawProductResponse response = rawProductService.createRawProduct(request);
+        RawProductResponse response = rawProductService.createRawProduct(request, null);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    // Multipart endpoint - Web with optional image
+    @PostMapping(value = "/raw-materials", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Create raw material (Multipart)", description = "Creates a new raw material with optional image. Use this for requests with image upload.")
+    public ResponseEntity<RawProductResponse> createRawProductMultipart(
+            @Parameter(description = "Raw product request JSON",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE))
+            @RequestPart("request") RawProductRequest request,
+            @RequestPart(value = "image", required = false) MultipartFile image) {
+        RawProductResponse response = rawProductService.createRawProduct(request, image);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -159,10 +172,48 @@ public class ProductsController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/raw-materials/{id}")
-    @Operation(summary = "Update raw material", description = "Updates an existing raw material")
+    @GetMapping("/raw-materials/{id}/image")
+    @Operation(summary = "Get raw material image by ID", description = "Redirects to the image of a raw material by its ID")
+    public ResponseEntity<Void> getRawProductImage(@PathVariable Long id) {
+        String imageUrl = rawProductService.getRawProductImageUrl(id);
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                .location(java.net.URI.create(imageUrl))
+                .build();
+    }
+
+    @GetMapping("/raw-materials/material-code/{materialCode}/image")
+    @Operation(summary = "Get raw material image by material code", description = "Redirects to the image of a raw material by its material code")
+    public ResponseEntity<Void> getRawProductImageByMaterialCode(@PathVariable String materialCode) {
+        String imageUrl = rawProductService.getRawProductImageUrlByMaterialCode(materialCode);
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                .location(java.net.URI.create(imageUrl))
+                .build();
+    }
+
+    // JSON endpoint - Swagger and web without image
+    @PutMapping(value = "/raw-materials/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Update raw material (JSON)", description = "Updates an existing raw material with JSON payload. Use this for requests without image.")
     public ResponseEntity<RawProductResponse> updateRawProduct(@PathVariable Long id, @RequestBody RawProductRequest request) {
-        RawProductResponse response = rawProductService.updateRawProduct(id, request);
+        RawProductResponse response = rawProductService.updateRawProduct(id, request, null);
+        return ResponseEntity.ok(response);
+    }
+
+    // Multipart endpoint - Web with optional image
+    @PutMapping(value = "/raw-materials/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Update raw material (Multipart)", description = "Updates an existing raw material with optional image. Use this for requests with image upload.")
+    public ResponseEntity<RawProductResponse> updateRawProductMultipart(
+            @PathVariable Long id,
+            @Parameter(description = "Raw product request JSON",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE))
+            @RequestPart("request") RawProductRequest request,
+            @RequestPart(value = "image", required = false) MultipartFile image) {
+        RawProductResponse response = rawProductService.updateRawProduct(id, request, image);
         return ResponseEntity.ok(response);
     }
 

@@ -104,6 +104,9 @@ public class DistributorMapper {
         entity.setStatus(dto.getStatus());
         entity.setPassword(dto.getPassword());
         entity.setUsername(dto.getUsername());
+        entity.setAccountName(dto.getAccountName());
+        entity.setAccountNumber(dto.getAccountNumber());
+        entity.setIfsc(dto.getIfsc());
         entity.setBankGuaranteeNumber(dto.getBankGuaranteeNumber());
 
         // Handle credit limit: if creditLimit is true, use creditAmount; otherwise 0
@@ -116,6 +119,8 @@ public class DistributorMapper {
         entity.setDistrict(dto.getDistrict());
         entity.setState(dto.getState());
         entity.setPinCode(dto.getPinCode());
-        entity.setKeyperson(dto.getKeyperson());
+        if (dto.getKeyperson() != null) {
+            entity.setKeyperson(dto.getKeyperson());
+        }
     }
 }

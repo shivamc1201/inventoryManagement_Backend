@@ -7,7 +7,7 @@ import com.nector.userservice.model.User;
 // import com.nector.userservice.model.UserSession;
 import com.nector.userservice.repository.UserRepository;
 // import com.nector.userservice.repository.UserSessionRepository;
-import com.nector.userservice.service.JwtService;
+// import com.nector.userservice.service.JwtService; // JWT disabled
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ public class LogoutServiceImpl implements LogoutService {
     
     private final UserRepository userRepository;
     // private final UserSessionRepository userSessionRepository; // For future session management
-    private final JwtService jwtService;
+    // private final JwtService jwtService; // JWT disabled
     
     @Override
     // @Transactional // For future session management

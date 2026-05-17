@@ -24,7 +24,7 @@ import com.nector.userservice.repository.DistributorLedgerRepository;
 import com.nector.userservice.repository.FinishedProductRepository;
 import com.nector.userservice.repository.ItemRepository;
 import com.nector.userservice.service.InvoiceService;
-import com.nector.userservice.service.JwtService;
+// import com.nector.userservice.service.JwtService; // JWT disabled
 import com.nector.userservice.ordertracking.service.OrderTrackingService;
 import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
 import com.nector.userservice.service.DistributorStockService;
@@ -56,7 +56,7 @@ public class DistributorServiceImpl implements DistributorService {
     private final OrderConfirmationRepository orderConfirmationRepository;
     private final ItemRepository itemRepository;
     private final FinishedProductRepository finishedProductRepository;
-    private final JwtService jwtService;
+    // private final JwtService jwtService; // JWT disabled
     private final UserRepository userRepository;
     private final SalesPersonRepository salesPersonRepository;
     private final CartRepository cartRepository;

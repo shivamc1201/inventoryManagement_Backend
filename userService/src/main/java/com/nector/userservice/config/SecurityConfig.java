@@ -28,7 +28,7 @@ import java.util.Arrays;
 public class SecurityConfig {
     
     private final CustomUserDetailsService userDetailsService;
-    private final JwtAuthenticationFilter jwtAuthFilter; // Uncomment when enabling JWT
+    // private final JwtAuthenticationFilter jwtAuthFilter; // JWT disabled
 
     @Bean
     public BCryptPasswordEncoder bCryptPasswordEncoder() {

@@ -262,14 +262,13 @@ public class ProformaInvoiceService {
                     InvoiceItem item = new InvoiceItem();
                     item.setSrNo(i + 1);
                     item.setDescription(cartItem.getItem().getName());
-                    item.setHsnCode("1234"); // Default HSN
-                    // Set altQty with calculated volume
+                    item.setHsnCode(cartItem.getItem().getHsn() != null ? cartItem.getItem().getHsn() : "");
                     java.math.BigDecimal itemVolume = calculateItemVolume(cartItem);
-                    item.setAltQty(itemVolume.toString());
+                    item.setAltQty(itemVolume.stripTrailingZeros().toPlainString());
                     item.setQuantity(cartItem.getQuantity());
                     item.setRatePerUnit(cartItem.getPriceAtTime().doubleValue());
-                    item.setUnit("Pcs");
-                    item.setPer("Pcs"); // Unit per
+                    item.setUnit("Bag");
+                    item.setPer("Bag");
                     item.setAmount(cartItem.getPriceAtTime().doubleValue() * cartItem.getQuantity());
                     return item;
                 })
@@ -292,7 +291,12 @@ public class ProformaInvoiceService {
 
         double totalTax = cgst + sgst;
         invoice.setTaxInWords("NIL");
-        invoice.setTotalAltQty("");
+        java.math.BigDecimal totalAltQtyVal = items.stream()
+                .map(InvoiceItem::getAltQty)
+                .filter(s -> s != null && !s.isEmpty())
+                .map(java.math.BigDecimal::new)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        invoice.setTotalAltQty(totalAltQtyVal.stripTrailingZeros().toPlainString());
         invoice.setDeliveryNote("");
 
         // Fetch Sales Order number from OrderTracking
@@ -544,30 +548,25 @@ public class ProformaInvoiceService {
         
         switch (product.getUnit()) {
             case KG:
-                // Convert KG to volume in tons (1 ton = 1000 kg)
-                java.math.BigDecimal weightInKg = weight.multiply(java.math.BigDecimal.valueOf(quantity));
-                return weightInKg.divide(java.math.BigDecimal.valueOf(1000), 6, java.math.BigDecimal.ROUND_HALF_UP);
-                
+                return weight.multiply(java.math.BigDecimal.valueOf(quantity))
+                        .setScale(6, java.math.RoundingMode.HALF_UP);
+
             case LITER:
-                // Convert Liters to volume in tons (assuming density of 1 kg/liter for water)
-                java.math.BigDecimal volumeInLiters = weight.multiply(java.math.BigDecimal.valueOf(quantity));
-                return volumeInLiters.divide(java.math.BigDecimal.valueOf(1000), 6, java.math.BigDecimal.ROUND_HALF_UP);
-                
+                return weight.multiply(java.math.BigDecimal.valueOf(quantity))
+                        .setScale(6, java.math.RoundingMode.HALF_UP);
+
             case DOZEN:
-                // For dozen, calculate weight per dozen and convert to volume in tons
-                java.math.BigDecimal weightPerPiece = weight.divide(java.math.BigDecimal.valueOf(12), 6, java.math.BigDecimal.ROUND_HALF_UP);
-                java.math.BigDecimal totalWeight = weightPerPiece.multiply(java.math.BigDecimal.valueOf(quantity));
-                return totalWeight.divide(java.math.BigDecimal.valueOf(1000), 6, java.math.BigDecimal.ROUND_HALF_UP);
-                
+                java.math.BigDecimal weightPerPiece = weight.divide(java.math.BigDecimal.valueOf(12), 6, java.math.RoundingMode.HALF_UP);
+                return weightPerPiece.multiply(java.math.BigDecimal.valueOf(quantity))
+                        .setScale(6, java.math.RoundingMode.HALF_UP);
+
             case PIECES:
-                // For pieces, calculate total weight and convert to volume in tons
-                java.math.BigDecimal totalWeightPieces = weight.multiply(java.math.BigDecimal.valueOf(quantity));
-                return totalWeightPieces.divide(java.math.BigDecimal.valueOf(1000), 6, java.math.BigDecimal.ROUND_HALF_UP);
-                
+                return weight.multiply(java.math.BigDecimal.valueOf(quantity))
+                        .setScale(6, java.math.RoundingMode.HALF_UP);
+
             default:
-                // Fallback to simple calculation
-                java.math.BigDecimal fallbackWeight = weight.multiply(java.math.BigDecimal.valueOf(quantity));
-                return fallbackWeight.divide(java.math.BigDecimal.valueOf(1000), 6, java.math.BigDecimal.ROUND_HALF_UP);
+                return weight.multiply(java.math.BigDecimal.valueOf(quantity))
+                        .setScale(6, java.math.RoundingMode.HALF_UP);
         }
     }
 
@@ -579,8 +578,8 @@ public class ProformaInvoiceService {
                 if (words[i].matches("\\d+(\\.\\d+)?") && 
                     (words[i + 1].equalsIgnoreCase("Kg") || words[i + 1].equalsIgnoreCase("KG"))) {
                     java.math.BigDecimal extractedWeight = new java.math.BigDecimal(words[i]);
-                    java.math.BigDecimal totalWeight = extractedWeight.multiply(java.math.BigDecimal.valueOf(quantity));
-                    return totalWeight.divide(java.math.BigDecimal.valueOf(1000), 6, java.math.BigDecimal.ROUND_HALF_UP);
+                    return extractedWeight.multiply(java.math.BigDecimal.valueOf(quantity))
+                            .setScale(6, java.math.RoundingMode.HALF_UP);
                 }
             }
         } catch (Exception e) {

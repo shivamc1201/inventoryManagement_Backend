@@ -8,6 +8,7 @@ import com.nector.userservice.exception.ResourceNotFoundException;
 import com.nector.userservice.bom.mapper.BomMapper;
 import com.nector.userservice.bom.repository.BillOfMaterialRepository;
 import com.nector.userservice.bom.service.BomService;
+import com.nector.userservice.enums.ProductStatus;
 import com.nector.userservice.model.FinishedProduct;
 import com.nector.userservice.model.RawProduct;
 import com.nector.userservice.repository.FinishedProductRepository;
@@ -282,6 +283,7 @@ public class BomServiceImpl implements BomService {
                 BigDecimal.valueOf(finishedProduct.getQuantity()) : BigDecimal.ZERO;
         BigDecimal newFinishedProductStock = currentFinishedQty.add(requestedQuantity);
         finishedProduct.setQuantity(newFinishedProductStock.intValue());
+        finishedProduct.setStatus(ProductStatus.BOM);
 
         if (requestDto.getMinimumThreshold() != null) {
             finishedProduct.setMinimumThreshold(requestDto.getMinimumThreshold());

@@ -23,7 +23,7 @@ import com.nector.userservice.model.User;
 // import com.nector.userservice.model.UserSession;
 import com.nector.userservice.repository.UserRepository;
 // import com.nector.userservice.repository.UserSessionRepository;
-import com.nector.userservice.service.JwtService;
+// import com.nector.userservice.service.JwtService; // JWT disabled
 import com.nector.userservice.model.SalesPerson;
 import com.nector.userservice.enums.SalesRole;
 import com.nector.userservice.repository.SalesPersonRepository;
@@ -44,7 +44,7 @@ public class LoginServiceImpl implements LoginService {
     
     private final UserRepository userRepository;
     // private final UserSessionRepository userSessionRepository; // For future session management
-    private final JwtService jwtService;
+    // private final JwtService jwtService; // JWT disabled
     private final DistributorRepository distributorRepository;
     private final SalesPersonRepository salesPersonRepository;
     private final RoleFeaturePermissionRepository roleFeaturePermissionRepository;
@@ -112,7 +112,8 @@ public class LoginServiceImpl implements LoginService {
             throw new RuntimeException("Invalid password");
         }
 
-        String token = jwtService.generateToken(request.getUsername());
+        // String token = jwtService.generateToken(request.getUsername()); // JWT disabled
+        String token = null;
 
         // Update last login time if you have that field
         // salesPerson.setLastLoginTime(LocalDateTime.now());
@@ -168,7 +169,8 @@ public class LoginServiceImpl implements LoginService {
             throw new RuntimeException("Invalid password");
         }
 
-        String token = jwtService.generateToken(request.getUsername());
+        // String token = jwtService.generateToken(request.getUsername()); // JWT disabled
+        String token = null;
 
         user.setLoggedIn(true);
         user.setLastLoginTime(LocalDateTime.now());
@@ -209,7 +211,8 @@ public class LoginServiceImpl implements LoginService {
             throw new RuntimeException("Invalid password");
         }
 
-        String token = jwtService.generateToken(request.getUsername());
+        // String token = jwtService.generateToken(request.getUsername()); // JWT disabled
+        String token = null;
 
         user.setLoggedIn(true);
         user.setLastLoginTime(LocalDateTime.now());
@@ -292,7 +295,8 @@ public class LoginServiceImpl implements LoginService {
             throw new RuntimeException("Invalid password");
         }
 
-        String token = jwtService.generateToken(request.getUsername());
+        // String token = jwtService.generateToken(request.getUsername()); // JWT disabled
+        String token = null;
 
         // Distributor features
         List<Object> featureDetails = List.of(

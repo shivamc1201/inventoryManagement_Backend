@@ -338,12 +338,15 @@ public class InvoiceService {
                         InvoiceItem item = new InvoiceItem();
                         item.setSrNo(i + 1);
                         item.setDescription(cartItem.getItem().getName());
-                        item.setHsnCode("1234");
+                        item.setHsnCode(cartItem.getItem().getHsn() != null ? cartItem.getItem().getHsn() : "");
                         item.setQuantity(qty);
                         item.setRatePerUnit(cartItem.getPriceAtTime().doubleValue());
-                        item.setUnit("Pcs");
-                        item.setPer("Pcs");
-                        item.setAltQty("");
+                        item.setUnit("Bag");
+                        item.setPer("Bag");
+                        java.math.BigDecimal w1 = cartItem.getItem().getWeight();
+                        item.setAltQty(w1 != null
+                                ? w1.multiply(java.math.BigDecimal.valueOf(qty)).stripTrailingZeros().toPlainString()
+                                : "");
                         item.setAmount(cartItem.getPriceAtTime().doubleValue() * qty);
                         return item;
                     })
@@ -364,12 +367,15 @@ public class InvoiceService {
                         InvoiceItem item = new InvoiceItem();
                         item.setSrNo(srNo.getAndIncrement());
                         item.setDescription(cartItem.getItem().getName());
-                        item.setHsnCode("1234");
+                        item.setHsnCode(cartItem.getItem().getHsn() != null ? cartItem.getItem().getHsn() : "");
                         item.setQuantity(cartItem.getQuantity());
                         item.setRatePerUnit(cartItem.getPriceAtTime().doubleValue());
-                        item.setUnit("Pcs");
-                        item.setPer("Pcs");
-                        item.setAltQty("");
+                        item.setUnit("Bag");
+                        item.setPer("Bag");
+                        java.math.BigDecimal w2 = cartItem.getItem().getWeight();
+                        item.setAltQty(w2 != null
+                                ? w2.multiply(java.math.BigDecimal.valueOf(cartItem.getQuantity())).stripTrailingZeros().toPlainString()
+                                : "");
                         item.setAmount(cartItem.getPriceAtTime().doubleValue() * cartItem.getQuantity());
                         return item;
                     })
@@ -389,7 +395,12 @@ public class InvoiceService {
         invoice.setTaxAmount(taxAmount);
         invoice.setGrandTotal(grandTotal);
         invoice.setTotalQty(String.valueOf(totalQuantity));
-        invoice.setTotalAltQty("");
+        java.math.BigDecimal totalAltQtyVal = items.stream()
+                .map(InvoiceItem::getAltQty)
+                .filter(s -> s != null && !s.isEmpty())
+                .map(java.math.BigDecimal::new)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        invoice.setTotalAltQty(totalAltQtyVal.stripTrailingZeros().toPlainString());
         invoice.setAmountInWords(convertToWords(grandTotal));
         invoice.setTaxInWords(taxAmount == 0 ? "NIL" : convertToWords(taxAmount));
 

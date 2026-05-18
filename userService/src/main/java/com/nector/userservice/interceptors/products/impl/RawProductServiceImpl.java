@@ -24,10 +24,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class RawProductServiceImpl implements RawProductService {
-    
+
     private final RawProductRepository rawProductRepository;
     private final CloudinaryService cloudinaryService;
-    
+
     @Override
     @Transactional
     public RawProductResponse createRawProduct(RawProductRequest request) {
@@ -38,11 +38,11 @@ public class RawProductServiceImpl implements RawProductService {
     @Transactional
     public RawProductResponse createRawProduct(RawProductRequest request, MultipartFile image) {
         log.info("Creating raw product with material code: {}", request.getMaterialCode());
-        
+
         if (request.getMaterialCode() != null && rawProductRepository.existsByMaterialCode(request.getMaterialCode())) {
             throw new DataIntegrityViolationException("Raw product with material code " + request.getMaterialCode() + " already exists");
         }
-        
+
         RawProduct product = new RawProduct();
         product.setName(request.getName());
         product.setMaterialCode(request.getMaterialCode());
@@ -63,13 +63,13 @@ public class RawProductServiceImpl implements RawProductService {
             String imageUrl = cloudinaryService.uploadImage(image);
             product.setImageUrl(imageUrl);
         }
-        
+
         RawProduct savedProduct = rawProductRepository.save(product);
         log.info("Raw product created successfully with ID: {}", savedProduct.getId());
-        
+
         return mapToResponse(savedProduct);
     }
-    
+
     @Override
     @Transactional
     public RawProductResponse updateRawProduct(Long id, RawProductRequest request) {
@@ -80,14 +80,21 @@ public class RawProductServiceImpl implements RawProductService {
     @Transactional
     public RawProductResponse updateRawProduct(Long id, RawProductRequest request, MultipartFile image) {
         log.info("Updating raw product with ID: {}", id);
-        
+
         RawProduct product = rawProductRepository.findById(id)
-            .orElseThrow(() -> new RawProductNotFoundException(id));
-        
+                .orElseThrow(() -> new RawProductNotFoundException(id));
+
         product.setName(request.getName());
         product.setUnit(request.getUnit());
         product.setPrice(request.getPrice());
-        product.setQuantity(request.getQuantity());
+
+        if (request.getQuantity() != null) {
+            BigDecimal updatedQuantity = product.getQuantity()
+                    .add(request.getQuantity());
+
+            product.setQuantity(updatedQuantity);
+        }
+
         product.setMinimumThreshold(request.getMinimumThreshold());
         product.setHsn(request.getHsn());
         product.setTaxRate(request.getTaxRate());
@@ -103,101 +110,101 @@ public class RawProductServiceImpl implements RawProductService {
             String imageUrl = cloudinaryService.uploadImage(image);
             product.setImageUrl(imageUrl);
         }
-        
+
         RawProduct updatedProduct = rawProductRepository.save(product);
         log.info("Raw product updated successfully with ID: {}", updatedProduct.getId());
-        
+
         return mapToResponse(updatedProduct);
     }
-    
+
     @Override
     @Transactional
     public void deleteRawProduct(Long id) {
         log.info("Soft deleting raw product with ID: {}", id);
-        
+
         RawProduct product = rawProductRepository.findById(id)
-            .orElseThrow(() -> new RawProductNotFoundException(id));
-        
+                .orElseThrow(() -> new RawProductNotFoundException(id));
+
         product.setActive(false);
         rawProductRepository.save(product);
-        
+
         log.info("Raw product soft deleted successfully with ID: {}", id);
     }
-    
+
     @Override
     @Transactional(readOnly = true)
     public RawProductResponse getRawProductById(Long id) {
         log.info("Fetching raw product with ID: {}", id);
-        
+
         RawProduct product = rawProductRepository.findById(id)
-            .orElseThrow(() -> new RawProductNotFoundException(id));
-        
+                .orElseThrow(() -> new RawProductNotFoundException(id));
+
         return mapToResponse(product);
     }
-    
+
     @Override
     @Transactional(readOnly = true)
     public List<RawProductResponse> getAllRawProducts() {
         log.info("Fetching all raw products");
-        
+
         return rawProductRepository.findByActiveTrue().stream()
-            .map(this::mapToResponse)
-            .collect(Collectors.toList());
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
-    
+
     @Override
     @Transactional
     public RawProductResponse increaseStock(Long id, BigDecimal quantity) {
         log.info("Increasing stock for raw product ID: {} by quantity: {}", id, quantity);
-        
+
         RawProduct product = rawProductRepository.findActiveById(id)
-            .orElseThrow(() -> new RawProductNotFoundException(id));
-        
+                .orElseThrow(() -> new RawProductNotFoundException(id));
+
         BigDecimal currentQty = product.getQuantity() != null ? product.getQuantity() : BigDecimal.ZERO;
         product.setQuantity(currentQty.add(quantity));
         RawProduct updatedProduct = rawProductRepository.save(product);
-        
+
         log.info("Stock increased successfully for raw product ID: {}", id);
         return mapToResponse(updatedProduct);
     }
-    
+
     @Override
     @Transactional
     public RawProductResponse decreaseStock(Long id, BigDecimal quantity) {
         log.info("Decreasing stock for raw product ID: {} by quantity: {}", id, quantity);
-        
+
         RawProduct product = rawProductRepository.findActiveById(id)
-            .orElseThrow(() -> new RawProductNotFoundException(id));
-        
+                .orElseThrow(() -> new RawProductNotFoundException(id));
+
         BigDecimal currentQty = product.getQuantity() != null ? product.getQuantity() : BigDecimal.ZERO;
         if (currentQty.compareTo(quantity) < 0) {
             throw new InsufficientStockException(product.getMaterialCode(), quantity, currentQty);
         }
-        
+
         product.setQuantity(currentQty.subtract(quantity));
         RawProduct updatedProduct = rawProductRepository.save(product);
-        
+
         BigDecimal updatedQty = updatedProduct.getQuantity() != null ? updatedProduct.getQuantity() : BigDecimal.ZERO;
         BigDecimal threshold = updatedProduct.getMinimumThreshold() != null ? updatedProduct.getMinimumThreshold() : BigDecimal.ZERO;
         if (updatedQty.compareTo(threshold) <= 0) {
-            log.warn("ALERT: Raw product {} (ID: {}) stock is below minimum threshold. Current: {}, Threshold: {}", 
-                updatedProduct.getMaterialCode(), id, updatedProduct.getQuantity(), updatedProduct.getMinimumThreshold());
+            log.warn("ALERT: Raw product {} (ID: {}) stock is below minimum threshold. Current: {}, Threshold: {}",
+                    updatedProduct.getMaterialCode(), id, updatedProduct.getQuantity(), updatedProduct.getMinimumThreshold());
         }
-        
+
         log.info("Stock decreased successfully for raw product ID: {}", id);
         return mapToResponse(updatedProduct);
     }
-    
+
     @Override
     @Transactional(readOnly = true)
     public List<RawProductResponse> getLowStockItems() {
         log.info("Fetching low stock raw products");
-        
+
         return rawProductRepository.findLowStockItems().stream()
-            .map(this::mapToResponse)
-            .collect(Collectors.toList());
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
-    
+
     private RawProductResponse mapToResponse(RawProduct product) {
         RawProductResponse response = new RawProductResponse();
         response.setId(product.getId());

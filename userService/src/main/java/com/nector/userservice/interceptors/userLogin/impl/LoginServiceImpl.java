@@ -125,7 +125,7 @@ public class LoginServiceImpl implements LoginService {
         List<Object> featureDetails = getSalesPersonFeatures(roleType);
         Set<String> featureNames = getSalesPersonFeatureNames(roleType);
 
-        return new LoginResponse(
+        LoginResponse response = new LoginResponse(
                 token,
                 "Bearer",
                 request.getUsername(),
@@ -136,6 +136,8 @@ public class LoginServiceImpl implements LoginService {
                 featureNames,
                 "LOGGED_IN"
         );
+        response.setName(salesPerson.getFirstName() + " " + salesPerson.getLastName());
+        return response;
     }
 
     private RoleType convertSalesRoleToRoleType(SalesRole salesRole) {

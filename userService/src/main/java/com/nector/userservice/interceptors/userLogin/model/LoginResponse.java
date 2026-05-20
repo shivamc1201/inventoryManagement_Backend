@@ -36,6 +36,9 @@ public class LoginResponse implements BaseLoginResponse {
 
     @Schema(description = "LOGIN/LOGOUT status")
     private String loginStatus;
+
+    @Schema(description = "Full name of the logged-in user")
+    private String name;
     
     public LoginResponse(String token, String type, String username, String message) {
         this.token = token;

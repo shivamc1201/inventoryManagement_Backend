@@ -37,6 +37,8 @@ public class UpdateMachinePart {
     @NotNull(message = "Condition is required")
     private MachinePart.Condition condition;
 
+    private BigDecimal price;
+
     private String hsn;
 
     private BigDecimal taxRate;

@@ -28,6 +28,8 @@ public class MachinePartRequest {
 
     private MachinePart.Condition condition;
 
+    private BigDecimal price;
+
     private String hsn;
 
     private String taxRateCode;

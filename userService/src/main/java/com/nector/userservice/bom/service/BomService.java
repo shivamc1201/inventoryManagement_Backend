@@ -27,4 +27,7 @@ public interface BomService {
     BomSummaryDto getSummary();
 
     BomProductionResponseDto produceFinishedProduct(BomProductionRequestDto requestDto);
+
+    /** Reload BOM from DB, recalculate all cost fields, and persist. */
+    void recomputeBomCosts(Long bomId);
 }

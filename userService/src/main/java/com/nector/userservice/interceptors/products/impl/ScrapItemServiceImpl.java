@@ -2,8 +2,10 @@ package com.nector.userservice.interceptors.products.impl;
 
 import com.nector.userservice.exception.InsufficientStockException;
 import com.nector.userservice.exception.ScrapItemNotFoundException;
+import com.nector.userservice.interceptors.products.model.ProductPriceHistory;
 import com.nector.userservice.interceptors.products.model.ScrapItemRequest;
 import com.nector.userservice.interceptors.products.model.ScrapItemResponse;
+import com.nector.userservice.interceptors.products.service.ProductPriceHistoryService;
 import com.nector.userservice.interceptors.products.service.ScrapItemService;
 import com.nector.userservice.model.ScrapItem;
 import com.nector.userservice.repository.ScrapItemRepository;
@@ -24,6 +26,7 @@ import java.util.stream.Collectors;
 public class ScrapItemServiceImpl implements ScrapItemService {
     
     private final ScrapItemRepository scrapItemRepository;
+    private final ProductPriceHistoryService productPriceHistoryService;
     
     @Override
     @Transactional
@@ -62,7 +65,9 @@ public class ScrapItemServiceImpl implements ScrapItemService {
         
         ScrapItem item = scrapItemRepository.findById(id)
             .orElseThrow(() -> new ScrapItemNotFoundException(id));
-        
+
+        BigDecimal oldPrice = item.getPrice();
+
         item.setName(request.getName());
         item.setUnit(request.getUnit());
         item.setPrice(request.getPrice());
@@ -78,10 +83,17 @@ public class ScrapItemServiceImpl implements ScrapItemService {
         
         ScrapItem updatedItem = scrapItemRepository.save(item);
         log.info("Scrap item updated successfully with ID: {}", updatedItem.getId());
-        
+
+        BigDecimal newPrice = updatedItem.getPrice();
+        if (oldPrice != null && newPrice != null && oldPrice.compareTo(newPrice) != 0) {
+            productPriceHistoryService.record(ProductPriceHistory.ProductType.SCRAP_ITEM,
+                    updatedItem.getId(), updatedItem.getName(), updatedItem.getItemCode(),
+                    oldPrice, newPrice);
+        }
+
         return mapToResponse(updatedItem);
     }
-    
+
     @Override
     @Transactional
     public void deleteScrapItem(Long id) {
@@ -212,6 +224,8 @@ public class ScrapItemServiceImpl implements ScrapItemService {
         ScrapItem item = scrapItemRepository.findByItemCode(itemCode)
                 .orElseThrow(() -> new ScrapItemNotFoundException(0L));
 
+        BigDecimal oldPriceByCode = item.getPrice();
+
         if (request.getName() != null) item.setName(request.getName());
         if (request.getUnit() != null) item.setUnit(request.getUnit());
         if (request.getPrice() != null) item.setPrice(request.getPrice());
@@ -228,6 +242,15 @@ public class ScrapItemServiceImpl implements ScrapItemService {
 
         ScrapItem updatedItem = scrapItemRepository.save(item);
         log.info("Scrap item updated by item code: {}", itemCode);
+
+        BigDecimal newPriceByCode = updatedItem.getPrice();
+        if (request.getPrice() != null && oldPriceByCode != null
+                && oldPriceByCode.compareTo(newPriceByCode) != 0) {
+            productPriceHistoryService.record(ProductPriceHistory.ProductType.SCRAP_ITEM,
+                    updatedItem.getId(), updatedItem.getName(), updatedItem.getItemCode(),
+                    oldPriceByCode, newPriceByCode);
+        }
+
         return mapToResponse(updatedItem);
     }
 }

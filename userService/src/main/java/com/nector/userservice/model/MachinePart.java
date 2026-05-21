@@ -53,6 +53,9 @@ public class MachinePart {
     @Column
     private Condition condition = Condition.New;
     
+    @Column(precision = 10, scale = 2)
+    private BigDecimal price;
+
     @Column(length = 50)
     private String hsn;
     

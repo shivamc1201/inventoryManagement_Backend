@@ -218,6 +218,15 @@ public class BomServiceImpl implements BomService {
     }
 
     @Override
+    public void recomputeBomCosts(Long bomId) {
+        BillOfMaterial bom = billOfMaterialRepository.findById(bomId)
+                .orElseThrow(() -> new ResourceNotFoundException("BOM not found with ID: " + bomId));
+        computeCosts(bom);
+        billOfMaterialRepository.save(bom);
+        log.info("Recomputed costs for BOM ID: {}", bomId);
+    }
+
+    @Override
     public BomProductionResponseDto produceFinishedProduct(BomProductionRequestDto requestDto) {
         log.info("Producing finished product: {} with quantity: {}",
                 requestDto.getFinishedProductName(), requestDto.getQuantity());

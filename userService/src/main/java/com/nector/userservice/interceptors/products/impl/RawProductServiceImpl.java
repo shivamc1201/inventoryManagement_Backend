@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.products.impl;
 
+import com.nector.userservice.bom.service.BomPriceChangeService;
 import com.nector.userservice.cloudinary.CloudinaryService;
 import com.nector.userservice.exception.InsufficientStockException;
 import com.nector.userservice.exception.RawProductNotFoundException;
@@ -27,6 +28,7 @@ public class RawProductServiceImpl implements RawProductService {
 
     private final RawProductRepository rawProductRepository;
     private final CloudinaryService cloudinaryService;
+    private final BomPriceChangeService bomPriceChangeService;
 
     @Override
     @Transactional
@@ -84,6 +86,8 @@ public class RawProductServiceImpl implements RawProductService {
         RawProduct product = rawProductRepository.findById(id)
                 .orElseThrow(() -> new RawProductNotFoundException(id));
 
+        BigDecimal oldPrice = product.getPrice();
+
         product.setName(request.getName());
         product.setUnit(request.getUnit());
         product.setPrice(request.getPrice());
@@ -113,6 +117,11 @@ public class RawProductServiceImpl implements RawProductService {
 
         RawProduct updatedProduct = rawProductRepository.save(product);
         log.info("Raw product updated successfully with ID: {}", updatedProduct.getId());
+
+        BigDecimal newPrice = updatedProduct.getPrice();
+        if (oldPrice != null && newPrice != null && oldPrice.compareTo(newPrice) != 0) {
+            bomPriceChangeService.handleRawMaterialPriceChange(updatedProduct, oldPrice, newPrice);
+        }
 
         return mapToResponse(updatedProduct);
     }
@@ -261,6 +270,8 @@ public class RawProductServiceImpl implements RawProductService {
         RawProduct product = rawProductRepository.findByMaterialCode(materialCode)
                 .orElseThrow(() -> new RawProductNotFoundException(0L));
 
+        BigDecimal oldPriceByCode = product.getPrice();
+
         if (request.getName() != null) product.setName(request.getName());
         if (request.getUnit() != null) product.setUnit(request.getUnit());
         if (request.getPrice() != null) product.setPrice(request.getPrice());
@@ -277,6 +288,13 @@ public class RawProductServiceImpl implements RawProductService {
 
         RawProduct updatedProduct = rawProductRepository.save(product);
         log.info("Raw product updated by material code: {}", materialCode);
+
+        BigDecimal newPriceByCode = updatedProduct.getPrice();
+        if (request.getPrice() != null && oldPriceByCode != null
+                && oldPriceByCode.compareTo(newPriceByCode) != 0) {
+            bomPriceChangeService.handleRawMaterialPriceChange(updatedProduct, oldPriceByCode, newPriceByCode);
+        }
+
         return mapToResponse(updatedProduct);
     }
 }

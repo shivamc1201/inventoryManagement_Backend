@@ -12,4 +12,6 @@ public interface BomComponentRepository extends JpaRepository<BomComponent, Long
     List<BomComponent> findByBomId(Long bomId);
 
     void deleteByBomId(Long bomId);
+
+    List<BomComponent> findByRawMaterialId(Long rawMaterialId);
 }

@@ -19,6 +19,7 @@ public class MachinePartResponse {
     private LocalDate warrantyExpiryDate;
     private Integer quantity;
     private String unit;
+    private BigDecimal price;
     private MachinePart.Condition condition;
     private String hsn;
     private BigDecimal taxRate;
@@ -26,4 +27,7 @@ public class MachinePartResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private ProductStatus status;
+    private BigDecimal rate;
+    private BigDecimal gst;
+    private BigDecimal grossAmount;
 }

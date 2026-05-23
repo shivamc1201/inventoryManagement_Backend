@@ -2,8 +2,10 @@ package com.nector.userservice.interceptors.products.impl;
 
 import com.nector.userservice.exception.InsufficientStockException;
 import com.nector.userservice.exception.PromotionalItemNotFoundException;
+import com.nector.userservice.interceptors.products.model.ProductPriceHistory;
 import com.nector.userservice.interceptors.products.model.PromotionalItemRequest;
 import com.nector.userservice.interceptors.products.model.PromotionalItemResponse;
+import com.nector.userservice.interceptors.products.service.ProductPriceHistoryService;
 import com.nector.userservice.interceptors.products.service.PromotionalItemService;
 import com.nector.userservice.model.PromotionalItem;
 import com.nector.userservice.repository.PromotionalItemRepository;
@@ -24,6 +26,7 @@ import java.util.stream.Collectors;
 public class PromotionalItemServiceImpl implements PromotionalItemService {
     
     private final PromotionalItemRepository promotionalItemRepository;
+    private final ProductPriceHistoryService productPriceHistoryService;
     
     @Override
     @Transactional
@@ -48,9 +51,12 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
         item.setTransportName(request.getTransportName());
         item.setDriverName(request.getDriverName());
         item.setDriverMobile(request.getDriverMobile());
+        item.setRate(request.getRate());
+        item.setGst(request.getGst());
+        item.setGrossAmount(request.getGrossAmount());
         item.setActive(true);
         if (request.getStatus() != null) item.setStatus(request.getStatus());
-        
+
         PromotionalItem savedItem = promotionalItemRepository.save(item);
         log.info("Promotional item created successfully with ID: {}", savedItem.getId());
         
@@ -64,7 +70,9 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
         
         PromotionalItem item = promotionalItemRepository.findById(id)
             .orElseThrow(() -> new PromotionalItemNotFoundException(id));
-        
+
+        BigDecimal oldPrice = item.getPrice();
+
         item.setName(request.getName());
         item.setUnit(request.getUnit());
         item.setPrice(request.getPrice());
@@ -77,14 +85,24 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
         item.setTransportName(request.getTransportName());
         item.setDriverName(request.getDriverName());
         item.setDriverMobile(request.getDriverMobile());
+        item.setRate(request.getRate());
+        item.setGst(request.getGst());
+        item.setGrossAmount(request.getGrossAmount());
         if (request.getStatus() != null) item.setStatus(request.getStatus());
-        
+
         PromotionalItem updatedItem = promotionalItemRepository.save(item);
         log.info("Promotional item updated successfully with ID: {}", updatedItem.getId());
-        
+
+        BigDecimal newPrice = updatedItem.getPrice();
+        if (oldPrice != null && newPrice != null && oldPrice.compareTo(newPrice) != 0) {
+            productPriceHistoryService.record(ProductPriceHistory.ProductType.PROMOTIONAL_ITEM,
+                    updatedItem.getId(), updatedItem.getName(), updatedItem.getItemCode(),
+                    oldPrice, newPrice);
+        }
+
         return mapToResponse(updatedItem);
     }
-    
+
     @Override
     @Transactional
     public void deletePromotionalItem(Long id) {
@@ -202,6 +220,9 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
         response.setDriverName(item.getDriverName());
         response.setDriverMobile(item.getDriverMobile());
         response.setStatus(item.getStatus());
+        response.setRate(item.getRate());
+        response.setGst(item.getGst());
+        response.setGrossAmount(item.getGrossAmount());
         return response;
     }
 
@@ -212,6 +233,8 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
 
         PromotionalItem item = promotionalItemRepository.findByItemCode(itemCode)
                 .orElseThrow(() -> new PromotionalItemNotFoundException(0L));
+
+        BigDecimal oldPriceByCode = item.getPrice();
 
         if (request.getName() != null) item.setName(request.getName());
         if (request.getUnit() != null) item.setUnit(request.getUnit());
@@ -225,10 +248,22 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
         if (request.getTransportName() != null) item.setTransportName(request.getTransportName());
         if (request.getDriverName() != null) item.setDriverName(request.getDriverName());
         if (request.getDriverMobile() != null) item.setDriverMobile(request.getDriverMobile());
+        if (request.getRate() != null) item.setRate(request.getRate());
+        if (request.getGst() != null) item.setGst(request.getGst());
+        if (request.getGrossAmount() != null) item.setGrossAmount(request.getGrossAmount());
         if (request.getStatus() != null) item.setStatus(request.getStatus());
 
         PromotionalItem updatedItem = promotionalItemRepository.save(item);
         log.info("Promotional item updated by item code: {}", itemCode);
+
+        BigDecimal newPriceByCode = updatedItem.getPrice();
+        if (request.getPrice() != null && oldPriceByCode != null
+                && oldPriceByCode.compareTo(newPriceByCode) != 0) {
+            productPriceHistoryService.record(ProductPriceHistory.ProductType.PROMOTIONAL_ITEM,
+                    updatedItem.getId(), updatedItem.getName(), updatedItem.getItemCode(),
+                    oldPriceByCode, newPriceByCode);
+        }
+
         return mapToResponse(updatedItem);
     }
 }

@@ -28,9 +28,17 @@ public class MachinePartRequest {
 
     private MachinePart.Condition condition;
 
+    private BigDecimal price;
+
     private String hsn;
 
     private String taxRateCode;
 
     private ProductStatus status;
+
+    private BigDecimal rate;
+
+    private BigDecimal gst;
+
+    private BigDecimal grossAmount;
 }

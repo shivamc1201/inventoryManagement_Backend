@@ -36,4 +36,10 @@ public class ScrapItemRequest {
     private String driverMobile;
 
     private ProductStatus status;
+
+    private BigDecimal rate;
+
+    private BigDecimal gst;
+
+    private BigDecimal grossAmount;
 }

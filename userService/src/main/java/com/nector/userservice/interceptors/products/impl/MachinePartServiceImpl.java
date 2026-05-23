@@ -3,15 +3,18 @@ package com.nector.userservice.interceptors.products.impl;
 import com.nector.userservice.exception.MachinePartNotFoundException;
 import com.nector.userservice.interceptors.products.model.MachinePartRequest;
 import com.nector.userservice.interceptors.products.model.MachinePartResponse;
-import com.nector.userservice.repository.MachinePartRepository;
+import com.nector.userservice.interceptors.products.model.ProductPriceHistory;
 import com.nector.userservice.interceptors.products.service.MachinePartService;
+import com.nector.userservice.interceptors.products.service.ProductPriceHistoryService;
 import com.nector.userservice.model.MachinePart;
+import com.nector.userservice.repository.MachinePartRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,6 +24,7 @@ import java.util.stream.Collectors;
 public class MachinePartServiceImpl implements MachinePartService {
     
     private final MachinePartRepository machinePartRepository;
+    private final ProductPriceHistoryService productPriceHistoryService;
     
     @Override
     @Transactional
@@ -40,9 +44,13 @@ public class MachinePartServiceImpl implements MachinePartService {
         part.setWarrantyExpiryDate(request.getWarrantyExpiryDate());
         part.setQuantity(request.getQuantity());
         part.setUnit(request.getUnit());
+        part.setPrice(request.getPrice());
         part.setCondition(request.getCondition());
         part.setHsn(request.getHsn());
         part.setTaxRate(parseTaxRate(request.getTaxRateCode()));
+        part.setRate(request.getRate());
+        part.setGst(request.getGst());
+        part.setGrossAmount(request.getGrossAmount());
         if (request.getStatus() != null) part.setStatus(request.getStatus());
 
         MachinePart savedPart = machinePartRepository.save(part);
@@ -60,6 +68,8 @@ public class MachinePartServiceImpl implements MachinePartService {
                 .filter(p -> Boolean.TRUE.equals(p.getActive()))
                 .orElseThrow(() -> new MachinePartNotFoundException(id));
 
+        BigDecimal oldPrice = part.getPrice();
+
         part.setName(request.getName());
         part.setCategory(request.getCategory());
         part.setVendor(request.getVendor());
@@ -67,12 +77,23 @@ public class MachinePartServiceImpl implements MachinePartService {
         part.setWarrantyExpiryDate(request.getWarrantyExpiryDate());
         part.setQuantity(request.getQuantity());
         part.setUnit(request.getUnit());
+        part.setPrice(request.getPrice());
         part.setCondition(request.getCondition());
         part.setHsn(request.getHsn());
         part.setTaxRate(request.getTaxRate());
+        if (request.getRate() != null) part.setRate(request.getRate());
+        if (request.getGst() != null) part.setGst(request.getGst());
+        if (request.getGrossAmount() != null) part.setGrossAmount(request.getGrossAmount());
 
         MachinePart updatedPart = machinePartRepository.save(part);
         log.info("Machine part updated successfully with ID: {}", updatedPart.getId());
+
+        BigDecimal newPrice = updatedPart.getPrice();
+        if (oldPrice != null && newPrice != null && oldPrice.compareTo(newPrice) != 0) {
+            productPriceHistoryService.record(ProductPriceHistory.ProductType.MACHINE_PART,
+                    updatedPart.getId(), updatedPart.getName(), updatedPart.getPartNumber(),
+                    oldPrice, newPrice);
+        }
 
         return mapToResponse(updatedPart);
     }
@@ -177,11 +198,15 @@ public class MachinePartServiceImpl implements MachinePartService {
         response.setWarrantyExpiryDate(part.getWarrantyExpiryDate());
         response.setQuantity(part.getQuantity());
         response.setUnit(part.getUnit());
+        response.setPrice(part.getPrice());
         response.setCondition(part.getCondition());
         response.setActive(part.getActive());
         response.setCreatedAt(part.getCreatedAt());
         response.setUpdatedAt(part.getUpdatedAt());
         response.setStatus(part.getStatus());
+        response.setRate(part.getRate());
+        response.setGst(part.getGst());
+        response.setGrossAmount(part.getGrossAmount());
         return response;
     }
 
@@ -193,6 +218,8 @@ public class MachinePartServiceImpl implements MachinePartService {
         MachinePart part = machinePartRepository.findByPartNumber(partNumber)
                 .orElseThrow(() -> new MachinePartNotFoundException(0L));
 
+        BigDecimal oldPriceByPart = part.getPrice();
+
         if (request.getName() != null) part.setName(request.getName());
         if (request.getCategory() != null) part.setCategory(request.getCategory());
         if (request.getVendor() != null) part.setVendor(request.getVendor());
@@ -200,13 +227,26 @@ public class MachinePartServiceImpl implements MachinePartService {
         if (request.getWarrantyExpiryDate() != null) part.setWarrantyExpiryDate(request.getWarrantyExpiryDate());
         if (request.getQuantity() != null) part.setQuantity(request.getQuantity());
         if (request.getUnit() != null) part.setUnit(request.getUnit());
+        if (request.getPrice() != null) part.setPrice(request.getPrice());
         if (request.getCondition() != null) part.setCondition(request.getCondition());
         if (request.getHsn() != null) part.setHsn(request.getHsn());
         if (request.getTaxRateCode() != null) part.setTaxRate(parseTaxRate(request.getTaxRateCode()));
+        if (request.getRate() != null) part.setRate(request.getRate());
+        if (request.getGst() != null) part.setGst(request.getGst());
+        if (request.getGrossAmount() != null) part.setGrossAmount(request.getGrossAmount());
         if (request.getStatus() != null) part.setStatus(request.getStatus());
 
         MachinePart updatedPart = machinePartRepository.save(part);
         log.info("Machine part updated by part number: {}", partNumber);
+
+        BigDecimal newPriceByPart = updatedPart.getPrice();
+        if (request.getPrice() != null && oldPriceByPart != null
+                && oldPriceByPart.compareTo(newPriceByPart) != 0) {
+            productPriceHistoryService.record(ProductPriceHistory.ProductType.MACHINE_PART,
+                    updatedPart.getId(), updatedPart.getName(), updatedPart.getPartNumber(),
+                    oldPriceByPart, newPriceByPart);
+        }
+
         return mapToResponse(updatedPart);
     }
 

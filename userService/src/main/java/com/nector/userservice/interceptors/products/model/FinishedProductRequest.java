@@ -31,6 +31,12 @@ public class FinishedProductRequest {
     private BigDecimal taxRate;
     
     private Boolean active;
-    
+
     private ProductStatus status;
+
+    private BigDecimal rate;
+
+    private BigDecimal gst;
+
+    private BigDecimal grossAmount;
 }

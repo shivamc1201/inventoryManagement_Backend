@@ -30,4 +30,7 @@ public class RawProductResponse {
     private String driverMobile;
     private ProductStatus status;
     private String imageUrl;
+    private BigDecimal rate;
+    private BigDecimal gst;
+    private BigDecimal grossAmount;
 }

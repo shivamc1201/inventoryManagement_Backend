@@ -53,6 +53,9 @@ public class MachinePart {
     @Column
     private Condition condition = Condition.New;
     
+    @Column(precision = 10, scale = 2)
+    private BigDecimal price;
+
     @Column(length = 50)
     private String hsn;
     
@@ -73,6 +76,15 @@ public class MachinePart {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
     
+    @Column(precision = 10, scale = 2)
+    private BigDecimal rate;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal gst;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal grossAmount;
+
     public enum Category {
         Machine, MACHINE, Electrical, ELECTRICAL, Hydraulic, HYDRAULIC, Pneumatic, PNEUMATIC, Tool, TOOL, SparePart, SPARE_PART, Other, OTHER
     }

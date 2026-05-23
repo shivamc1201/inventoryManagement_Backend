@@ -101,4 +101,12 @@ public class RawProduct {
     @Column(length = 500)
     private String imageUrl;
 
+    @Column(precision = 10, scale = 2)
+    private BigDecimal rate;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal gst;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal grossAmount;
 }

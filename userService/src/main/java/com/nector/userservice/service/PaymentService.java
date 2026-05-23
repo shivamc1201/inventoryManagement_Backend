@@ -516,7 +516,7 @@ public class PaymentService {
 
         // Update payment status
         payment.setStatus("LEDGER_UPDATED");
-        payment.setApprovedAt(LocalDateTime.now());
+        payment.setApprovedAt(payment.getCreatedAt());
         payment.setApprovedBy(approvedBy);
         paymentApprovalRepository.save(payment);
     }

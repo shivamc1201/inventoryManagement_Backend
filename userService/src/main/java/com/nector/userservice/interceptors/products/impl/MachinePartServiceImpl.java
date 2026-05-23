@@ -48,6 +48,9 @@ public class MachinePartServiceImpl implements MachinePartService {
         part.setCondition(request.getCondition());
         part.setHsn(request.getHsn());
         part.setTaxRate(parseTaxRate(request.getTaxRateCode()));
+        part.setRate(request.getRate());
+        part.setGst(request.getGst());
+        part.setGrossAmount(request.getGrossAmount());
         if (request.getStatus() != null) part.setStatus(request.getStatus());
 
         MachinePart savedPart = machinePartRepository.save(part);
@@ -78,6 +81,9 @@ public class MachinePartServiceImpl implements MachinePartService {
         part.setCondition(request.getCondition());
         part.setHsn(request.getHsn());
         part.setTaxRate(request.getTaxRate());
+        if (request.getRate() != null) part.setRate(request.getRate());
+        if (request.getGst() != null) part.setGst(request.getGst());
+        if (request.getGrossAmount() != null) part.setGrossAmount(request.getGrossAmount());
 
         MachinePart updatedPart = machinePartRepository.save(part);
         log.info("Machine part updated successfully with ID: {}", updatedPart.getId());
@@ -198,6 +204,9 @@ public class MachinePartServiceImpl implements MachinePartService {
         response.setCreatedAt(part.getCreatedAt());
         response.setUpdatedAt(part.getUpdatedAt());
         response.setStatus(part.getStatus());
+        response.setRate(part.getRate());
+        response.setGst(part.getGst());
+        response.setGrossAmount(part.getGrossAmount());
         return response;
     }
 
@@ -222,6 +231,9 @@ public class MachinePartServiceImpl implements MachinePartService {
         if (request.getCondition() != null) part.setCondition(request.getCondition());
         if (request.getHsn() != null) part.setHsn(request.getHsn());
         if (request.getTaxRateCode() != null) part.setTaxRate(parseTaxRate(request.getTaxRateCode()));
+        if (request.getRate() != null) part.setRate(request.getRate());
+        if (request.getGst() != null) part.setGst(request.getGst());
+        if (request.getGrossAmount() != null) part.setGrossAmount(request.getGrossAmount());
         if (request.getStatus() != null) part.setStatus(request.getStatus());
 
         MachinePart updatedPart = machinePartRepository.save(part);

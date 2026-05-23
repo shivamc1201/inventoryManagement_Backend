@@ -29,4 +29,7 @@ public class PromotionalItemResponse {
     private String driverName;
     private String driverMobile;
     private ProductStatus status;
+    private BigDecimal rate;
+    private BigDecimal gst;
+    private BigDecimal grossAmount;
 }

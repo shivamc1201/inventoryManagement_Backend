@@ -35,4 +35,10 @@ public class MachinePartRequest {
     private String taxRateCode;
 
     private ProductStatus status;
+
+    private BigDecimal rate;
+
+    private BigDecimal gst;
+
+    private BigDecimal grossAmount;
 }

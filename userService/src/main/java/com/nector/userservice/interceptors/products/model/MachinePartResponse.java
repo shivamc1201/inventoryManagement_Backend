@@ -27,4 +27,7 @@ public class MachinePartResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private ProductStatus status;
+    private BigDecimal rate;
+    private BigDecimal gst;
+    private BigDecimal grossAmount;
 }

@@ -36,4 +36,10 @@ public class RawProductRequest {
     private String driverMobile;
 
     private ProductStatus status;
+
+    private BigDecimal rate;
+
+    private BigDecimal gst;
+
+    private BigDecimal grossAmount;
 }

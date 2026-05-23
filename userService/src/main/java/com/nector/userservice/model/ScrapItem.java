@@ -97,4 +97,13 @@ public class ScrapItem {
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private ProductStatus status = ProductStatus.MASTER;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal rate;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal gst;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal grossAmount;
 }

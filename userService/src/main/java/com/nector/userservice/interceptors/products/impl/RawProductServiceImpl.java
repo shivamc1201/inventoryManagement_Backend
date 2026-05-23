@@ -57,6 +57,9 @@ public class RawProductServiceImpl implements RawProductService {
         product.setTransportName(request.getTransportName());
         product.setDriverName(request.getDriverName());
         product.setDriverMobile(request.getDriverMobile());
+        product.setRate(request.getRate());
+        product.setGst(request.getGst());
+        product.setGrossAmount(request.getGrossAmount());
         product.setActive(true);
         if (request.getStatus() != null) product.setStatus(request.getStatus());
 
@@ -93,10 +96,8 @@ public class RawProductServiceImpl implements RawProductService {
         product.setPrice(request.getPrice());
 
         if (request.getQuantity() != null) {
-            BigDecimal updatedQuantity = product.getQuantity()
-                    .add(request.getQuantity());
-
-            product.setQuantity(updatedQuantity);
+            BigDecimal currentQty = product.getQuantity() != null ? product.getQuantity() : BigDecimal.ZERO;
+            product.setQuantity(currentQty.add(request.getQuantity()));
         }
 
         product.setMinimumThreshold(request.getMinimumThreshold());
@@ -107,6 +108,9 @@ public class RawProductServiceImpl implements RawProductService {
         product.setTransportName(request.getTransportName());
         product.setDriverName(request.getDriverName());
         product.setDriverMobile(request.getDriverMobile());
+        product.setRate(request.getRate());
+        product.setGst(request.getGst());
+        product.setGrossAmount(request.getGrossAmount());
         if (request.getStatus() != null) product.setStatus(request.getStatus());
 
         if (image != null && !image.isEmpty()) {
@@ -243,6 +247,9 @@ public class RawProductServiceImpl implements RawProductService {
         response.setDriverMobile(product.getDriverMobile());
         response.setStatus(product.getStatus());
         response.setImageUrl(product.getImageUrl());
+        response.setRate(product.getRate());
+        response.setGst(product.getGst());
+        response.setGrossAmount(product.getGrossAmount());
         return response;
     }
 
@@ -284,6 +291,9 @@ public class RawProductServiceImpl implements RawProductService {
         if (request.getTransportName() != null) product.setTransportName(request.getTransportName());
         if (request.getDriverName() != null) product.setDriverName(request.getDriverName());
         if (request.getDriverMobile() != null) product.setDriverMobile(request.getDriverMobile());
+        if (request.getRate() != null) product.setRate(request.getRate());
+        if (request.getGst() != null) product.setGst(request.getGst());
+        if (request.getGrossAmount() != null) product.setGrossAmount(request.getGrossAmount());
         if (request.getStatus() != null) product.setStatus(request.getStatus());
 
         RawProduct updatedProduct = rawProductRepository.save(product);

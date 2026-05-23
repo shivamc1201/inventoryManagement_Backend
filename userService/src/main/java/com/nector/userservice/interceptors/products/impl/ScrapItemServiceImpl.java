@@ -49,9 +49,12 @@ public class ScrapItemServiceImpl implements ScrapItemService {
         item.setTransportName(request.getTransportName());
         item.setDriverName(request.getDriverName());
         item.setDriverMobile(request.getDriverMobile());
+        item.setRate(request.getRate());
+        item.setGst(request.getGst());
+        item.setGrossAmount(request.getGrossAmount());
         item.setActive(true);
         if (request.getStatus() != null) item.setStatus(request.getStatus());
-        
+
         ScrapItem savedItem = scrapItemRepository.save(item);
         log.info("Scrap item created successfully with ID: {}", savedItem.getId());
         
@@ -80,7 +83,10 @@ public class ScrapItemServiceImpl implements ScrapItemService {
         item.setTransportName(request.getTransportName());
         item.setDriverName(request.getDriverName());
         item.setDriverMobile(request.getDriverMobile());
-        
+        item.setRate(request.getRate());
+        item.setGst(request.getGst());
+        item.setGrossAmount(request.getGrossAmount());
+
         ScrapItem updatedItem = scrapItemRepository.save(item);
         log.info("Scrap item updated successfully with ID: {}", updatedItem.getId());
 
@@ -213,6 +219,9 @@ public class ScrapItemServiceImpl implements ScrapItemService {
         response.setDriverName(item.getDriverName());
         response.setDriverMobile(item.getDriverMobile());
         response.setStatus(item.getStatus());
+        response.setRate(item.getRate());
+        response.setGst(item.getGst());
+        response.setGrossAmount(item.getGrossAmount());
         return response;
     }
 
@@ -238,6 +247,9 @@ public class ScrapItemServiceImpl implements ScrapItemService {
         if (request.getTransportName() != null) item.setTransportName(request.getTransportName());
         if (request.getDriverName() != null) item.setDriverName(request.getDriverName());
         if (request.getDriverMobile() != null) item.setDriverMobile(request.getDriverMobile());
+        if (request.getRate() != null) item.setRate(request.getRate());
+        if (request.getGst() != null) item.setGst(request.getGst());
+        if (request.getGrossAmount() != null) item.setGrossAmount(request.getGrossAmount());
         if (request.getStatus() != null) item.setStatus(request.getStatus());
 
         ScrapItem updatedItem = scrapItemRepository.save(item);

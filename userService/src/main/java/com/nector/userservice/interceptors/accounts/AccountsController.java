@@ -15,8 +15,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
@@ -138,8 +140,9 @@ public class AccountsController {
             @RequestParam Long distributorId,
             @RequestParam BigDecimal amount,
             @RequestParam TransactionType transactionType,
-            @RequestParam String description) {
-        Long paymentId = paymentService.addPaymentForApproval(distributorId, amount, transactionType.name(), description);
+            @RequestParam String description,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime date) {
+        Long paymentId = paymentService.addPaymentForApproval(distributorId, amount, transactionType.name(), description, date);
 
         PaymentApprovalResponse response = new PaymentApprovalResponse();
         response.setPaymentId(paymentId);
@@ -157,8 +160,9 @@ public class AccountsController {
             @RequestParam Long salespersonId,
             @RequestParam BigDecimal amount,
             @RequestParam TransactionType transactionType,
-            @RequestParam String description) {
-        Long paymentId = paymentService.addPaymentForApprovalWithSalesperson(distributorId, salespersonId, amount, transactionType.name(), description);
+            @RequestParam String description,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime date) {
+        Long paymentId = paymentService.addPaymentForApprovalWithSalesperson(distributorId, salespersonId, amount, transactionType.name(), description, date);
 
         PaymentApprovalResponse response = new PaymentApprovalResponse();
         response.setPaymentId(paymentId);
@@ -298,10 +302,11 @@ public class AccountsController {
             @RequestParam Long distributorId,
             @RequestParam BigDecimal amount,
             @RequestParam TransactionType transactionType,
-            @RequestParam String description) {
+            @RequestParam String description,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime date) {
 
         // Directly update ledger for all transaction types (JV, CREDIT, DEBIT)
-        paymentService.updateDistributorBalance(distributorId, amount, transactionType.name(), description);
+        paymentService.updateDistributorBalance(distributorId, amount, transactionType.name(), description, date);
 
         PaymentApprovalResponse response = new PaymentApprovalResponse();
         response.setPaymentId(null);

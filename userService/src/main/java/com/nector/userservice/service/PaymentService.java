@@ -175,12 +175,13 @@ public class PaymentService {
             .toList();
     }
     
-    public void updateDistributorBalance(Long distributorId, BigDecimal amount, String transactionType, String description) {
+    public void updateDistributorBalance(Long distributorId, BigDecimal amount, String transactionType, String description, LocalDateTime date) {
         DistributorLedger ledger = new DistributorLedger();
         ledger.setDistributorId(distributorId);
         ledger.setAmount(amount);
         ledger.setTransactionType(transactionType);
         ledger.setDescription(description);
+        ledger.setCreatedAt(date != null ? date : LocalDateTime.now());
         distributorLedgerRepository.save(ledger);
     }
     
@@ -289,7 +290,7 @@ public class PaymentService {
             updateAwaitingPaymentStep(orderId);
             
             // Deduct amount from distributor ledger
-            updateDistributorBalance(distributorId, piAmount, "DEBIT", "Payment for Order #" + orderId);
+            updateDistributorBalance(distributorId, piAmount, "DEBIT", "Payment for Order #" + orderId, LocalDateTime.now());
             
             // Update PI status to PAID
             pi.setPaymentStatus(ProformaInvoice.PaymentStatus.PAID);
@@ -355,7 +356,7 @@ public class PaymentService {
         distributorRepository.save(distributor);
 
         // Create a ledger entry for audit trail
-        updateDistributorBalance(distributorId, orderAmount, "DEBIT", "Payment for Order #" + orderId + " (using credit)");
+        updateDistributorBalance(distributorId, orderAmount, "DEBIT", "Payment for Order #" + orderId + " (using credit)", LocalDateTime.now());
 
         // Update order tracking Step 6: Approved from Accounts
         updatePaymentApprovedStep(orderId);
@@ -410,7 +411,7 @@ public class PaymentService {
         distributorRepository.save(distributor);
 
         // Create a ledger entry so the transaction appears in the ledger
-        updateDistributorBalance(distributorId, amount, "CREDIT", description);
+        updateDistributorBalance(distributorId, amount, "CREDIT", description, LocalDateTime.now());
     }
 
     public List<ProformaInvoice> getPendingPaymentApprovals() {
@@ -426,21 +427,22 @@ public class PaymentService {
     private void updateDistributorLedger(Long distributorId, java.math.BigDecimal amount) {
         String transactionType = amount.compareTo(BigDecimal.ZERO) > 0 ? "CREDIT" : "DEBIT";
         String description = amount.compareTo(BigDecimal.ZERO) > 0 ? "Payment received" : "Order deduction";
-        updateDistributorBalance(distributorId, amount.abs(), transactionType, description);
+        updateDistributorBalance(distributorId, amount.abs(), transactionType, description, LocalDateTime.now());
     }
 
-    public Long addPaymentForApproval(Long distributorId, BigDecimal amount, String transactionType, String description) {
+    public Long addPaymentForApproval(Long distributorId, BigDecimal amount, String transactionType, String description, LocalDateTime date) {
         PaymentApproval payment = new PaymentApproval();
         payment.setDistributorId(distributorId);
         payment.setAmount(amount);
         payment.setTransactionType(transactionType);
         payment.setDescription(description);
         payment.setStatus("PAYMENT_ADDED");
+        payment.setCreatedAt(date != null ? date : LocalDateTime.now());
         PaymentApproval savedPayment = paymentApprovalRepository.save(payment);
         return savedPayment.getId();
     }
 
-    public Long addPaymentForApprovalWithSalesperson(Long distributorId, Long salespersonId, BigDecimal amount, String transactionType, String description) {
+    public Long addPaymentForApprovalWithSalesperson(Long distributorId, Long salespersonId, BigDecimal amount, String transactionType, String description, LocalDateTime date) {
         PaymentApproval payment = new PaymentApproval();
         payment.setDistributorId(distributorId);
         payment.setSalespersonId(salespersonId);
@@ -448,7 +450,7 @@ public class PaymentService {
         payment.setTransactionType(transactionType);
         payment.setDescription(description);
         payment.setStatus("PAYMENT_ADDED");
-        payment.setCreatedAt(LocalDateTime.now());
+        payment.setCreatedAt(date != null ? date : LocalDateTime.now());
         PaymentApproval savedPayment = paymentApprovalRepository.save(payment);
         return savedPayment.getId();
     }
@@ -486,32 +488,32 @@ public class PaymentService {
                     // Log both transactions
                     if (creditShortfall.compareTo(BigDecimal.ZERO) > 0) {
                         updateDistributorBalance(payment.getDistributorId(), creditShortfall,
-                                "CREDIT", payment.getDescription() + " (Credit Restored)");
+                                "CREDIT", payment.getDescription() + " (Credit Restored)", payment.getCreatedAt());
                     }
-                    
+
                     if (remainingAmount.compareTo(BigDecimal.ZERO) > 0) {
                         updateDistributorBalance(payment.getDistributorId(), remainingAmount,
-                                "CREDIT", payment.getDescription() + " (Ledger Balance)");
+                                "CREDIT", payment.getDescription() + " (Ledger Balance)", payment.getCreatedAt());
                     }
                 } else {
                     // Payment is less than shortfall - add entire amount to creditBalance only
                     BigDecimal newCreditBalance = creditBalance.add(paymentAmount);
                     distributor.setCreditBalance(newCreditBalance);
                     distributorRepository.save(distributor);
-                    
+
                     // Log the transaction
                     updateDistributorBalance(payment.getDistributorId(), paymentAmount,
-                            "CREDIT", payment.getDescription() + " (Credit Restored)");
+                            "CREDIT", payment.getDescription() + " (Credit Restored)", payment.getCreatedAt());
                 }
             } else {
                 // creditBalance is already at limit or above - add entire amount to ledger
                 updateDistributorBalance(payment.getDistributorId(), payment.getAmount(),
-                        payment.getTransactionType(), payment.getDescription());
+                        payment.getTransactionType(), payment.getDescription(), payment.getCreatedAt());
             }
         } else {
             // For DEBIT or other transaction types, process normally
             updateDistributorBalance(payment.getDistributorId(), payment.getAmount(),
-                    payment.getTransactionType(), payment.getDescription());
+                    payment.getTransactionType(), payment.getDescription(), payment.getCreatedAt());
         }
 
         // Update payment status
@@ -632,7 +634,7 @@ public class PaymentService {
                         }
                 );
                 updateDistributorBalance(distributorId, entry.getDebit(), "JV",
-                        entry.getDescription() + " - " + request.getNarration());
+                        entry.getDescription() + " - " + request.getNarration(), request.getDate());
             }
 
             if (entry.getCredit() != null && entry.getCredit().compareTo(BigDecimal.ZERO) > 0) {
@@ -647,7 +649,7 @@ public class PaymentService {
                         }
                 );
                 updateDistributorBalance(distributorId, entry.getCredit(), "JV",
-                        entry.getDescription() + " - " + request.getNarration());
+                        entry.getDescription() + " - " + request.getNarration(), request.getDate());
             }
         }
     }

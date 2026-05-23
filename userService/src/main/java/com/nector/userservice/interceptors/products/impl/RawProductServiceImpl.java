@@ -1,5 +1,7 @@
 package com.nector.userservice.interceptors.products.impl;
 
+import com.nector.userservice.bom.entity.RawMaterialInventoryLot;
+import com.nector.userservice.bom.repository.RawMaterialInventoryLotRepository;
 import com.nector.userservice.bom.service.BomPriceChangeService;
 import com.nector.userservice.cloudinary.CloudinaryService;
 import com.nector.userservice.exception.InsufficientStockException;
@@ -29,6 +31,7 @@ public class RawProductServiceImpl implements RawProductService {
     private final RawProductRepository rawProductRepository;
     private final CloudinaryService cloudinaryService;
     private final BomPriceChangeService bomPriceChangeService;
+    private final RawMaterialInventoryLotRepository inventoryLotRepository;
 
     @Override
     @Transactional
@@ -72,6 +75,11 @@ public class RawProductServiceImpl implements RawProductService {
         RawProduct savedProduct = rawProductRepository.save(product);
         log.info("Raw product created successfully with ID: {}", savedProduct.getId());
 
+        if (request.getQuantity() != null && request.getQuantity().compareTo(BigDecimal.ZERO) > 0
+                && request.getPrice() != null && request.getPrice().compareTo(BigDecimal.ZERO) > 0) {
+            createInventoryLot(savedProduct.getId(), request.getQuantity(), request.getPrice());
+        }
+
         return mapToResponse(savedProduct);
     }
 
@@ -95,9 +103,11 @@ public class RawProductServiceImpl implements RawProductService {
         product.setUnit(request.getUnit());
         product.setPrice(request.getPrice());
 
-        if (request.getQuantity() != null) {
+        BigDecimal qtyAdded = null;
+        if (request.getQuantity() != null && request.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal currentQty = product.getQuantity() != null ? product.getQuantity() : BigDecimal.ZERO;
             product.setQuantity(currentQty.add(request.getQuantity()));
+            qtyAdded = request.getQuantity();
         }
 
         product.setMinimumThreshold(request.getMinimumThreshold());
@@ -121,6 +131,13 @@ public class RawProductServiceImpl implements RawProductService {
 
         RawProduct updatedProduct = rawProductRepository.save(product);
         log.info("Raw product updated successfully with ID: {}", updatedProduct.getId());
+
+        if (qtyAdded != null) {
+            BigDecimal lotPrice = updatedProduct.getPrice() != null ? updatedProduct.getPrice() : BigDecimal.ZERO;
+            if (lotPrice.compareTo(BigDecimal.ZERO) > 0) {
+                createInventoryLot(updatedProduct.getId(), qtyAdded, lotPrice);
+            }
+        }
 
         BigDecimal newPrice = updatedProduct.getPrice();
         if (oldPrice != null && newPrice != null && oldPrice.compareTo(newPrice) != 0) {
@@ -176,6 +193,11 @@ public class RawProductServiceImpl implements RawProductService {
         BigDecimal currentQty = product.getQuantity() != null ? product.getQuantity() : BigDecimal.ZERO;
         product.setQuantity(currentQty.add(quantity));
         RawProduct updatedProduct = rawProductRepository.save(product);
+
+        BigDecimal price = updatedProduct.getPrice() != null ? updatedProduct.getPrice() : BigDecimal.ZERO;
+        if (price.compareTo(BigDecimal.ZERO) > 0) {
+            createInventoryLot(updatedProduct.getId(), quantity, price);
+        }
 
         log.info("Stock increased successfully for raw product ID: {}", id);
         return mapToResponse(updatedProduct);
@@ -278,6 +300,7 @@ public class RawProductServiceImpl implements RawProductService {
                 .orElseThrow(() -> new RawProductNotFoundException(0L));
 
         BigDecimal oldPriceByCode = product.getPrice();
+        BigDecimal oldQtyByCode = product.getQuantity() != null ? product.getQuantity() : BigDecimal.ZERO;
 
         if (request.getName() != null) product.setName(request.getName());
         if (request.getUnit() != null) product.setUnit(request.getUnit());
@@ -299,6 +322,17 @@ public class RawProductServiceImpl implements RawProductService {
         RawProduct updatedProduct = rawProductRepository.save(product);
         log.info("Raw product updated by material code: {}", materialCode);
 
+        if (request.getQuantity() != null) {
+            BigDecimal newQtyByCode = updatedProduct.getQuantity() != null ? updatedProduct.getQuantity() : BigDecimal.ZERO;
+            BigDecimal diff = newQtyByCode.subtract(oldQtyByCode);
+            if (diff.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal lotPrice = updatedProduct.getPrice() != null ? updatedProduct.getPrice() : BigDecimal.ZERO;
+                if (lotPrice.compareTo(BigDecimal.ZERO) > 0) {
+                    createInventoryLot(updatedProduct.getId(), diff, lotPrice);
+                }
+            }
+        }
+
         BigDecimal newPriceByCode = updatedProduct.getPrice();
         if (request.getPrice() != null && oldPriceByCode != null
                 && oldPriceByCode.compareTo(newPriceByCode) != 0) {
@@ -306,5 +340,16 @@ public class RawProductServiceImpl implements RawProductService {
         }
 
         return mapToResponse(updatedProduct);
+    }
+
+    private void createInventoryLot(Long rawMaterialId, BigDecimal quantity, BigDecimal price) {
+        RawMaterialInventoryLot lot = RawMaterialInventoryLot.builder()
+                .rawMaterialId(rawMaterialId)
+                .quantityOriginal(quantity)
+                .quantityRemaining(quantity)
+                .pricePerUnit(price)
+                .build();
+        inventoryLotRepository.save(lot);
+        log.info("Created FIFO inventory lot for raw material ID {}: {} units @ {}", rawMaterialId, quantity, price);
     }
 }

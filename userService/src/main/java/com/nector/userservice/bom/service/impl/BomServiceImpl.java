@@ -2,6 +2,7 @@ package com.nector.userservice.bom.service.impl;
 
 import com.nector.userservice.bom.dto.*;
 import com.nector.userservice.bom.entity.*;
+import com.nector.userservice.bom.repository.RawMaterialInventoryLotRepository;
 import com.nector.userservice.exception.InsufficientStockException;
 import com.nector.userservice.exception.RawProductNotFoundException;
 import com.nector.userservice.exception.ResourceNotFoundException;
@@ -38,6 +39,7 @@ public class BomServiceImpl implements BomService {
     private final BomMapper bomMapper;
     private final RawProductRepository rawProductRepository;
     private final FinishedProductRepository finishedProductRepository;
+    private final RawMaterialInventoryLotRepository inventoryLotRepository;
 
     @Override
     public BomResponseDto create(BomRequestDto requestDto) {
@@ -155,7 +157,7 @@ public class BomServiceImpl implements BomService {
 
     private void computeCosts(BillOfMaterial bom) {
         log.debug("Computing costs for BOM: {}", bom.getBomName());
-        
+
         if (bom.getComponents() == null || bom.getComponents().isEmpty()) {
             throw new IllegalArgumentException("BOM must have at least one component");
         }
@@ -163,8 +165,10 @@ public class BomServiceImpl implements BomService {
         BigDecimal totalComponentCost = BigDecimal.ZERO;
 
         for (BomComponent component : bom.getComponents()) {
+            BigDecimal fifoRate = computeFifoRate(component.getRawMaterialId(), component.getQuantity());
+            component.setRate(fifoRate);
             BigDecimal amount = component.getQuantity()
-                    .multiply(component.getRate())
+                    .multiply(fifoRate)
                     .setScale(2, RoundingMode.HALF_UP);
             component.setAmount(amount);
             totalComponentCost = totalComponentCost.add(amount);
@@ -215,6 +219,58 @@ public class BomServiceImpl implements BomService {
         bom.setMaterialCount(bom.getComponents().size());
 
         log.debug("Cost computation completed for BOM: {}", bom.getBomName());
+    }
+
+    /**
+     * FIFO weighted-average rate for the given raw material and required quantity.
+     * Consumes oldest lots first; falls back to the product's current price for any
+     * quantity not covered by existing lots.
+     */
+    private BigDecimal computeFifoRate(Long rawMaterialId, BigDecimal requiredQty) {
+        if (requiredQty == null || requiredQty.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+
+        List<RawMaterialInventoryLot> lots = inventoryLotRepository
+                .findByRawMaterialIdAndQuantityRemainingGreaterThanOrderByReceivedAtAsc(
+                        rawMaterialId, BigDecimal.ZERO);
+
+        BigDecimal remaining = requiredQty;
+        BigDecimal totalCost = BigDecimal.ZERO;
+
+        for (RawMaterialInventoryLot lot : lots) {
+            if (remaining.compareTo(BigDecimal.ZERO) <= 0) break;
+            BigDecimal consume = remaining.min(lot.getQuantityRemaining());
+            totalCost = totalCost.add(consume.multiply(lot.getPricePerUnit()));
+            remaining = remaining.subtract(consume);
+        }
+
+        // Fall back to current product price for any quantity not yet covered by lots
+        if (remaining.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal fallback = rawProductRepository.findActiveById(rawMaterialId)
+                    .map(RawProduct::getPrice)
+                    .orElse(BigDecimal.ZERO);
+            if (fallback == null) fallback = BigDecimal.ZERO;
+            totalCost = totalCost.add(remaining.multiply(fallback));
+        }
+
+        return totalCost.divide(requiredQty, 2, RoundingMode.HALF_UP);
+    }
+
+    /** Deducts the given quantity from FIFO lots (oldest first). */
+    private void deductFromFifoLots(Long rawMaterialId, BigDecimal qty) {
+        List<RawMaterialInventoryLot> lots = inventoryLotRepository
+                .findByRawMaterialIdAndQuantityRemainingGreaterThanOrderByReceivedAtAsc(
+                        rawMaterialId, BigDecimal.ZERO);
+
+        BigDecimal remaining = qty;
+        for (RawMaterialInventoryLot lot : lots) {
+            if (remaining.compareTo(BigDecimal.ZERO) <= 0) break;
+            BigDecimal consume = remaining.min(lot.getQuantityRemaining());
+            lot.setQuantityRemaining(lot.getQuantityRemaining().subtract(consume));
+            inventoryLotRepository.save(lot);
+            remaining = remaining.subtract(consume);
+        }
     }
 
     @Override
@@ -273,6 +329,7 @@ public class BomServiceImpl implements BomService {
 
             rawProduct.setQuantity(newQuantity);
             rawProductRepository.save(rawProduct);
+            deductFromFifoLots(rawProduct.getId(), requiredQuantity);
             log.info("Deducted {} {} from raw material: {} (ID: {}). New stock: {}",
                     requiredQuantity, component.getUnit(), rawProduct.getName(),
                     rawProduct.getId(), rawProduct.getQuantity());

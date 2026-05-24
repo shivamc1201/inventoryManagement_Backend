@@ -50,7 +50,11 @@ public class BomPriceChangeController {
         return ResponseEntity.ok(bomPriceChangeService.getPriceHistory(rawMaterialId));
     }
 
-    /** Approve a single pending request — updates BOM component rate, recalculates BOM costs, and syncs FinishedProduct price. */
+    // Admin approval endpoints are disabled — BOM prices now update automatically via FIFO
+    // when a raw material price changes. Re-enable by uncommenting and restoring the
+    // maker-checker block in BomPriceChangeServiceImpl.handleRawMaterialPriceChange.
+
+    /*
     @PutMapping("/{requestId}/approve")
     public ResponseEntity<BomPriceChangeResponseDto> approve(
             @PathVariable Long requestId,
@@ -58,7 +62,6 @@ public class BomPriceChangeController {
         return ResponseEntity.ok(bomPriceChangeService.approve(requestId, action));
     }
 
-    /** Reject a single pending request — BOM keeps existing rates unchanged. */
     @PutMapping("/{requestId}/reject")
     public ResponseEntity<BomPriceChangeResponseDto> reject(
             @PathVariable Long requestId,
@@ -66,7 +69,6 @@ public class BomPriceChangeController {
         return ResponseEntity.ok(bomPriceChangeService.reject(requestId, action));
     }
 
-    /** Approve all pending requests for a raw material in one shot. */
     @PutMapping("/bulk-approve")
     public ResponseEntity<List<BomPriceChangeResponseDto>> bulkApprove(
             @RequestParam Long rawMaterialId,
@@ -74,11 +76,11 @@ public class BomPriceChangeController {
         return ResponseEntity.ok(bomPriceChangeService.bulkApprove(rawMaterialId, action));
     }
 
-    /** Reject all pending requests for a raw material in one shot. */
     @PutMapping("/bulk-reject")
     public ResponseEntity<List<BomPriceChangeResponseDto>> bulkReject(
             @RequestParam Long rawMaterialId,
             @RequestBody(required = false) PriceChangeActionDto action) {
         return ResponseEntity.ok(bomPriceChangeService.bulkReject(rawMaterialId, action));
     }
+    */
 }

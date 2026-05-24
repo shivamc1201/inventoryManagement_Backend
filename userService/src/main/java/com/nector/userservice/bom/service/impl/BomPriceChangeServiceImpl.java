@@ -53,19 +53,40 @@ public class BomPriceChangeServiceImpl implements BomPriceChangeService {
 
         List<BomComponent> affectedComponents = bomComponentRepository.findByRawMaterialId(rawProduct.getId());
         if (affectedComponents.isEmpty()) {
-            log.info("No BOM components found for raw material ID {}, skipping change requests", rawProduct.getId());
+            log.info("No BOM components found for raw material ID {}, skipping BOM recompute", rawProduct.getId());
             return;
         }
 
+        // Collect distinct BOM IDs and recompute each once
+        affectedComponents.stream()
+                .map(c -> c.getBom().getId())
+                .distinct()
+                .forEach(bomId -> {
+                    bomService.recomputeBomCosts(bomId);
+
+                    BillOfMaterial bom = billOfMaterialRepository.findById(bomId).orElse(null);
+                    if (bom != null && bom.getEffectiveRatePerUnit() != null) {
+                        finishedProductRepository.findById(bom.getFinishedProductId()).ifPresent(fp -> {
+                            fp.setPrice(bom.getEffectiveRatePerUnit());
+                            finishedProductRepository.save(fp);
+                            log.info("Auto-updated finished product '{}' price to {} via FIFO recompute",
+                                    fp.getName(), bom.getEffectiveRatePerUnit());
+                        });
+                    }
+                    log.info("Auto-recomputed BOM costs for BOM ID {} after raw material '{}' price change {} → {}",
+                            bomId, rawProduct.getName(), oldPrice, newPrice);
+                });
+
+        // Admin approval flow is disabled — BOM costs are updated automatically above.
+        // To re-enable maker-checker approval, uncomment the block below and remove the auto-recompute above.
+        /*
         final Long historyId = history.getId();
         for (BomComponent component : affectedComponents) {
-            // Skip if a PENDING request already exists for this component (e.g. rapid successive updates)
             if (priceChangeRequestRepository.existsByBomComponentIdAndStatus(
                     component.getId(), BomPriceChangeStatus.PENDING)) {
                 log.warn("Pending price change request already exists for BOM component ID {}, skipping", component.getId());
                 continue;
             }
-
             BillOfMaterial bom = component.getBom();
             BomPriceChangeRequest request = BomPriceChangeRequest.builder()
                     .rawMaterialId(rawProduct.getId())
@@ -85,6 +106,7 @@ public class BomPriceChangeServiceImpl implements BomPriceChangeService {
             log.info("Created PENDING price change request for BOM '{}' component '{}': rate {} → {}",
                     bom.getBomName(), rawProduct.getName(), component.getRate(), newPrice);
         }
+        */
     }
 
     @Override

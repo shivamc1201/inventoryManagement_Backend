@@ -4,7 +4,9 @@ import com.nector.userservice.exception.ResourceNotFoundException;
 import com.nector.userservice.interceptors.distributor.model.Distributor;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.ledger.repository.LedgerAccountRepository;
+import com.nector.userservice.model.SalesPerson;
 import com.nector.userservice.model.User;
+import com.nector.userservice.repository.SalesPersonRepository;
 import com.nector.userservice.repository.UserRepository;
 import com.nector.userservice.interceptors.salesMapping.model.*;
 import com.nector.userservice.interceptors.salesMapping.repository.SalesMappingRepository;
@@ -16,9 +18,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.annotation.Propagation;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,6 +30,7 @@ import java.util.stream.Collectors;
 public class SalesMappingServiceImpl implements SalesMappingService {
     
     private final SalesMappingRepository salesMappingRepository;
+    private final SalesPersonRepository salesPersonRepository;
     private final UserRepository userRepository;
     private final DistributorRepository distributorRepository;
     private final LedgerAccountService ledgerAccountService;
@@ -101,10 +104,21 @@ public class SalesMappingServiceImpl implements SalesMappingService {
     @Override
     @Transactional(readOnly = true)
     public List<MappingResponseDTO> getMappingsBySalesperson(Long salespersonId) {
-        return salesMappingRepository.findBySalespersonId(salespersonId)
+        List<Long> allIds = new ArrayList<>();
+        allIds.add(salespersonId);
+        collectSubordinateIds(salespersonId, allIds);
+
+        return salesMappingRepository.findBySalespersonIdIn(allIds)
                 .stream()
                 .map(this::buildResponseDTO)
                 .collect(Collectors.toList());
+    }
+
+    private void collectSubordinateIds(Long managerId, List<Long> ids) {
+        for (SalesPerson sub : salesPersonRepository.findActiveByManagerId(managerId)) {
+            ids.add(sub.getId());
+            collectSubordinateIds(sub.getId(), ids);
+        }
     }
     
     @Override
@@ -136,20 +150,29 @@ public class SalesMappingServiceImpl implements SalesMappingService {
     }
     
     private MappingResponseDTO buildResponseDTO(SalespersonDistributorMapping mapping) {
-        User salesperson = userRepository.findById(mapping.getSalespersonId()).orElse(null);
+        String salespersonName = salesPersonRepository.findById(mapping.getSalespersonId())
+                .map(sp -> sp.getFirstName() + " " + sp.getLastName())
+                .orElseGet(() -> userRepository.findById(mapping.getSalespersonId())
+                        .map(u -> u.getFirstName() + " " + u.getLastName())
+                        .orElse("Unknown"));
+
         Distributor distributor = distributorRepository.findById(mapping.getDistributorId()).orElse(null);
-        LedgerAccount ledgerAccount = null;
-//
-//        try {
-//            ledgerAccount = ledgerAccountService.getLedgerAccount(mapping.getCompanyId(), mapping.getDistributorId());
-//        } catch (Exception e) {
-//            log.warn("Ledger account not found for distributor: {}", mapping.getDistributorId());
-//        }
+        LedgerAccount ledgerAccount = ledgerAccountRepository
+                .findByCompanyIdAndDistributorId(mapping.getCompanyId(), mapping.getDistributorId())
+                .orElse(null);
 
-        ledgerAccount = ledgerAccountRepository.findByCompanyIdAndDistributorId(mapping.getCompanyId(), mapping.getDistributorId()).orElse(null);
-
-
-        return buildResponseDTO(mapping, salesperson, distributor, ledgerAccount);
+        MappingResponseDTO dto = new MappingResponseDTO();
+        dto.setId(mapping.getId());
+        dto.setSalespersonId(mapping.getSalespersonId());
+        dto.setSalespersonName(salespersonName);
+        dto.setDistributorId(mapping.getDistributorId());
+        dto.setDistributorName(distributor != null ? distributor.getFirstName() + " " + distributor.getLastName() : "Unknown");
+        dto.setCompanyId(mapping.getCompanyId());
+        dto.setStatus(mapping.getStatus());
+        dto.setLedgerAccountId(ledgerAccount != null ? ledgerAccount.getId() : null);
+        dto.setCreatedOn(mapping.getCreatedOn());
+        dto.setCreatedBy(mapping.getCreatedBy());
+        return dto;
     }
     
     private MappingResponseDTO buildResponseDTO(SalespersonDistributorMapping mapping, User salesperson, Distributor distributor, LedgerAccount ledgerAccount) {

@@ -63,6 +63,8 @@ public class RawProductServiceImpl implements RawProductService {
         product.setRate(request.getRate());
         product.setGst(request.getGst());
         product.setGrossAmount(request.getGrossAmount());
+        product.setHsn(request.getHsn());
+        product.setTaxRate(request.getTaxRate());
         product.setActive(true);
         if (request.getStatus() != null) product.setStatus(request.getStatus());
 

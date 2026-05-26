@@ -5,17 +5,20 @@ import com.nector.userservice.interceptors.products.impl.UpdateMachinePart;
 import com.nector.userservice.interceptors.products.model.*;
 import com.nector.userservice.interceptors.products.service.FinishedProductService;
 import com.nector.userservice.interceptors.products.service.MachinePartService;
+import com.nector.userservice.interceptors.products.service.ProductInwardApprovalService;
 import com.nector.userservice.interceptors.products.service.RawProductService;
 import com.nector.userservice.interceptors.products.service.PromotionalItemService;
 import com.nector.userservice.interceptors.products.service.ScrapItemService;
 import com.nector.userservice.interceptors.products.service.OutwardItemService;
 import com.nector.userservice.model.MachinePart;
 import com.nector.userservice.model.OutwardItemTransaction;
+import com.nector.userservice.model.ProductInwardApproval;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -23,6 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -41,6 +45,7 @@ public class ProductsController {
     private final PromotionalItemService promotionalItemService;
     private final ScrapItemService scrapItemService;
     private final OutwardItemService outwardItemService;
+    private final ProductInwardApprovalService productInwardApprovalService;
 
     // ==================== FINISHED PRODUCTS ====================
 
@@ -198,23 +203,38 @@ public class ProductsController {
 
     // JSON endpoint - Swagger and web without image
     @PutMapping(value = "/raw-materials/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Update raw material (JSON)", description = "Updates an existing raw material with JSON payload. Use this for requests without image.")
+    @Operation(summary = "Update raw material (JSON)", description = "Updates an existing raw material with JSON payload. Blocked if a pending inward approval exists for this product.")
     public ResponseEntity<RawProductResponse> updateRawProduct(@PathVariable Long id, @RequestBody RawProductRequest request) {
+        if (productInwardApprovalService.hasPendingApproval(ProductInwardApproval.ProductType.RAW_PRODUCT, id)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Please approve the last inward entry first for raw material ID: " + id);
+        }
         RawProductResponse response = rawProductService.updateRawProduct(id, request, null);
         return ResponseEntity.ok(response);
     }
 
     // Multipart endpoint - Web with optional image
     @PutMapping(value = "/raw-materials/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Update raw material (Multipart)", description = "Updates an existing raw material with optional image. Use this for requests with image upload.")
+    @Operation(summary = "Update raw material (Multipart)", description = "Updates an existing raw material with optional image. Blocked if a pending inward approval exists.")
     public ResponseEntity<RawProductResponse> updateRawProductMultipart(
             @PathVariable Long id,
             @Parameter(description = "Raw product request JSON",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE))
             @RequestPart("request") RawProductRequest request,
             @RequestPart(value = "image", required = false) MultipartFile image) {
+        if (productInwardApprovalService.hasPendingApproval(ProductInwardApproval.ProductType.RAW_PRODUCT, id)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Please approve the last inward entry first for raw material ID: " + id);
+        }
         RawProductResponse response = rawProductService.updateRawProduct(id, request, image);
         return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping(value = "/raw-materials/{id}")
+    @Operation(summary = "Submit raw material inward for approval (PATCH)", description = "Submits an inward stock entry for a raw material. Requires admin approval before the stock is updated.")
+    public ResponseEntity<Map<String, Object>> patchRawProduct(@PathVariable Long id, @RequestBody RawProductRequest request) {
+        Map<String, Object> response = productInwardApprovalService.createRawProductInwardApproval(id, request);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
     }
 
     @DeleteMapping("/raw-materials/{id}")
@@ -271,10 +291,21 @@ public class ProductsController {
     }
 
     @PutMapping("/machine-parts/{id}")
-    @Operation(summary = "Update machine part", description = "Updates an existing machine part")
+    @Operation(summary = "Update machine part", description = "Updates an existing machine part. Blocked if a pending inward approval exists for this product.")
     public ResponseEntity<MachinePartResponse> updateMachinePart(@PathVariable Long id, @RequestBody UpdateMachinePart request) {
+        if (productInwardApprovalService.hasPendingApproval(ProductInwardApproval.ProductType.MACHINE_PART, id)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Please approve the last inward entry first for machine part ID: " + id);
+        }
         MachinePartResponse response = machinePartService.updateMachinePart(id, request);
         return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/machine-parts/{id}")
+    @Operation(summary = "Submit machine part inward for approval (PATCH)", description = "Submits an inward stock entry for a machine part. Requires admin approval before the stock is updated.")
+    public ResponseEntity<Map<String, Object>> patchMachinePart(@PathVariable Long id, @RequestBody UpdateMachinePart request) {
+        Map<String, Object> response = productInwardApprovalService.createMachinePartInwardApproval(id, request);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
     }
 
     @DeleteMapping("/machine-parts/{id}")
@@ -338,10 +369,21 @@ public class ProductsController {
     }
 
     @PutMapping("/promotional-items/{id}")
-    @Operation(summary = "Update promotional item", description = "Updates an existing promotional item")
+    @Operation(summary = "Update promotional item", description = "Updates an existing promotional item. Blocked if a pending inward approval exists for this product.")
     public ResponseEntity<PromotionalItemResponse> updatePromotionalItem(@PathVariable Long id, @RequestBody PromotionalItemRequest request) {
+        if (productInwardApprovalService.hasPendingApproval(ProductInwardApproval.ProductType.PROMOTIONAL_ITEM, id)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Please approve the last inward entry first for promotional item ID: " + id);
+        }
         PromotionalItemResponse response = promotionalItemService.updatePromotionalItem(id, request);
         return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/promotional-items/{id}")
+    @Operation(summary = "Submit promotional item inward for approval (PATCH)", description = "Submits an inward stock entry for a promotional item. Requires admin approval before the stock is updated.")
+    public ResponseEntity<Map<String, Object>> patchPromotionalItem(@PathVariable Long id, @RequestBody PromotionalItemRequest request) {
+        Map<String, Object> response = productInwardApprovalService.createPromotionalItemInwardApproval(id, request);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
     }
 
     @DeleteMapping("/promotional-items/{id}")
@@ -398,10 +440,21 @@ public class ProductsController {
     }
 
     @PutMapping("/scrap-items/{id}")
-    @Operation(summary = "Update scrap item", description = "Updates an existing scrap item")
+    @Operation(summary = "Update scrap item", description = "Updates an existing scrap item. Blocked if a pending inward approval exists for this product.")
     public ResponseEntity<ScrapItemResponse> updateScrapItem(@PathVariable Long id, @RequestBody ScrapItemRequest request) {
+        if (productInwardApprovalService.hasPendingApproval(ProductInwardApproval.ProductType.SCRAP_ITEM, id)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Please approve the last inward entry first for scrap item ID: " + id);
+        }
         ScrapItemResponse response = scrapItemService.updateScrapItem(id, request);
         return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/scrap-items/{id}")
+    @Operation(summary = "Submit scrap item inward for approval (PATCH)", description = "Submits an inward stock entry for a scrap item. Requires admin approval before the stock is updated.")
+    public ResponseEntity<Map<String, Object>> patchScrapItem(@PathVariable Long id, @RequestBody ScrapItemRequest request) {
+        Map<String, Object> response = productInwardApprovalService.createScrapItemInwardApproval(id, request);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
     }
 
     @DeleteMapping("/scrap-items/{id}")
@@ -525,30 +578,66 @@ public class ProductsController {
     }
 
     @PutMapping("/raw-materials/sku/{materialCode}")
-    @Operation(summary = "Update raw material by material code", description = "Updates a raw material using its material code. Only provided fields are updated.")
+    @Operation(summary = "Update raw material by material code", description = "Updates a raw material using its material code. Blocked if a pending inward approval exists.")
     public ResponseEntity<RawProductResponse> updateRawProductByMaterialCode(@PathVariable String materialCode, @RequestBody RawProductRequest request) {
+        if (productInwardApprovalService.hasPendingApprovalByProductCode(ProductInwardApproval.ProductType.RAW_PRODUCT, materialCode)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Please approve the last inward entry first for raw material: " + materialCode);
+        }
         RawProductResponse response = rawProductService.updateByMaterialCode(materialCode, request);
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/machine-parts/sku/{partNumber}")
-    @Operation(summary = "Update machine part by part number", description = "Updates a machine part using its part number. Only provided fields are updated.")
+    @Operation(summary = "Update machine part by part number", description = "Updates a machine part using its part number. Blocked if a pending inward approval exists.")
     public ResponseEntity<MachinePartResponse> updateMachinePartByPartNumber(@PathVariable String partNumber, @RequestBody MachinePartRequest request) {
+        if (productInwardApprovalService.hasPendingApprovalByProductCode(ProductInwardApproval.ProductType.MACHINE_PART, partNumber)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Please approve the last inward entry first for machine part: " + partNumber);
+        }
         MachinePartResponse response = machinePartService.updateByPartNumber(partNumber, request);
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/promotional-items/sku/{itemCode}")
-    @Operation(summary = "Update promotional item by item code", description = "Updates a promotional item using its item code. Only provided fields are updated.")
+    @Operation(summary = "Update promotional item by item code", description = "Updates a promotional item using its item code. Blocked if a pending inward approval exists.")
     public ResponseEntity<PromotionalItemResponse> updatePromotionalItemByItemCode(@PathVariable String itemCode, @RequestBody PromotionalItemRequest request) {
+        if (productInwardApprovalService.hasPendingApprovalByProductCode(ProductInwardApproval.ProductType.PROMOTIONAL_ITEM, itemCode)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Please approve the last inward entry first for promotional item: " + itemCode);
+        }
         PromotionalItemResponse response = promotionalItemService.updateByItemCode(itemCode, request);
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/scrap-items/sku/{itemCode}")
-    @Operation(summary = "Update scrap item by item code", description = "Updates a scrap item using its item code. Only provided fields are updated.")
+    @Operation(summary = "Update scrap item by item code", description = "Updates a scrap item using its item code. Blocked if a pending inward approval exists.")
     public ResponseEntity<ScrapItemResponse> updateScrapItemByItemCode(@PathVariable String itemCode, @RequestBody ScrapItemRequest request) {
+        if (productInwardApprovalService.hasPendingApprovalByProductCode(ProductInwardApproval.ProductType.SCRAP_ITEM, itemCode)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Please approve the last inward entry first for scrap item: " + itemCode);
+        }
         ScrapItemResponse response = scrapItemService.updateByItemCode(itemCode, request);
+        return ResponseEntity.ok(response);
+    }
+
+    // ==================== INWARD APPROVAL (ADMIN) ====================
+
+    @GetMapping("/inward-approvals/pending")
+    @Operation(summary = "Get all pending inward approvals", description = "Retrieves all pending product inward approval requests across all product types")
+    public ResponseEntity<List<ProductInwardApproval>> getPendingInwardApprovals() {
+        List<ProductInwardApproval> approvals = productInwardApprovalService.getPendingApprovals();
+        return ResponseEntity.ok(approvals);
+    }
+
+    @PostMapping("/inward-approvals/{approvalId}/process")
+    @Operation(summary = "Process product inward approval", description = "Approves or rejects a product inward request. On approval, stock is updated in the database.")
+    public ResponseEntity<Map<String, Object>> processInwardApproval(
+            @PathVariable Long approvalId,
+            @RequestBody InwardApprovalRequest request,
+            @RequestHeader("Admin-Username") String adminUsername) {
+        Map<String, Object> response = productInwardApprovalService.processApproval(
+                approvalId, request.getAction(), adminUsername, request.getComments());
         return ResponseEntity.ok(response);
     }
 
@@ -566,5 +655,11 @@ public class ProductsController {
 
         public MachinePart.Condition getCondition() { return condition; }
         public void setCondition(MachinePart.Condition condition) { this.condition = condition; }
+    }
+
+    @Data
+    public static class InwardApprovalRequest {
+        private String action; // APPROVE or REJECT
+        private String comments;
     }
 }

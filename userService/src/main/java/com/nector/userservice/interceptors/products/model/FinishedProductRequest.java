@@ -25,7 +25,9 @@ public class FinishedProductRequest {
     private Integer quantity;
     
     private Integer minimumThreshold;
-    
+
+    private String batchNumber;
+
     private String hsn;
     
     private BigDecimal taxRate;

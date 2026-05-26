@@ -67,6 +67,9 @@ public class FinishedProduct {
     
     @Column(name = "minimum_threshold")
     private Integer minimumThreshold;
+
+    @Column(name = "batch_number", length = 100)
+    private String batchNumber;
     
     @Column(length = 50)
     private String hsn;

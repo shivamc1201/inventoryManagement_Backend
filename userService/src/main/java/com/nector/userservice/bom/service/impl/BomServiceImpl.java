@@ -354,10 +354,8 @@ public class BomServiceImpl implements BomService {
         finishedProduct.setRate(ratePerUnit);
         finishedProduct.setGrossAmount(ratePerUnit.multiply(newFinishedProductStock).setScale(2, RoundingMode.HALF_UP));
 
-        if (requestDto.getMinimumThreshold() != null) {
-            finishedProduct.setMinimumThreshold(requestDto.getMinimumThreshold());
-            log.info("Updated minimum threshold for finished product: {} to {}",
-                    finishedProduct.getName(), requestDto.getMinimumThreshold());
+        if (requestDto.getBatchNumber() != null) {
+            finishedProduct.setBatchNumber(requestDto.getBatchNumber());
         }
 
         finishedProductRepository.save(finishedProduct);
@@ -371,7 +369,7 @@ public class BomServiceImpl implements BomService {
                 .quantityProduced(requestedQuantity)
                 .outputUnit(bom.getOutputUnit())
                 .finishedProductNewStock(newFinishedProductStock.intValue())
-                .minimumThreshold(finishedProduct.getMinimumThreshold())
+                .batchNumber(finishedProduct.getBatchNumber())
                 .rawMaterialsConsumed(consumptions)
                 .productionTime(Instant.now())
                 .message(String.format("Successfully produced %s %s of '%s' using BOM '%s'",

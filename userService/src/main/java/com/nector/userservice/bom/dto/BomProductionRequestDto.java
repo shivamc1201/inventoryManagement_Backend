@@ -23,6 +23,5 @@ public class BomProductionRequestDto {
     @Min(value = 1, message = "Quantity must be at least 1")
     private BigDecimal quantity;
 
-    @Min(value = 0, message = "Minimum threshold must be 0 or greater")
-    private Integer minimumThreshold;
+    private String batchNumber;
 }

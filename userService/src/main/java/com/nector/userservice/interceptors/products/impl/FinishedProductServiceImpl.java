@@ -51,6 +51,7 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         product.setPrice(request.getPrice());
         product.setQuantity(request.getQuantity());
         product.setMinimumThreshold(request.getMinimumThreshold());
+        product.setBatchNumber(request.getBatchNumber());
         product.setHsn(request.getHsn());
         product.setTaxRate(request.getTaxRate());
         product.setRate(request.getRate());
@@ -91,6 +92,7 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         if (request.getPrice() != null) product.setPrice(request.getPrice());
         if (request.getQuantity() != null) product.setQuantity(request.getQuantity());
         if (request.getMinimumThreshold() != null) product.setMinimumThreshold(request.getMinimumThreshold());
+        if (request.getBatchNumber() != null) product.setBatchNumber(request.getBatchNumber());
         if (request.getHsn() != null) product.setHsn(request.getHsn());
         if (request.getTaxRate() != null) product.setTaxRate(request.getTaxRate());
         if (request.getRate() != null) product.setRate(request.getRate());
@@ -232,6 +234,7 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         response.setPerPieceRate(perPieceRate);
         
         response.setMinimumThreshold(product.getMinimumThreshold());
+        response.setBatchNumber(product.getBatchNumber());
         response.setHsn(product.getHsn());
         response.setTaxRate(product.getTaxRate());
         response.setActive(product.getActive());
@@ -288,6 +291,7 @@ public class FinishedProductServiceImpl implements FinishedProductService {
         if (request.getPrice() != null) product.setPrice(request.getPrice());
         if (request.getQuantity() != null) product.setQuantity(request.getQuantity());
         if (request.getMinimumThreshold() != null) product.setMinimumThreshold(request.getMinimumThreshold());
+        if (request.getBatchNumber() != null) product.setBatchNumber(request.getBatchNumber());
         if (request.getHsn() != null) product.setHsn(request.getHsn());
         if (request.getTaxRate() != null) product.setTaxRate(request.getTaxRate());
         if (request.getRate() != null) product.setRate(request.getRate());

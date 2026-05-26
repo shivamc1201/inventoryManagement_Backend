@@ -21,7 +21,7 @@ public class BomProductionResponseDto {
     private BigDecimal quantityProduced;
     private String outputUnit;
     private Integer finishedProductNewStock;
-    private Integer minimumThreshold;
+    private String batchNumber;
     private List<RawMaterialConsumptionDto> rawMaterialsConsumed;
     private Instant productionTime;
     private String message;

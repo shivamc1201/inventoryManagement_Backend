@@ -19,6 +19,7 @@ public class FinishedProductResponse {
     private Integer quantity;
     private BigDecimal perPieceRate;
     private Integer minimumThreshold;
+    private String batchNumber;
     private String hsn;
     private BigDecimal taxRate;
     private Boolean active;

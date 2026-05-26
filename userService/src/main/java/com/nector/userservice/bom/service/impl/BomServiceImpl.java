@@ -352,8 +352,7 @@ public class BomServiceImpl implements BomService {
         finishedProduct.setStatus(ProductStatus.BOM);
         BigDecimal ratePerUnit = bom.getEffectiveRatePerUnit() != null ? bom.getEffectiveRatePerUnit() : BigDecimal.ZERO;
         finishedProduct.setRate(ratePerUnit);
-        BigDecimal sellingPrice = finishedProduct.getPrice() != null ? finishedProduct.getPrice() : BigDecimal.ZERO;
-        finishedProduct.setGrossAmount(sellingPrice.multiply(newFinishedProductStock).setScale(2, RoundingMode.HALF_UP));
+        finishedProduct.setGrossAmount(ratePerUnit.multiply(newFinishedProductStock).setScale(2, RoundingMode.HALF_UP));
 
         if (requestDto.getBatchNumber() != null) {
             finishedProduct.setBatchNumber(requestDto.getBatchNumber());

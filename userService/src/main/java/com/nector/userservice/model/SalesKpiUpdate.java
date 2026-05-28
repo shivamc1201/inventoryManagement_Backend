@@ -29,12 +29,24 @@ public class SalesKpiUpdate {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sales_person_id")
+    private com.nector.userservice.model.SalesPerson salesPerson;
+
     @Column(nullable = false)
     private LocalDate date;
 
     private Double totalDistanceInKm;
 
     private Integer noOfMeetings;
+
+    private Integer farmerVisit;
+    private Integer distributorVisit;
+    private Integer dealerVisit;
+    private Integer dealerOnboard;
+    private Integer distributorOnboard;
+    private Integer retailerVisit;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

@@ -320,6 +320,7 @@ public class ProformaInvoiceService {
     private String generateHtmlFromTemplate(ProformaInvoice invoice) {
         Context context = new Context();
         context.setVariable("invoice", invoice);
+        context.setVariable("logoPath", htmlToPdfService.getLogoDataUri());
         return templateEngine.process("proforma-invoice", context);
     }
 

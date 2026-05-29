@@ -414,7 +414,7 @@ public class InvoiceService {
     private String generateHtmlFromTemplate(Invoice invoice) {
         Context context = new Context();
         context.setVariable("invoice", invoice);
-        context.setVariable("logoPath", "../static/logo.png"); // Path to logo relative to templates directory
+        context.setVariable("logoPath", htmlToPdfService.getLogoDataUri());
         return templateEngine.process("invoice", context);
     }
 

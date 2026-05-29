@@ -19,6 +19,6 @@ public interface PaymentApprovalRepository extends JpaRepository<PaymentApproval
     List<PaymentApproval> findByDistributorIdAndSalespersonIdAndStatusOrderByCreatedAtDesc(Long distributorId, Long salespersonId, String status);
 
     // Sum approved payments by distributor and date range (for collection calculations)
-    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM PaymentApproval p WHERE p.distributorId = :distributorId AND p.status = 'LEDGER_UPDATED' AND p.approvedAt BETWEEN :startDate AND :endDate")
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM PaymentApproval p WHERE p.distributorId = :distributorId AND p.status = 'LEDGER_UPDATED' AND p.transactionType = 'CREDIT' AND p.approvedAt BETWEEN :startDate AND :endDate")
     BigDecimal sumApprovedPaymentsByDistributorAndDateRange(@Param("distributorId") Long distributorId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 }

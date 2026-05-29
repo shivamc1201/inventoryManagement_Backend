@@ -710,7 +710,7 @@ public class GdnService {
         data.put("companyName", "Nectar Origin Private Limited");
         data.put("companyAddress", "360 K, Shiv Parwati Nagar, Block Road No-2, Ward No 16, Kahalgaon, Bhagalpur Bihar, Bihar - 813203, India");
         data.put("contactNumber", "06429-450126,9797979522");
-        data.put("logoPath", "../static/logo.png"); // Path to logo relative to templates directory
+        data.put("logoPath", htmlToPdfService.getLogoDataUri());
         
         return data;
     }

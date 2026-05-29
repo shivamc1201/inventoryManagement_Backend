@@ -229,24 +229,24 @@ public class PaymentService {
         
         // Calculate opening balance by subtracting all transactions from closing balance
         for (DistributorLedger transaction : reversedHistory) {
-            if ("DEBIT".equalsIgnoreCase(transaction.getTransactionType())) {
+            if (isDebitType(transaction.getTransactionType())) {
                 openingBalance = openingBalance.add(transaction.getAmount());
-            } else if ("CREDIT".equalsIgnoreCase(transaction.getTransactionType())) {
+            } else if (isCreditType(transaction.getTransactionType())) {
                 openingBalance = openingBalance.subtract(transaction.getAmount());
             }
         }
-        
+
         // Now calculate running balance forward from opening balance
         BigDecimal runningBalance = openingBalance;
-        
+
         for (DistributorLedger transaction : reversedHistory) {
-            PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance item = 
+            PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance item =
                 new PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance();
-            
+
             // Apply transaction to get new balance
-            if ("DEBIT".equalsIgnoreCase(transaction.getTransactionType())) {
+            if (isDebitType(transaction.getTransactionType())) {
                 runningBalance = runningBalance.subtract(transaction.getAmount());
-            } else if ("CREDIT".equalsIgnoreCase(transaction.getTransactionType())) {
+            } else if (isCreditType(transaction.getTransactionType())) {
                 runningBalance = runningBalance.add(transaction.getAmount());
             }
             
@@ -586,7 +586,8 @@ public class PaymentService {
     }
 
     public List<DistributorLedger> getJournalVouchersByDistributor(Long distributorId) {
-        return distributorLedgerRepository.findByDistributorIdAndTransactionTypeOrderByCreatedAtDesc(distributorId, "JV");
+        return distributorLedgerRepository.findByDistributorIdAndTransactionTypeInOrderByCreatedAtDesc(
+                distributorId, java.util.List.of("JV_CREDIT", "JV_DEBIT"));
     }
 
     public List<PaymentApproval> getLedgerUpdatedPayments(Long salespersonId, Long distributorId) {
@@ -633,7 +634,7 @@ public class PaymentService {
                             throw new RuntimeException("Distributor not found with ID: " + distributorId);
                         }
                 );
-                updateDistributorBalance(distributorId, entry.getDebit(), "JV",
+                updateDistributorBalance(distributorId, entry.getDebit(), "JV_DEBIT",
                         entry.getDescription() + " - " + request.getNarration(), request.getDate());
             }
 
@@ -648,10 +649,18 @@ public class PaymentService {
                             throw new RuntimeException("Distributor not found with ID: " + distributorId);
                         }
                 );
-                updateDistributorBalance(distributorId, entry.getCredit(), "JV",
+                updateDistributorBalance(distributorId, entry.getCredit(), "JV_CREDIT",
                         entry.getDescription() + " - " + request.getNarration(), request.getDate());
             }
         }
+    }
+
+    private boolean isCreditType(String transactionType) {
+        return "CREDIT".equalsIgnoreCase(transactionType) || "JV_CREDIT".equalsIgnoreCase(transactionType);
+    }
+
+    private boolean isDebitType(String transactionType) {
+        return "DEBIT".equalsIgnoreCase(transactionType) || "JV_DEBIT".equalsIgnoreCase(transactionType);
     }
 
     public DistributorRepository getDistributorRepository() {
@@ -818,10 +827,12 @@ public class PaymentService {
             
             log.info("Distributor name: {}", distributorName);
             
-            // Calculate total amount
-            BigDecimal totalAmount = cart.getCartItems().stream()
-                .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+            // Use pre-calculated total from cart to avoid lazy-loading issues
+            BigDecimal totalAmount = cart.getTotalCartAmount() != null
+                ? cart.getTotalCartAmount()
+                : cart.getCartItems().stream()
+                    .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
             
             log.info("Total amount calculated: {}", totalAmount);
             

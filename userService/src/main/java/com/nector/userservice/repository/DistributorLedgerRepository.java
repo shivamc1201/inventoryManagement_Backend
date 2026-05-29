@@ -15,9 +15,11 @@ public interface DistributorLedgerRepository extends JpaRepository<DistributorLe
     List<DistributorLedger> findByDistributorIdOrderByCreatedAtDesc(Long distributorId);
     
     List<DistributorLedger> findByDistributorIdAndTransactionTypeOrderByCreatedAtDesc(Long distributorId, String transactionType);
-    
+
     List<DistributorLedger> findByDistributorIdAndTransactionTypeOrderByCreatedAtAsc(Long distributorId, String transactionType);
-    
-    @Query("SELECT COALESCE(SUM(CASE WHEN dl.transactionType = 'CREDIT' THEN dl.amount ELSE -dl.amount END), 0) FROM DistributorLedger dl WHERE dl.distributorId = ?1")
+
+    List<DistributorLedger> findByDistributorIdAndTransactionTypeInOrderByCreatedAtDesc(Long distributorId, List<String> transactionTypes);
+
+    @Query("SELECT COALESCE(SUM(CASE WHEN dl.transactionType IN ('CREDIT', 'JV_CREDIT') THEN dl.amount ELSE -dl.amount END), 0) FROM DistributorLedger dl WHERE dl.distributorId = ?1")
     BigDecimal getDistributorBalance(Long distributorId);
 }

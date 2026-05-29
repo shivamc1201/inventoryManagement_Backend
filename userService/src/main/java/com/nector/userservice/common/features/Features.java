@@ -29,7 +29,11 @@ public enum Features {
 
     // --- Inventory Sub-Items ---
     // Masters
-    INVENTORY_MASTERS("Masters", "/inventory/masters"),
+    INVENTORY_MASTERS("Master Inventory", "/inventory/masters"),
+
+    // Inward / Outward
+    INVENTORY_INWARD("Inward Inventory", "/inventory/inward"),
+    INVENTORY_OUTWARD("Outward Inventory", "/inventory/outward"),
 
     // Transactions
     INVENTORY_TRANSACTIONS("Transactions", "/inventory/transactions"), // Parent for all Inventory Transactions

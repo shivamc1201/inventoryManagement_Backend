@@ -58,18 +58,23 @@ public class DataInitializationService implements CommandLineRunner {
             assignPermissionsToRole(RoleType.HR_EXECUTIVE, 
                 Features.DASHBOARD, Features.HR);
             
-            assignPermissionsToRole(RoleType.LOGISTICS_MGR, 
-                Features.DASHBOARD, Features.INVENTORY, Features.REPORTS);
-            assignPermissionsToRole(RoleType.LOGISTICS_OFFICER, 
-                Features.DASHBOARD, Features.INVENTORY);
-            
-            assignPermissionsToRole(RoleType.PLANT_MGR, 
-                Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_MASTERS, 
+            assignPermissionsToRole(RoleType.LOGISTICS_MGR,
+                Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_INWARD,
+                Features.INVENTORY_OUTWARD, Features.REPORTS);
+            assignPermissionsToRole(RoleType.LOGISTICS_OFFICER,
+                Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_INWARD,
+                Features.INVENTORY_OUTWARD);
+
+            assignPermissionsToRole(RoleType.PLANT_MGR,
+                Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_MASTERS,
+                Features.INVENTORY_INWARD, Features.INVENTORY_OUTWARD,
                 Features.INVENTORY_TRANSACTIONS, Features.REPORTS);
-            assignPermissionsToRole(RoleType.PLANT_OFFICER, 
-                Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_MASTERS);
-            assignPermissionsToRole(RoleType.PLANT_EXECUTIVE, 
-                Features.DASHBOARD, Features.INVENTORY);
+            assignPermissionsToRole(RoleType.PLANT_OFFICER,
+                Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_MASTERS,
+                Features.INVENTORY_INWARD, Features.INVENTORY_OUTWARD);
+            assignPermissionsToRole(RoleType.PLANT_EXECUTIVE,
+                Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_INWARD,
+                Features.INVENTORY_OUTWARD);
             
             // Explicit SALES permission assignment to ensure it's available
             assignPermissionsToRole(RoleType.ADMIN, Features.SALES);

@@ -315,6 +315,8 @@ public class RoleFeaturePermissionController {
             case 21 -> Features.INVENTORY_TRANSACTIONS_PO_LIST;
             case 22 -> Features.INVENTORY_TRANSACTIONS_OUTWARD_CHALLAN;
             case 23 -> Features.INVENTORY_TRANSACTIONS_SALE_INVOICE;
+            case 24 -> Features.INVENTORY_INWARD;
+            case 25 -> Features.INVENTORY_OUTWARD;
             default -> throw new IllegalArgumentException("Unknown feature ID: " + featureId);
         };
     }

@@ -22,7 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -350,12 +352,27 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
         return assignments.map(this::mapToResponse);
     }
 
+    private static final Map<Long, Integer> KPI_DISPLAY_ORDER = Map.of(
+        15L, 0,  // farmer Visit
+        17L, 1,  // Dealer Visit
+        16L, 2,  // Distributor Visit
+        20L, 3,  // Retailer Visit
+        18L, 4,  // Dealer Onboard
+        19L, 5,  // Distributor Onboard
+        14L, 6   // Sale Target
+    );
+
     @Override
     @Transactional(readOnly = true)
     public List<KpiAssignmentResponse> getAllAssignments() {
         return assignmentRepository.findAll()
                 .stream()
                 .map(this::mapToResponse)
+                .sorted(Comparator
+                        .comparingInt((KpiAssignmentResponse r) ->
+                                KPI_DISPLAY_ORDER.getOrDefault(r.getKpiId(), Integer.MAX_VALUE))
+                        .thenComparing(KpiAssignmentResponse::getEmployeeId,
+                                Comparator.nullsLast(Comparator.naturalOrder())))
                 .collect(Collectors.toList());
     }
 

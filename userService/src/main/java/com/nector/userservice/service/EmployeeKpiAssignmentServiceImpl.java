@@ -369,10 +369,10 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
                 .stream()
                 .map(this::mapToResponse)
                 .sorted(Comparator
-                        .comparingInt((KpiAssignmentResponse r) ->
-                                KPI_DISPLAY_ORDER.getOrDefault(r.getKpiId(), Integer.MAX_VALUE))
-                        .thenComparing(KpiAssignmentResponse::getEmployeeId,
-                                Comparator.nullsLast(Comparator.naturalOrder())))
+                        .comparing(KpiAssignmentResponse::getEmployeeId,
+                                Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparingInt(r ->
+                                KPI_DISPLAY_ORDER.getOrDefault(r.getKpiId(), Integer.MAX_VALUE)))
                 .collect(Collectors.toList());
     }
 

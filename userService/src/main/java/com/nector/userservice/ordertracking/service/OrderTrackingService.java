@@ -3,6 +3,7 @@ package com.nector.userservice.ordertracking.service;
 import com.nector.userservice.ordertracking.dto.*;
 import com.nector.userservice.ordertracking.entity.*;
 import com.nector.userservice.ordertracking.repository.*;
+import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.repository.UserRepository;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.service.SalesPersonService;
@@ -29,6 +30,7 @@ public class OrderTrackingService {
     private final UserRepository userRepository;
     private final DistributorRepository distributorRepository;
     private final SalesPersonService salesPersonService;
+    private final CartRepository cartRepository;
     
     // Public method to get repository for external services
     public OrderTrackingRepository getOrderRepository() {
@@ -257,18 +259,25 @@ public class OrderTrackingService {
     }
 
     private OrderTrackingDTO toDTO(OrderTracking o) {
-        // Ensure steps are loaded (LAZY) in sorted order
         List<OrderTrackingStep> steps = stepRepo
             .findByOrderIdOrderByStepSequenceAsc(o.getId());
 
+        java.math.BigDecimal amount = o.getTotalAmount();
+        if (o.getCartId() != null) {
+            java.math.BigDecimal cartAmount = cartRepository.findTotalCartAmountById(o.getCartId());
+            if (cartAmount != null) {
+                amount = cartAmount;
+            }
+        }
+
         return OrderTrackingDTO.builder()
             .id(o.getId())
-            .cartId(o.getCartId())  // Include cart ID for reference
+            .cartId(o.getCartId())
             .orderNumber(o.getOrderNumber())
             .distributorName(o.getDistributorName())
             .distributorId(o.getDistributorId())
             .orderDate(o.getOrderDate())
-            .totalAmount(o.getTotalAmount())
+            .totalAmount(amount)
             .steps(steps.stream().map(this::toStepDTO).collect(Collectors.toList()))
             .build();
     }

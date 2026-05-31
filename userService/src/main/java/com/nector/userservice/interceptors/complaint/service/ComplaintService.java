@@ -13,6 +13,8 @@ public interface ComplaintService {
     ComplaintResponse getComplaintById(Long id);
     
     Page<ComplaintResponse> getAllComplaints(Pageable pageable);
-    
+
+    Page<ComplaintResponse> getComplaintsByFilter(Long salespersonId, Long distributorId, Pageable pageable);
+
     ComplaintResponse updateComplaintStatus(Long id, ComplaintStatusUpdateRequest request);
 }

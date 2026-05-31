@@ -37,4 +37,8 @@ public class ComplaintCreateRequest {
     
     @NotBlank(message = "Description is required")
     private String description;
+
+    private Long salespersonId;
+
+    private Long distributorId;
 }

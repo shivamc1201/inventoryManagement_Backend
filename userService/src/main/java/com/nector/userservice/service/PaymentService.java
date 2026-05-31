@@ -843,12 +843,13 @@ public class PaymentService {
             
             // Use OrderTrackingService to create from cart
             orderTrackingService.createFromCart(
-                cartId, 
-                distributorName, 
-                cart.getDistributorId(), 
-                orderNumber, 
+                cartId,
+                distributorName,
+                cart.getDistributorId(),
+                orderNumber,
                 totalAmount,
-                cart.getDeliveryBy()
+                cart.getDeliveryBy(),
+                cart.getSalespersonId()
             );
             
             log.info("Successfully created order tracking for cart: {}", cartId);

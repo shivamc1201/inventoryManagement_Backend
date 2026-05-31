@@ -45,6 +45,9 @@ public class OrderTracking {
     @Column(name = "total_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal totalAmount;
 
+    @Column(name = "salesperson_id")
+    private Long salespersonId;
+
     @Column(name = "created_by")
     private Long createdBy;
 

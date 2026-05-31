@@ -29,10 +29,11 @@ public class OrderTrackingController {
             @RequestParam(defaultValue = "all") String status,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Long distributorId,
+            @RequestParam(required = false) Long salespersonId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
 
-        return ResponseEntity.ok(service.listOrders(search, status, distributorId, page, size));
+        return ResponseEntity.ok(service.listOrders(search, status, distributorId, salespersonId, page, size));
     }
 
     /**

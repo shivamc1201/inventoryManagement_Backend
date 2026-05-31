@@ -5,6 +5,7 @@ import com.nector.userservice.ordertracking.entity.*;
 import com.nector.userservice.ordertracking.repository.*;
 import com.nector.userservice.repository.UserRepository;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
+import com.nector.userservice.service.SalesPersonService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,6 +28,7 @@ public class OrderTrackingService {
     private final OrderTrackingStepRepository stepRepo;
     private final UserRepository userRepository;
     private final DistributorRepository distributorRepository;
+    private final SalesPersonService salesPersonService;
     
     // Public method to get repository for external services
     public OrderTrackingRepository getOrderRepository() {
@@ -35,7 +38,7 @@ public class OrderTrackingService {
     // ── 1. List orders with filters ──────────────────────────────────────────
 
     public OrderTrackingListResponse listOrders(String search, String status, Long distributorId,
-                                              int page, int size) {
+                                              Long salespersonId, int page, int size) {
         String searchParam = (search == null || search.isBlank()) ? null : search.trim();
         String statusParam = (status == null || "all".equalsIgnoreCase(status)) ? null : status.trim();
 
@@ -43,10 +46,11 @@ public class OrderTrackingService {
         Page<OrderTracking> result;
 
         if (distributorId != null) {
-            // Filter by specific distributor
             result = orderRepo.findByDistributorId(distributorId, pageable);
+        } else if (salespersonId != null) {
+            List<Long> hierarchyIds = buildHierarchyIds(salespersonId);
+            result = orderRepo.findFilteredBySalespersonIds(searchParam, statusParam, hierarchyIds, pageable);
         } else {
-            // Use existing filtering logic
             result = orderRepo.findFiltered(searchParam, statusParam, pageable);
         }
 
@@ -59,6 +63,17 @@ public class OrderTrackingService {
             .totalElements(result.getTotalElements())
             .totalPages(result.getTotalPages())
             .build();
+    }
+
+    private List<Long> buildHierarchyIds(Long salespersonId) {
+        List<Long> ids = new ArrayList<>();
+        ids.add(salespersonId);
+        try {
+            ids.addAll(salesPersonService.getSubordinateIds(salespersonId));
+        } catch (Exception e) {
+            log.warn("Could not fetch subordinates for salesperson {}: {}", salespersonId, e.getMessage());
+        }
+        return ids;
     }
 
     // ── 2. Single order ───────────────────────────────────────────────────────
@@ -190,6 +205,7 @@ public class OrderTrackingService {
             .orderDate(req.getOrderDate() != null ? req.getOrderDate() : LocalDate.now())
             .totalAmount(req.getTotalAmount())
             .createdBy(req.getCreatedBy())
+            .salespersonId(req.getSalespersonId())
             .build();
 
         order.setSteps(buildDefaultSteps(order, req.getDeliveryBy()));
@@ -199,12 +215,12 @@ public class OrderTrackingService {
     // ── 7. Create OrderTracking from existing Cart ───────────────────────────
 
     @Transactional
-    public OrderTrackingDTO createFromCart(Long cartId, String distributorName, Long distributorId, 
+    public OrderTrackingDTO createFromCart(Long cartId, String distributorName, Long distributorId,
                                           String orderNumber, java.math.BigDecimal totalAmount,
-                                          String deliveryBy) {
+                                          String deliveryBy, Long salespersonId) {
         long startTime = System.currentTimeMillis();
         log.info("[TIMING] Creating OrderTracking from cart {} for distributor {}", cartId, distributorId);
-        
+
         OrderTracking order = OrderTracking.builder()
             .orderNumber(orderNumber)
             .cartId(cartId)
@@ -212,6 +228,7 @@ public class OrderTrackingService {
             .distributorName(distributorName)
             .orderDate(LocalDate.now())
             .totalAmount(totalAmount)
+            .salespersonId(salespersonId)
             .build();
 
         long stepsStart = System.currentTimeMillis();

@@ -30,6 +30,8 @@ public class CreateOrderTrackingRequest {
     private BigDecimal totalAmount;
     
     private Long createdBy;
-    
+
+    private Long salespersonId;
+
     private String deliveryBy;
 }

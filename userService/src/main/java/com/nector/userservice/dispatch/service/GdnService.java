@@ -33,6 +33,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
@@ -271,7 +272,28 @@ public class GdnService {
         if (cart.getStatus() != Cart.CartStatus.PAYMENT_APPROVED) {
             throw new RuntimeException("Order must be PAYMENT_APPROVED for GDN generation. Current status: " + cart.getStatus());
         }
-        
+
+        // Verify live stock availability for every cart item before touching anything
+        List<String> stockErrors = new ArrayList<>();
+        for (CartItem cartItem : cart.getCartItems()) {
+            String sku = cartItem.getItem().getSku();
+            int ordered = cartItem.getQuantity();
+            try {
+                int available = inventoryService.getAvailableStockBySku(sku);
+                if (available < ordered) {
+                    stockErrors.add(String.format("'%s' (SKU: %s): ordered %d, available %d",
+                            cartItem.getItem().getName(), sku, ordered, available));
+                }
+            } catch (Exception e) {
+                stockErrors.add(String.format("'%s' (SKU: %s): not found in inventory",
+                        cartItem.getItem().getName(), sku));
+            }
+        }
+        if (!stockErrors.isEmpty()) {
+            throw new RuntimeException("Insufficient stock for GDN generation. Please run inventory verification and resolve:\n" +
+                    String.join("\n", stockErrors));
+        }
+
         Gdn gdn = new Gdn();
         gdn.setGdnNumber(generateGdnNumber());
         gdn.setOrderId(orderId);
@@ -412,11 +434,19 @@ public class GdnService {
         
         response.setItems(items);
         
-        boolean canProceed = items.stream().allMatch(item -> item.getAvailableQuantity() > 0);
+        boolean canProceed = items.stream().allMatch(InventoryVerificationResponse.InventoryItem::isSufficientStock);
         response.setCanProceedWithGdn(canProceed);
-        response.setMessage(canProceed ? 
-            "Inventory verified. Proceed with GDN generation." : 
-            "Some items have insufficient stock. Adjust quantities before GDN generation.");
+
+        if (canProceed) {
+            response.setMessage("Inventory verified. All items have sufficient stock. Proceed with GDN generation.");
+        } else {
+            List<String> shortItems = items.stream()
+                .filter(item -> !item.isSufficientStock())
+                .map(item -> String.format("'%s' (SKU: %s): ordered %d, available %d",
+                        item.getItemName(), item.getItemSku(), item.getOrderedQuantity(), item.getAvailableQuantity()))
+                .collect(Collectors.toList());
+            response.setMessage("Insufficient stock for the following items: " + String.join("; ", shortItems));
+        }
         
         saveInventoryVerification(orderId, cart.getId(), items, canProceed);
 

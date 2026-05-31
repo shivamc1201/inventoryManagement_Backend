@@ -1,6 +1,7 @@
 package com.nector.userservice.service;
 
 import com.nector.userservice.dto.DashboardResponse;
+import com.nector.userservice.dto.MonthlySalesResponse;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.repository.DealerRepository;
 import com.nector.userservice.repository.OrderRepository;
@@ -15,6 +16,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -156,5 +158,58 @@ public class DashboardService {
         BigDecimal totalAmount = orderRepository.getTotalAmountBetweenDates(startDate.atStartOfDay(), endDate.atTime(LocalTime.MAX));
         categorySales.put("General", totalAmount != null ? totalAmount : BigDecimal.ZERO);
         return categorySales;
+    }
+
+    @Transactional(readOnly = true)
+    public MonthlySalesResponse getMonthlySalesData() {
+        LocalDate today = LocalDate.now();
+        // Indian FY: April 1 to March 31
+        int fyStartYear = today.getMonthValue() >= 4 ? today.getYear() : today.getYear() - 1;
+        LocalDate fyStart = LocalDate.of(fyStartYear, 4, 1);
+        LocalDate fyEnd = LocalDate.of(fyStartYear + 1, 3, 31);
+
+        String financialYear = "FY " + fyStartYear + "-" + String.format("%02d", (fyStartYear + 1) % 100);
+
+        List<Object[]> results = orderRepository.getMonthlyGdnRevenue(
+                fyStart.atStartOfDay(), fyEnd.atTime(LocalTime.MAX));
+
+        Map<String, MonthlySalesResponse.MonthlyData> dataMap = new HashMap<>();
+        for (Object[] row : results) {
+            int month = ((Number) row[0]).intValue();
+            int year = ((Number) row[1]).intValue();
+            BigDecimal revenue = row[2] instanceof BigDecimal ? (BigDecimal) row[2] : new BigDecimal(row[2].toString());
+            long orderCount = ((Number) row[3]).longValue();
+            dataMap.put(year + "-" + month,
+                    new MonthlySalesResponse.MonthlyData(monthAbbr(month), year, revenue, orderCount));
+        }
+
+        // All 12 months in FY order: Apr(4) … Dec(12), Jan(1) … Mar(3)
+        int[] fyMonths = {4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3};
+        List<MonthlySalesResponse.MonthlyData> months = new ArrayList<>();
+        for (int m : fyMonths) {
+            int yr = m >= 4 ? fyStartYear : fyStartYear + 1;
+            months.add(dataMap.getOrDefault(yr + "-" + m,
+                    new MonthlySalesResponse.MonthlyData(monthAbbr(m), yr, BigDecimal.ZERO, 0L)));
+        }
+
+        return new MonthlySalesResponse(financialYear, months);
+    }
+
+    private String monthAbbr(int month) {
+        return switch (month) {
+            case 1 -> "Jan";
+            case 2 -> "Feb";
+            case 3 -> "Mar";
+            case 4 -> "Apr";
+            case 5 -> "May";
+            case 6 -> "Jun";
+            case 7 -> "Jul";
+            case 8 -> "Aug";
+            case 9 -> "Sep";
+            case 10 -> "Oct";
+            case 11 -> "Nov";
+            case 12 -> "Dec";
+            default -> "Unknown";
+        };
     }
 }

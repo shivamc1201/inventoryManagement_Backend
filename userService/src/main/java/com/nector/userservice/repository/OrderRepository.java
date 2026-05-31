@@ -165,6 +165,16 @@ public interface OrderRepository extends JpaRepository<OrderWithSalesPerson, Lon
             "o.distributorId = :distributorId")
     BigDecimal getTotalAmountByDistributor(@Param("distributorId") Long distributorId);
 
+    @Query(value = "SELECT EXTRACT(MONTH FROM created_at) as month, EXTRACT(YEAR FROM created_at) as year, " +
+            "COALESCE(SUM(total_cart_amount), 0) as revenue, COUNT(*) as order_count " +
+            "FROM carts WHERE status = 'GDN_GENERATED' AND created_at BETWEEN :dateFrom AND :dateTo " +
+            "GROUP BY EXTRACT(YEAR FROM created_at), EXTRACT(MONTH FROM created_at) ORDER BY year, month",
+            nativeQuery = true)
+    List<Object[]> getMonthlyGdnRevenue(
+            @Param("dateFrom") LocalDateTime dateFrom,
+            @Param("dateTo") LocalDateTime dateTo
+    );
+
     @Query("SELECT COUNT(o) FROM OrderWithSalesPerson o WHERE " +
             "o.status = :status AND " +
             "o.createdAt BETWEEN :dateFrom AND :dateTo")

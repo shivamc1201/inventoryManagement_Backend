@@ -1,6 +1,7 @@
 package com.nector.userservice.controller;
 
 import com.nector.userservice.dto.DashboardResponse;
+import com.nector.userservice.dto.MonthlySalesResponse;
 import com.nector.userservice.dto.OrderDashboardResponse;
 import com.nector.userservice.dto.VolumeAnalyticsResponse;
 import com.nector.userservice.enums.OrderStatus;
@@ -112,6 +113,13 @@ public class DashboardController {
         };
     }
 
+
+    @GetMapping("/monthly-sales")
+    @Operation(summary = "Get monthly sales revenue", description = "Retrieves monthly revenue and order count for GDN_GENERATED orders across the current Indian financial year (Apr–Mar)")
+    @ApiResponse(responseCode = "200", description = "Monthly sales data retrieved successfully")
+    public ResponseEntity<MonthlySalesResponse> getMonthlySales() {
+        return ResponseEntity.ok(dashboardService.getMonthlySalesData());
+    }
 
     @GetMapping("/distributor-orders")
     @Operation(summary = "Get distributor order dashboard analytics", description = "Retrieves order analytics data for specified time period and distributor")

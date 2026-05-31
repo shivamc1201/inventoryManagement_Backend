@@ -25,6 +25,9 @@ public class ComplaintResponse {
     private PriorityLevel priorityLevel;
     private String description;
     private ComplaintStatus status;
+    private String comment;
+    private Long salespersonId;
+    private Long distributorId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

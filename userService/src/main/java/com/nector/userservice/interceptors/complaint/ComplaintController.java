@@ -52,6 +52,19 @@ public class ComplaintController {
         Page<ComplaintResponse> complaints = complaintService.getAllComplaints(pageable);
         return ResponseEntity.ok(ApiResponse.success(complaints));
     }
+
+    @GetMapping("/filter")
+    @Operation(summary = "Get complaints by filter", description = "Retrieves complaints optionally filtered by salesperson or distributor ID")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Complaints retrieved successfully")
+    public ResponseEntity<ApiResponse<Page<ComplaintResponse>>> getComplaintsByFilter(
+            @RequestParam(required = false) Long salespersonId,
+            @RequestParam(required = false) Long distributorId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ComplaintResponse> complaints = complaintService.getComplaintsByFilter(salespersonId, distributorId, pageable);
+        return ResponseEntity.ok(ApiResponse.success(complaints));
+    }
     
     @PutMapping("/{id}/status")
     @Operation(summary = "Update complaint status", description = "Updates the status of a complaint")

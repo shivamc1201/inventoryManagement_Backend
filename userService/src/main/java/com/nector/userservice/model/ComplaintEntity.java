@@ -49,7 +49,14 @@ public class ComplaintEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ComplaintStatus status = ComplaintStatus.OPEN;
-    
+
+    @Column(columnDefinition = "TEXT")
+    private String comment;
+
+    private Long salespersonId;
+
+    private Long distributorId;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

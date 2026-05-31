@@ -33,6 +33,8 @@ public class ComplaintServiceImpl implements ComplaintService {
         complaint.setPriorityLevel(request.getPriorityLevel());
         complaint.setDescription(request.getDescription());
         complaint.setStatus(ComplaintStatus.OPEN);
+        complaint.setSalespersonId(request.getSalespersonId());
+        complaint.setDistributorId(request.getDistributorId());
         
         ComplaintEntity savedComplaint = complaintRepository.save(complaint);
         return mapToResponse(savedComplaint);
@@ -52,13 +54,29 @@ public class ComplaintServiceImpl implements ComplaintService {
         Page<ComplaintEntity> complaints = complaintRepository.findAll(pageable);
         return complaints.map(this::mapToResponse);
     }
-    
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ComplaintResponse> getComplaintsByFilter(Long salespersonId, Long distributorId, Pageable pageable) {
+        if (salespersonId != null && distributorId != null) {
+            return complaintRepository.findBySalespersonIdAndDistributorId(salespersonId, distributorId, pageable)
+                    .map(this::mapToResponse);
+        } else if (salespersonId != null) {
+            return complaintRepository.findBySalespersonId(salespersonId, pageable).map(this::mapToResponse);
+        } else if (distributorId != null) {
+            return complaintRepository.findByDistributorId(distributorId, pageable).map(this::mapToResponse);
+        } else {
+            return complaintRepository.findAll(pageable).map(this::mapToResponse);
+        }
+    }
+
     @Override
     public ComplaintResponse updateComplaintStatus(Long id, ComplaintStatusUpdateRequest request) {
         ComplaintEntity complaint = complaintRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Complaint not found with id: " + id));
-        
+
         complaint.setStatus(request.getStatus());
+        complaint.setComment(request.getComment());
         ComplaintEntity updatedComplaint = complaintRepository.save(complaint);
         return mapToResponse(updatedComplaint);
     }
@@ -75,6 +93,9 @@ public class ComplaintServiceImpl implements ComplaintService {
                 complaint.getPriorityLevel(),
                 complaint.getDescription(),
                 complaint.getStatus(),
+                complaint.getComment(),
+                complaint.getSalespersonId(),
+                complaint.getDistributorId(),
                 complaint.getCreatedAt(),
                 complaint.getUpdatedAt()
         );

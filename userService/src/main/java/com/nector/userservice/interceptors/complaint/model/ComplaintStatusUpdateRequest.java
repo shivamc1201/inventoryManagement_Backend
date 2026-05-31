@@ -10,7 +10,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ComplaintStatusUpdateRequest {
-    
+
     @NotNull(message = "Status is required")
     private ComplaintStatus status;
+
+    private String comment;
 }

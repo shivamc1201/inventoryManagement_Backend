@@ -827,14 +827,11 @@ public class PaymentService {
             
             log.info("Distributor name: {}", distributorName);
             
-            // Use pre-calculated total from cart to avoid lazy-loading issues
-            BigDecimal totalAmount = cart.getTotalCartAmount() != null
-                ? cart.getTotalCartAmount()
-                : cart.getCartItems().stream()
-                    .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            
-            log.info("Total amount calculated: {}", totalAmount);
+            BigDecimal totalAmount = cartRepository.findTotalCartAmountById(cartId);
+            if (totalAmount == null) {
+                throw new RuntimeException("Cart total_cart_amount is null for cart: " + cartId);
+            }
+            log.info("Total amount from cart: {}", totalAmount);
             
             // Generate order number in format: SO/YYYY-YY/NNNN (e.g., SO/2026-27/0001)
             String orderNumber = documentNumberService.generateSalesOrderNumber();

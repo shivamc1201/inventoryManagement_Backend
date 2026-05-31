@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,6 +31,9 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
     List<Cart> findBySalespersonIdInAndStatus(List<Long> salespersonIds, Cart.CartStatus status);
 
     List<Cart> findByDistributorIdAndStatusIn(Long distributorId, List<Cart.CartStatus> statuses);
+
+    @Query("SELECT c.totalCartAmount FROM Cart c WHERE c.id = :id")
+    BigDecimal findTotalCartAmountById(@Param("id") Long id);
 
     @Query("SELECT COUNT(c) FROM Cart c WHERE c.salespersonId = :salespersonId AND c.status = :status")
     Long countBySalespersonIdAndStatus(@Param("salespersonId") Long salespersonId, @Param("status") Cart.CartStatus status);

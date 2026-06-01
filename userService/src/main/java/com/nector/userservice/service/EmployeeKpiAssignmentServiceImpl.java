@@ -353,7 +353,7 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
     }
 
     private static final Map<Long, Integer> KPI_DISPLAY_ORDER = Map.of(
-        15L, 0,  // farmer Visit
+        15L, 0,  // Farmer Visit
         17L, 1,  // Dealer Visit
         16L, 2,  // Distributor Visit
         20L, 3,  // Retailer Visit

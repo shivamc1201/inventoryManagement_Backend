@@ -83,7 +83,7 @@ public class SalesKpiUpdateService {
 
     private void updateKpiAssignments(Long salesPersonId, SalesKpiUpdateRequest req) {
         Map<String, Integer> kpiValues = Map.of(
-                "farmer Visit",       req.getFarmerVisit()       != null ? req.getFarmerVisit()       : 0,
+                "Farmer Visit",       req.getFarmerVisit()       != null ? req.getFarmerVisit()       : 0,
                 "Distributor Visit",  req.getDistributorVisit()  != null ? req.getDistributorVisit()  : 0,
                 "Dealer Visit",       req.getDealerVisit()       != null ? req.getDealerVisit()       : 0,
                 "Dealer Onboard",     req.getDealerOnboard()     != null ? req.getDealerOnboard()     : 0,

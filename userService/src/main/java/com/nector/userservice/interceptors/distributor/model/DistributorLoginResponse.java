@@ -42,6 +42,12 @@ public class DistributorLoginResponse  implements BaseLoginResponse {
     @Schema(description = "LOGIN/LOGOUT status")
     private String loginStatus;
 
+    @Schema(description = "FIRM_NAME")
+    private String firmName;
+
+    @Schema(description = "DIS_CODE")
+    private String disCode;
+
     public DistributorLoginResponse(
             String token,
             String type,
@@ -51,6 +57,8 @@ public class DistributorLoginResponse  implements BaseLoginResponse {
             String roleType,
             List<Object> features,
             Set<String> featureNames,
+            String firmName,
+            String disCode,
             String loginStatus) {
 
         this.token = token;
@@ -62,5 +70,7 @@ public class DistributorLoginResponse  implements BaseLoginResponse {
         this.roleType = roleType;
         this.features = features;
         this.featureNames = featureNames;
+        this.firmName = firmName;
+        this.disCode = disCode;
     }
 }

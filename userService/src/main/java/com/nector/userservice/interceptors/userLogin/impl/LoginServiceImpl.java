@@ -321,6 +321,8 @@ public class LoginServiceImpl implements LoginService {
                 "distributor",
                 featureDetails,
                 featureNames,
+                user.getFirstName(),
+                user.getDistributorCode(),
                 "LOGGED_IN"
         );
     }

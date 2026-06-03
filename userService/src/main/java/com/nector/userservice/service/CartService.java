@@ -23,6 +23,7 @@ import com.nector.userservice.model.SalesPerson;
 import com.nector.userservice.service.SalesHierarchyValidationService;
 import com.nector.userservice.service.PaymentService;
 import com.nector.userservice.ordertracking.service.OrderTrackingService;
+import com.nector.userservice.ordertracking.service.OrderDocumentService;
 import com.nector.userservice.ordertracking.repository.OrderTrackingStepRepository;
 import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
 import lombok.RequiredArgsConstructor;
@@ -54,16 +55,7 @@ public class CartService {
     private final OrderTrackingStepRepository orderTrackingStepRepository;
     private final HtmlToPdfService htmlToPdfService;
     private final @org.springframework.context.annotation.Lazy PaymentService paymentService;
-
-    // Self-injection to enable @Async method calls through Spring proxy
-    private CartService self;
-
-    // Setter injection for self-reference to enable async proxy calls
-    // @Lazy breaks the circular dependency
-    @org.springframework.beans.factory.annotation.Autowired
-    public void setSelf(@org.springframework.context.annotation.Lazy CartService cartService) {
-        this.self = cartService;
-    }
+    private final OrderDocumentService orderDocumentService;
 
 
     @Transactional
@@ -369,43 +361,12 @@ public class CartService {
         cart.setStatus(Cart.CartStatus.APPROVED);
         long saveStart = System.currentTimeMillis();
         Cart updatedCart = cartRepository.save(cart);
-        // Update Order Tracking Steps async to not block the response
-        if (self != null) {
-            self.updateOrderTrackingAsync(updatedCart);
-        } else {
-            updateOrderTrackingSync(updatedCart);
-        }
-        // Generate Proforma Invoice async to not block the response
-        if (self != null) {
-            self.generateProformaInvoiceAsync(cartId, updatedCart.getId());
-        } else {
-            generateProformaInvoiceSync(cartId, updatedCart.getId());
-        }
-        // Use fast response mapper - avoid extra DB lookups
-        long mapStart = System.currentTimeMillis();
+        updateOrderTrackingSync(updatedCart);
+        generateProformaInvoiceSync(cartId, updatedCart.getId());
         CartResponse response = mapToResponseFast(updatedCart);
         return response;
     }
 
-    /**
-     * Async wrapper to update order tracking without blocking the API response
-     */
-    @Async
-    public void updateOrderTrackingAsync(Cart updatedCart) {
-        long asyncStart = System.currentTimeMillis();
-        try {
-            updateOrderTrackingSync(updatedCart);
-            log.info("[TIMING-ASYNC] Order tracking update completed in {} ms for cart {}",
-                    System.currentTimeMillis() - asyncStart, updatedCart.getId());
-        } catch (Exception e) {
-            log.error("[TIMING-ASYNC] Order tracking update failed after {} ms for cart {}: {}",
-                    System.currentTimeMillis() - asyncStart, updatedCart.getId(), e.getMessage());
-        }
-    }
-
-    /**
-     * Synchronous order tracking update - used as fallback or called async
-     */
     private void updateOrderTrackingSync(Cart updatedCart) {
         // Update Order Tracking Step 3: Approved from Sales
         try {
@@ -486,31 +447,11 @@ public class CartService {
         }
     }
 
-    /**
-     * Async wrapper to generate proforma invoice without blocking the API response
-     */
-    @Async
-    public void generateProformaInvoiceAsync(Long cartId, Long updatedCartId) {
-        long asyncStart = System.currentTimeMillis();
-        try {
-            generateProformaInvoiceSync(cartId, updatedCartId);
-            log.info("[TIMING-ASYNC] Proforma invoice generation completed in {} ms for cart {}",
-                    System.currentTimeMillis() - asyncStart, cartId);
-        } catch (Exception e) {
-            log.error("[TIMING-ASYNC] Proforma invoice generation failed after {} ms for cart {}: {}",
-                    System.currentTimeMillis() - asyncStart, cartId, e.getMessage());
-        }
-    }
-
-    /**
-     * Synchronous proforma invoice generation - used as fallback or called async
-     * Also updates order tracking Step 4
-     */
     private void generateProformaInvoiceSync(Long cartId, Long updatedCartId) {
         log.info("Starting proforma invoice generation for cart {}", cartId);
         
         // Generate Proforma Invoice after approval
-        proformaInvoiceService.generateProformaInvoice(cartId);
+        String cloudinaryUrl = proformaInvoiceService.generateProformaInvoice(cartId);
         log.info("Proforma invoice generated successfully for cart {}", cartId);
 
         // Update order tracking Step 4: PI Generated - set to "completed"
@@ -546,8 +487,19 @@ public class CartService {
                 step4Request.setDownloadLabel("Download Proforma Invoice");
 
                 orderTrackingService.updateStepBySequence(order.getId(), 4, step4Request);
-                log.info("Order tracking Step 4 set to completed for cart {} (order tracking ID: {})", 
+                log.info("Order tracking Step 4 set to completed for cart {} (order tracking ID: {})",
                     updatedCartId, order.getId());
+
+                // Persist the Cloudinary URL as an OrderDocument so the download endpoint can serve it
+                if (cloudinaryUrl != null) {
+                    try {
+                        orderDocumentService.saveDocument(order.getId(), "PI",
+                            "PI-" + updatedCartId + ".pdf", cloudinaryUrl);
+                        log.info("OrderDocument (PI) saved for order tracking {} cart {}", order.getId(), updatedCartId);
+                    } catch (Exception e) {
+                        log.warn("Could not save PI OrderDocument for cart {}: {}", updatedCartId, e.getMessage());
+                    }
+                }
             }
         } catch (Exception e) {
             log.error("Failed to update Order Tracking Step 4 for cart {}: {}",

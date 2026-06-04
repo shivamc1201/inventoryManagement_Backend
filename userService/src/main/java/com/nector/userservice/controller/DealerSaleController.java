@@ -4,16 +4,21 @@ import com.nector.userservice.dto.DealerOrderRequest;
 import com.nector.userservice.dto.DealerSaleRequest;
 import com.nector.userservice.model.DealerOrder;
 import com.nector.userservice.model.DealerSale;
+import com.nector.userservice.service.DealerInvoiceService;
 import com.nector.userservice.service.DealerSaleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 import java.util.List;
 
@@ -25,6 +30,7 @@ import java.util.List;
 public class DealerSaleController {
 
     private final DealerSaleService dealerSaleService;
+    private final DealerInvoiceService dealerInvoiceService;
 
     @PostMapping
     @Operation(summary = "Create dealer sale", description = "Create a new dealer sale and automatically generate corresponding ledger entry")
@@ -88,6 +94,30 @@ public class DealerSaleController {
 
         List<DealerOrder> orders = dealerSaleService.getOrdersByDistributorId(distributorId);
         return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/orders/{orderId}/invoice")
+    @Operation(summary = "Get dealer invoice by order ID", description = "Retrieve invoice details and PDF URL for a dealer order")
+    public ResponseEntity<Map<String, Object>> getDealerInvoice(
+            @Parameter(description = "Dealer Order ID")
+            @PathVariable Long orderId) {
+
+        Map<String, Object> invoice = dealerInvoiceService.getInvoiceByOrderId(orderId);
+        return ResponseEntity.ok(invoice);
+    }
+
+    @GetMapping("/orders/{orderId}/invoice/download")
+    @Operation(summary = "Download dealer invoice PDF", description = "Download the invoice PDF for a dealer order")
+    public ResponseEntity<byte[]> downloadDealerInvoice(
+            @Parameter(description = "Dealer Order ID")
+            @PathVariable Long orderId) {
+
+        byte[] pdfBytes = dealerInvoiceService.downloadInvoicePdf(orderId);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment", "dealer-invoice-" + orderId + ".pdf");
+        headers.setContentLength(pdfBytes.length);
+        return ResponseEntity.ok().headers(headers).body(pdfBytes);
     }
 
     @DeleteMapping("/{saleId}")

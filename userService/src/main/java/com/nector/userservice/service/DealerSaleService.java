@@ -41,6 +41,7 @@ public class DealerSaleService {
     private final CartItemRepository cartItemRepository;
     private final FinishedProductRepository finishedProductRepository;
     private final DistributorStockService distributorStockService;
+    private final DealerInvoiceService dealerInvoiceService;
 
     @Transactional
     public DealerSale createDealerSale(DealerSaleRequest request, Long distributorId) {
@@ -132,6 +133,15 @@ public class DealerSaleService {
 
         // Create corresponding ledger entry for the order
         createOrderLedgerEntry(savedOrder, dealer);
+
+        // Generate dealer invoice PDF and save URL to DB
+        try {
+            String invoiceUrl = dealerInvoiceService.generateInvoice(savedOrder, dealer);
+            log.info("Generated dealer invoice for order {}: {}", savedOrder.getId(), invoiceUrl);
+        } catch (Exception e) {
+            log.error("Failed to generate dealer invoice for order {}: {}", savedOrder.getId(), e.getMessage());
+            // Do not fail the order creation if invoice generation fails
+        }
 
         // Reduce stock from distributor inventory (- stock operation after billing dealer)
         try {

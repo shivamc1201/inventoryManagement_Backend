@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+        body {
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+        }
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 10mm;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            box-sizing: border-box;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Arial', sans-serif;
+            font-size: 11px;
+            color: #000;
+        }
+        .main-border-table { border: 1.5px solid black; }
+        .main-border-table td { border: 1px solid black; padding: 4px 6px; vertical-align: top; }
+        .bold { font-weight: bold; }
+        .center { text-align: center; }
+        .right { text-align: right; }
+
+        .items-header td {
+            border-top: 1.5px solid black !important;
+            border-bottom: 1.5px solid black !important;
+            font-weight: bold;
+            text-align: center;
+            padding: 5px 2px;
+        }
+        .product-row td { border-bottom: 1px solid black !important; border-top: none !important; }
+        .filler-row { height: 200px; }
+        .filler-row td { border-top: none !important; border-bottom: 1px solid black !important; }
+
+        .label-small { font-size: 9px; color: #333; font-weight: normal; }
+        .seller-name { font-size: 16px; font-weight: bold; }
+        .seller-details { font-size: 10px; line-height: 1.4; }
+
+        @media print {
+            @page { size: A4; margin: 10mm; }
+            body { background: none; padding: 0; margin: 0; display: block; width: 210mm; }
+            .page { box-shadow: none; margin: 0; width: 190mm; height: auto; min-height: 277mm; padding: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="page">
+    <div style="text-align: center; font-weight: bold; font-size: 15px; margin-bottom: 3px;">Bill of Supply</div>
+    <div style="text-align: right; font-size: 9px; margin-bottom: 4px;">Original Copy</div>
+
+    <table class="main-border-table">
+
+        <!-- Header: Seller Info + Invoice Meta -->
+        <tr>
+            <td colspan="4" width="55%">
+                <div class="seller-name" th:text="${invoice.sellerName}"></div>
+                <div class="seller-details">
+                    <span th:text="${invoice.sellerAddress}"></span><br/>
+                    <span th:if="${invoice.sellerState != null and !#strings.isEmpty(invoice.sellerState)}"
+                          th:text="${invoice.sellerState}"></span><br/>
+                    <span th:if="${invoice.sellerGstin != null and !#strings.isEmpty(invoice.sellerGstin)}">
+                        <span class="bold">GSTIN: </span><span th:text="${invoice.sellerGstin}"></span><br/>
+                    </span>
+                    <span th:if="${invoice.sellerPhone != null and !#strings.isEmpty(invoice.sellerPhone)}">
+                        Contact: <span th:text="${invoice.sellerPhone}"></span>
+                    </span>
+                </div>
+            </td>
+            <td colspan="2" width="22%">
+                <table style="width:100%; border-collapse: collapse;">
+                    <tr><td style="border: none; padding: 2px 0; font-size: 10px;"><span class="label-small">Invoice No.</span><br/><span class="bold" th:text="${invoice.invoiceNumber}"></span></td></tr>
+                    <tr><td style="border: none; padding: 2px 0; font-size: 10px;"><span class="label-small">Order No.</span><br/><span th:text="${invoice.orderNo}"></span></td></tr>
+                    <tr><td style="border: none; padding: 2px 0; font-size: 10px;"><span class="label-small">Mode/Terms of Payment</span><br/><span class="bold" th:text="${invoice.paymentTerms}"></span></td></tr>
+                </table>
+            </td>
+            <td colspan="2" width="23%">
+                <table style="width:100%; border-collapse: collapse;">
+                    <tr><td style="border: none; padding: 2px 0; font-size: 10px;"><span class="label-small">Dated</span><br/><span class="bold" th:text="${invoice.invoiceDate}"></span></td></tr>
+                    <tr><td style="border: none; padding: 2px 0; font-size: 10px;"><span class="label-small">Order Date</span><br/><span th:text="${invoice.orderDate}"></span></td></tr>
+                </table>
+            </td>
+        </tr>
+
+        <!-- Buyer (Bill To) -->
+        <tr>
+            <td colspan="8" style="font-size: 10px;">
+                <span class="label-small" style="font-weight: bold;">Buyer (Bill To)</span><br/>
+                <div class="bold" th:text="${invoice.buyerName}"></div>
+                <div th:text="${invoice.buyerAddress}" style="font-size: 10px;"></div>
+                <div th:if="${invoice.buyerPhone != null and !#strings.isEmpty(invoice.buyerPhone)}"
+                     style="font-size: 10px;">Contact: <span th:text="${invoice.buyerPhone}"></span></div>
+            </td>
+        </tr>
+
+        <!-- Items Header -->
+        <tr class="items-header">
+            <td width="5%" style="padding: 6px 2px;">SrNo</td>
+            <td width="12%" style="padding: 6px 2px;">SKU</td>
+            <td width="33%" style="padding: 6px 2px;">Description of Goods</td>
+            <td width="15%" style="padding: 6px 2px;">Qty.</td>
+            <td width="17%" style="padding: 6px 2px;">Rate (per unit)</td>
+            <td width="18%" style="padding: 6px 2px;">Amount (Rs.)</td>
+        </tr>
+
+        <!-- Items -->
+        <tr class="product-row" th:each="item, iter : ${invoice.items}">
+            <td class="center" style="padding: 3px 2px; font-size: 10px;" th:text="${iter.index + 1}"></td>
+            <td class="center" style="padding: 3px 2px; font-size: 10px;" th:text="${item.sku}"></td>
+            <td class="bold" style="padding: 3px 2px; font-size: 10px;" th:text="${item.description}"></td>
+            <td class="right bold" style="padding: 3px 2px; font-size: 10px;" th:text="${item.quantity}"></td>
+            <td class="right" style="padding: 3px 2px; font-size: 10px;" th:text="${item.ratePerUnit}"></td>
+            <td class="right bold" style="padding: 3px 2px; font-size: 10px;" th:text="${item.amount}"></td>
+        </tr>
+
+        <!-- Filler Row -->
+        <tr class="filler-row">
+            <td></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>
+
+        <!-- Total Row -->
+        <tr class="bold" style="font-size: 10px;">
+            <td colspan="3" class="right" style="padding: 3px 2px;">Total</td>
+            <td class="right" style="padding: 3px 2px;" th:text="${invoice.totalQty}"></td>
+            <td style="padding: 3px 2px;"></td>
+            <td class="right" style="padding: 3px 2px;" th:text="${invoice.grandTotal}"></td>
+        </tr>
+
+        <!-- Amount in Words -->
+        <tr style="font-size: 10px;">
+            <td colspan="6" style="padding: 4px 6px;">
+                <span class="label-small">Amount Chargeable (in words)</span>
+                <span style="float:right;" class="bold">E &amp; O.E</span><br/>
+                <div class="bold" th:text="${invoice.amountInWords}"></div>
+            </td>
+        </tr>
+
+        <!-- Grand Total Summary -->
+        <tr style="font-size: 10px;">
+            <td colspan="4" style="padding: 4px 6px;">
+                <span class="label-small">Tax Amount:</span> <span class="bold">NIL</span><br/><br/>
+                <div style="font-size: 9px; line-height: 1.1;">
+                    We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
+                </div>
+            </td>
+            <td colspan="1" class="right" style="padding: 4px 6px; font-size: 10px;">Grand Total</td>
+            <td class="right bold" style="padding: 4px 6px; font-size: 10px;" th:text="${invoice.grandTotal}"></td>
+        </tr>
+
+        <!-- Authorised Signatory -->
+        <tr>
+            <td colspan="6" style="padding: 5px; text-align: right; height: 60px;">
+                <span style="font-size: 10px;">for <span class="bold" th:text="${invoice.sellerName}"></span></span>
+                <br/><br/><br/>
+                <span class="bold">Authorised Signatory</span>
+            </td>
+        </tr>
+
+    </table>
+</div>
+
+</body>
+</html>

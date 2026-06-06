@@ -165,6 +165,27 @@ public interface OrderRepository extends JpaRepository<OrderWithSalesPerson, Lon
             "o.distributorId = :distributorId")
     BigDecimal getTotalAmountByDistributor(@Param("distributorId") Long distributorId);
 
+    @Query("SELECT COUNT(o) FROM OrderWithSalesPerson o WHERE o.status = com.nector.userservice.enums.OrderStatus.GDN_GENERATED AND o.salespersonId IN :ids AND o.createdAt BETWEEN :dateFrom AND :dateTo")
+    Long countGdnOrdersBySalespersonIdsBetweenDates(
+            @Param("ids") List<Long> ids,
+            @Param("dateFrom") LocalDateTime dateFrom,
+            @Param("dateTo") LocalDateTime dateTo
+    );
+
+    @Query("SELECT COALESCE(SUM(o.totalCartAmount), 0) FROM OrderWithSalesPerson o WHERE o.status = com.nector.userservice.enums.OrderStatus.GDN_GENERATED AND o.salespersonId IN :ids AND o.createdAt BETWEEN :dateFrom AND :dateTo")
+    BigDecimal sumGdnAmountBySalespersonIdsBetweenDates(
+            @Param("ids") List<Long> ids,
+            @Param("dateFrom") LocalDateTime dateFrom,
+            @Param("dateTo") LocalDateTime dateTo
+    );
+
+    @Query("SELECT o FROM OrderWithSalesPerson o WHERE o.status = com.nector.userservice.enums.OrderStatus.GDN_GENERATED AND o.salespersonId IN :ids AND o.createdAt BETWEEN :dateFrom AND :dateTo")
+    List<OrderWithSalesPerson> findGdnOrdersBySalespersonIdsAndCreatedAtBetween(
+            @Param("ids") List<Long> ids,
+            @Param("dateFrom") LocalDateTime dateFrom,
+            @Param("dateTo") LocalDateTime dateTo
+    );
+
     @Query(value = "SELECT EXTRACT(MONTH FROM created_at) as month, EXTRACT(YEAR FROM created_at) as year, " +
             "COALESCE(SUM(total_cart_amount), 0) as revenue, COUNT(*) as order_count " +
             "FROM carts WHERE status = 'GDN_GENERATED' AND created_at BETWEEN :dateFrom AND :dateTo " +

@@ -1,10 +1,12 @@
 package com.nector.userservice.service;
 
 import com.nector.userservice.dispatch.repository.GdnRepository;
+import com.nector.userservice.dto.SalesHierarchyAnalyticsResponse;
 import com.nector.userservice.dto.VolumeAnalyticsResponse;
 import com.nector.userservice.interceptors.distributor.model.DistributorStatus;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.model.Cart;
+import com.nector.userservice.model.SalesPerson;
 import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.repository.OrderRepository;
 import com.nector.userservice.repository.PaymentApprovalRepository;
@@ -15,9 +17,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +40,7 @@ public class VolumeAnalyticsService {
     private final DistributorRepository distributorRepository;
     private final CartRepository cartRepository;
     private final PaymentApprovalRepository paymentApprovalRepository;
+    private final SalesHierarchyValidationService hierarchyService;
 
     @Transactional(readOnly = true)
     public VolumeAnalyticsResponse getVolumeAnalyticsData(String period, Long salespersonId, Long distributorId) {
@@ -144,6 +149,51 @@ public class VolumeAnalyticsService {
 
         log.info("Exiting getVolumeAnalyticsData() with response for period: {}", period);
         return response;
+    }
+
+    @Transactional(readOnly = true)
+    public SalesHierarchyAnalyticsResponse getHierarchyAnalytics(Long salesPersonId) {
+        SalesPerson sp = salesPersonRepository.findById(salesPersonId)
+                .orElseThrow(() -> new RuntimeException("SalesPerson not found: " + salesPersonId));
+
+        List<Long> allIds = new ArrayList<>(hierarchyService.getAllSubordinateIds(salesPersonId));
+        allIds.add(salesPersonId);
+
+        LocalDate now = LocalDate.now();
+        LocalDate monthStart = now.withDayOfMonth(1);
+        LocalDate yearStart = now.withDayOfYear(1);
+
+        Long transactionsMTD = orderRepository.countGdnOrdersBySalespersonIdsBetweenDates(allIds, toDateTime(monthStart), toEndOfDay(now));
+        BigDecimal valueMTD = orderRepository.sumGdnAmountBySalespersonIdsBetweenDates(allIds, toDateTime(monthStart), toEndOfDay(now));
+
+        Long transactionsYTD = orderRepository.countGdnOrdersBySalespersonIdsBetweenDates(allIds, toDateTime(yearStart), toEndOfDay(now));
+        BigDecimal valueYTD = orderRepository.sumGdnAmountBySalespersonIdsBetweenDates(allIds, toDateTime(yearStart), toEndOfDay(now));
+
+        BigDecimal volumeMTDKg = getTotalWeightKgBySalespersonIds(monthStart, now, allIds);
+        BigDecimal volumeYTDKg = getTotalWeightKgBySalespersonIds(yearStart, now, allIds);
+
+        return SalesHierarchyAnalyticsResponse.builder()
+                .salesPersonId(salesPersonId)
+                .salesPersonName(sp.getFirstName() + " " + sp.getLastName())
+                .role(sp.getRole().name())
+                .volumeMTD(volumeMTDKg.divide(BigDecimal.valueOf(1000), 2, RoundingMode.HALF_UP))
+                .transactionsMTD(transactionsMTD != null ? transactionsMTD : 0L)
+                .valueMTD(valueMTD != null ? valueMTD : BigDecimal.ZERO)
+                .volumeYTD(volumeYTDKg.divide(BigDecimal.valueOf(1000), 2, RoundingMode.HALF_UP))
+                .transactionsYTD(transactionsYTD != null ? transactionsYTD : 0L)
+                .valueYTD(valueYTD != null ? valueYTD : BigDecimal.ZERO)
+                .teamSize(allIds.size())
+                .build();
+    }
+
+    private BigDecimal getTotalWeightKgBySalespersonIds(LocalDate start, LocalDate end, List<Long> ids) {
+        var orders = orderRepository.findGdnOrdersBySalespersonIdsAndCreatedAtBetween(ids, toDateTime(start), toEndOfDay(end));
+        return orders.stream()
+                .map(order -> gdnRepository.findByOrderId(order.getId()))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .map(gdn -> gdn.getTotalWeight() != null ? gdn.getTotalWeight() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private VolumeAnalyticsResponse.VolumeMetrics getVolumeMetrics(LocalDate start, LocalDate end, Long salespersonId, Long distributorId) {

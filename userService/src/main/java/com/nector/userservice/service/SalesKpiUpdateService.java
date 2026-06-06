@@ -37,10 +37,16 @@ public class SalesKpiUpdateService {
         List<SalesKpiUpdate> saved = new ArrayList<>();
 
         for (SalesKpiUpdateRequest req : requests) {
+            LocalDate entryDate = LocalDate.parse(req.getDate());
+            if (salesKpiUpdateRepository.existsByEmpCodeAndDate(req.getEmpCode(), entryDate)) {
+                log.warn("Duplicate entry skipped for empCode={} date={}", req.getEmpCode(), req.getDate());
+                continue;
+            }
+
             SalesKpiUpdate entity = new SalesKpiUpdate();
             entity.setUserName(req.getUserName());
             entity.setEmpCode(req.getEmpCode());
-            entity.setDate(LocalDate.parse(req.getDate()));
+            entity.setDate(entryDate);
             entity.setTotalDistanceInKm(req.getTotalDistanceInKm());
             entity.setNoOfMeetings(req.getNoOfMeetings());
             entity.setFarmerVisit(req.getFarmerVisit());

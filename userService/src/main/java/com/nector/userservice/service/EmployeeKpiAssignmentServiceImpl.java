@@ -36,6 +36,7 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
     private final KpiMasterRepository kpiMasterRepository;
     private final KpiValidator kpiValidator;
     private final KpiCalculator kpiCalculator;
+    private final EmployeeKpiResultService resultService;
 
     @Override
     @Transactional
@@ -506,6 +507,13 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
         int currentMonth = java.time.LocalDate.now().getMonthValue();
         int currentYear  = java.time.LocalDate.now().getYear();
 
+        // Monthly history + yearly aggregate for the current year
+        java.util.List<com.nector.userservice.dto.KpiResultResponse> monthlyHistory =
+                resultService.getResultsByEmployeeAndYear(employeeId, currentYear);
+
+        com.nector.userservice.dto.KpiYearlySummaryResponse yearly =
+                resultService.getYearlySummary(employeeId, currentYear);
+
         return KpiAssignmentWithGradeSummaryResponse.builder()
                 .kpis(kpiResponses)
                 // current month snapshot fields
@@ -514,6 +522,11 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
                 .totalScore(totalWeightedScore)
                 .finalGrade(finalGrade)
                 .finalGradeMeaning(finalGrade.getMeaning())
+                // monthly history and yearly aggregate
+                .monthlyHistory(monthlyHistory)
+                .yearlyAverage(yearly.getAverageMonthlyScore())
+                .yearlyGrade(yearly.getYearlyGrade())
+                .yearlyGradeMeaning(yearly.getYearlyGradeMeaning())
                 // backward-compat fields
                 .totalWeightedScore(totalWeightedScore)
                 .overallGrade(overallGrade.getGrade())

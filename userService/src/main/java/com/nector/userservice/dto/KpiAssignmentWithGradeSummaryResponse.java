@@ -24,6 +24,14 @@ public class KpiAssignmentWithGradeSummaryResponse {
     private KPIGrade finalGrade;
     private String finalGradeMeaning;
 
+    // Monthly history for the current year (from employee_kpi_result)
+    private List<KpiResultResponse> monthlyHistory;
+
+    // Yearly aggregate for the current year
+    private BigDecimal yearlyAverage;
+    private KPIGrade yearlyGrade;
+    private String yearlyGradeMeaning;
+
     // Backward-compat fields
     private BigDecimal totalWeightedScore;
     private String overallGrade;

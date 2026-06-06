@@ -3,6 +3,7 @@ package com.nector.userservice.controller;
 import com.nector.userservice.dto.DashboardResponse;
 import com.nector.userservice.dto.MonthlySalesResponse;
 import com.nector.userservice.dto.OrderDashboardResponse;
+import com.nector.userservice.dto.SalesHierarchyAnalyticsResponse;
 import com.nector.userservice.dto.VolumeAnalyticsResponse;
 import com.nector.userservice.enums.OrderStatus;
 import com.nector.userservice.model.User;
@@ -53,6 +54,15 @@ public class DashboardController {
             @RequestParam(required = false) Long salespersonId,
             @RequestParam(required = false) Long distributorId) {
         VolumeAnalyticsResponse response = volumeAnalyticsService.getVolumeAnalyticsData(period, salespersonId, distributorId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/sales-hierarchy-analytics")
+    @Operation(summary = "Get hierarchy-based sales analytics", description = "Returns MTD/YTD volume (tons) and value (amount) aggregated across the salesperson and all subordinates in their hierarchy.")
+    @ApiResponse(responseCode = "200", description = "Hierarchy analytics retrieved successfully")
+    public ResponseEntity<SalesHierarchyAnalyticsResponse> getSalesHierarchyAnalytics(
+            @RequestParam Long salesPersonId) {
+        SalesHierarchyAnalyticsResponse response = volumeAnalyticsService.getHierarchyAnalytics(salesPersonId);
         return ResponseEntity.ok(response);
     }
 

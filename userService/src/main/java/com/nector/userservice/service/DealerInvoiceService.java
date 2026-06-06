@@ -8,6 +8,8 @@ import com.nector.userservice.model.Dealer;
 import com.nector.userservice.model.DealerInvoice;
 import com.nector.userservice.model.DealerOrder;
 import com.nector.userservice.repository.DealerInvoiceRepository;
+import com.nector.userservice.repository.DealerOrderRepository;
+import com.nector.userservice.repository.DealerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,8 @@ import java.util.Map;
 public class DealerInvoiceService {
 
     private final DealerInvoiceRepository dealerInvoiceRepository;
+    private final DealerOrderRepository dealerOrderRepository;
+    private final DealerRepository dealerRepository;
     private final DistributorRepository distributorRepository;
     private final DocumentNumberService documentNumberService;
     private final TemplateEngine templateEngine;
@@ -43,8 +47,9 @@ public class DealerInvoiceService {
         log.info("=== DEALER INVOICE GENERATION STARTED === Order ID: {}", order.getId());
 
         try {
-            Distributor distributor = distributorRepository.findById(order.getDistributorId())
-                    .orElseThrow(() -> new RuntimeException("Distributor not found: " + order.getDistributorId()));
+            Distributor distributor = (order.getDistributorId() != null)
+                    ? distributorRepository.findById(order.getDistributorId()).orElse(null)
+                    : null;
 
             String invoiceNumber = documentNumberService.generateDocumentNumber("DI");
             log.info("Generated dealer invoice number: {}", invoiceNumber);
@@ -55,7 +60,8 @@ public class DealerInvoiceService {
             invoiceEntity.setDealerId(order.getDealerId());
             invoiceEntity.setDealerName(dealer.getFullName());
             invoiceEntity.setDistributorId(order.getDistributorId());
-            invoiceEntity.setDistributorName(distributor.getFirstName() + " " + distributor.getLastName());
+            invoiceEntity.setDistributorName(distributor != null
+                    ? distributor.getFirstName() + " " + distributor.getLastName() : "");
             invoiceEntity.setTotalAmount(order.getAmount());
             invoiceEntity.setGrandTotal(order.getAmount());
             invoiceEntity.setInvoiceStatus(DealerInvoice.InvoiceStatus.GENERATED);
@@ -104,6 +110,45 @@ public class DealerInvoiceService {
         }
     }
 
+    @Transactional
+    public void regeneratePdf(Long dealerOrderId) {
+        log.info("=== DEALER INVOICE PDF REGENERATION STARTED === Order ID: {}", dealerOrderId);
+
+        DealerOrder order = dealerOrderRepository.findById(dealerOrderId)
+                .orElseThrow(() -> new RuntimeException("DealerOrder not found: " + dealerOrderId));
+
+        java.util.Optional<DealerInvoice> invoiceOpt = dealerInvoiceRepository.findByDealerOrderId(dealerOrderId);
+
+        if (invoiceOpt.isEmpty()) {
+            // Invoice was never created (generation failed silently at order time) — create it now
+            log.info("No dealer invoice found for order {} — generating from scratch", dealerOrderId);
+            Dealer dealer = dealerRepository.findById(order.getDealerId())
+                    .orElseThrow(() -> new RuntimeException("Dealer not found: " + order.getDealerId()));
+            generateInvoice(order, dealer);
+            return;
+        }
+
+        DealerInvoice invoiceEntity = invoiceOpt.get();
+        Dealer dealer = dealerRepository.findById(invoiceEntity.getDealerId())
+                .orElseThrow(() -> new RuntimeException("Dealer not found: " + invoiceEntity.getDealerId()));
+        Distributor distributor = (invoiceEntity.getDistributorId() != null)
+                ? distributorRepository.findById(invoiceEntity.getDistributorId()).orElse(null)
+                : null;
+
+        try {
+            DealerInvoiceDto dto = buildDto(order, dealer, distributor, invoiceEntity.getInvoiceNumber());
+            String html = generateHtml(dto);
+            byte[] pdfBytes = htmlToPdfService.convertHtmlToPdf(html);
+            String newUrl = uploadToCloudinary(pdfBytes, invoiceEntity.getInvoiceNumber());
+            invoiceEntity.setPdfUrl(newUrl);
+            dealerInvoiceRepository.save(invoiceEntity);
+            log.info("=== DEALER INVOICE PDF REGENERATION COMPLETED === Invoice: {}", invoiceEntity.getInvoiceNumber());
+        } catch (Exception e) {
+            log.error("Dealer invoice PDF regeneration failed for order {}: {}", dealerOrderId, e.getMessage(), e);
+            throw new RuntimeException("Dealer invoice PDF regeneration failed", e);
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getInvoicesByDistributorId(Long distributorId) {
         return dealerInvoiceRepository.findByDistributorIdOrderByCreatedAtDesc(distributorId)
@@ -126,12 +171,12 @@ public class DealerInvoiceService {
                 : LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
         dto.setPaymentTerms("Due on Receipt");
 
-        // Seller = Distributor
-        dto.setSellerName(distributor.getFirstName() + " " + distributor.getLastName());
-        dto.setSellerAddress(distributor.getAddress() != null ? distributor.getAddress() : "");
-        dto.setSellerPhone(distributor.getPhoneNumber() != null ? distributor.getPhoneNumber() : "");
-        dto.setSellerGstin(distributor.getGstNumber() != null ? distributor.getGstNumber() : "");
-        dto.setSellerState(distributor.getState() != null ? distributor.getState() : "");
+        // Seller = Distributor (may be null if distributor_id was not set on the order)
+        dto.setSellerName(distributor != null ? distributor.getFirstName() + " " + distributor.getLastName() : "");
+        dto.setSellerAddress(distributor != null && distributor.getAddress() != null ? distributor.getAddress() : "");
+        dto.setSellerPhone(distributor != null && distributor.getPhoneNumber() != null ? distributor.getPhoneNumber() : "");
+        dto.setSellerGstin(distributor != null && distributor.getGstNumber() != null ? distributor.getGstNumber() : "");
+        dto.setSellerState(distributor != null && distributor.getState() != null ? distributor.getState() : "");
 
         // Buyer = Dealer
         dto.setBuyerName(dealer.getFullName() != null ? dealer.getFullName() : "");

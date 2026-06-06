@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -118,6 +119,20 @@ public class DealerSaleController {
         headers.setContentDispositionFormData("attachment", "dealer-invoice-" + orderId + ".pdf");
         headers.setContentLength(pdfBytes.length);
         return ResponseEntity.ok().headers(headers).body(pdfBytes);
+    }
+
+    @PostMapping("/orders/{orderId}/regenerate-pdf")
+    @Operation(summary = "Regenerate dealer invoice PDF", description = "Regenerate and re-upload the dealer invoice PDF to cloud storage")
+    public ResponseEntity<Map<String, Object>> regenerateDealerInvoicePdf(
+            @Parameter(description = "Dealer Order ID")
+            @PathVariable Long orderId) {
+        try {
+            dealerInvoiceService.regeneratePdf(orderId);
+            return ResponseEntity.ok(Map.of("message", "Dealer invoice PDF regenerated successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @DeleteMapping("/{saleId}")

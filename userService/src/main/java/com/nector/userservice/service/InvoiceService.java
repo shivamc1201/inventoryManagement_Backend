@@ -515,6 +515,23 @@ public class InvoiceService {
         }
     }
 
+    @Transactional
+    public void regenerateInvoicePdf(Long orderId) {
+        log.info("=== INVOICE PDF REGENERATION STARTED === Order ID: {}", orderId);
+
+        if (invoiceRepository.findByOrderId(orderId).isEmpty()) {
+            log.info("No invoice found for order {} — generating from scratch", orderId);
+            OrderConfirmation orderConfirmation = orderConfirmationRepository.findByOrderId(orderId)
+                    .orElseThrow(() -> new RuntimeException(
+                            "No OrderConfirmation found for order ID: " + orderId + ". Invoice cannot be generated."));
+            generateInvoice(orderConfirmation.getId());
+            return;
+        }
+
+        downloadInvoicePdf(orderId); // already regenerates from live data and re-uploads to Cloudinary
+        log.info("=== INVOICE PDF REGENERATION COMPLETED === Order ID: {}", orderId);
+    }
+
     /**
      * Download Invoice PDF - regenerates PDF on-the-fly from live data so items always appear correctly.
      */

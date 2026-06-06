@@ -6,6 +6,7 @@ import com.nector.userservice.dto.cart.PlaceOrderRequest;
 import com.nector.userservice.dto.DismissCartRequest;
 import com.nector.userservice.model.Cart;
 import com.nector.userservice.service.CartService;
+import com.nector.userservice.service.ProformaInvoiceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ import java.util.Map;
 public class CartController {
     
     private final CartService cartService;
+    private final ProformaInvoiceService proformaInvoiceService;
 
     @PostMapping("/items")
     public ResponseEntity<?> addItemToCart(
@@ -154,7 +156,7 @@ public class CartController {
         log.info("Downloading proforma invoice for cart: {}", cartId);
         try {
             byte[] pdfBytes = cartService.downloadProformaInvoice(cartId);
-            
+
             return ResponseEntity.ok()
                     .header("Content-Type", "application/pdf")
                     .header("Content-Disposition", "attachment; filename=proforma-invoice-" + cartId + ".pdf")
@@ -162,6 +164,20 @@ public class CartController {
         } catch (Exception e) {
             log.error("Error downloading proforma invoice for cart {}: {}", cartId, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PostMapping("/{cartId}/regenerate-proforma-invoice")
+    public ResponseEntity<Map<String, Object>> regenerateProformaInvoice(@PathVariable Long cartId) {
+        log.info("Regenerating proforma invoice PDF for cart: {}", cartId);
+        try {
+            proformaInvoiceService.regeneratePdf(cartId);
+            return ResponseEntity.ok(Map.of("message", "Proforma invoice PDF regenerated successfully"));
+        } catch (Exception e) {
+            log.error("Error regenerating proforma invoice for cart {}: {}", cartId, e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
     }
     @GetMapping("/approved")

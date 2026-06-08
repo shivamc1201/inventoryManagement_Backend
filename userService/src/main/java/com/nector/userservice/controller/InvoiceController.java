@@ -9,9 +9,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 import java.util.List;
 import java.util.Map;
@@ -64,6 +67,20 @@ public class InvoiceController {
             log.error("Error retrieving invoices for distributor {}: {}", distributorId, e.getMessage());
             return ResponseEntity.status(500)
                     .body(new ApiResponse<>(false, "Failed to retrieve invoices", null));
+        }
+    }
+
+    @PostMapping("/order/{orderId}/regenerate-pdf")
+    @Operation(summary = "Regenerate invoice PDF", description = "Regenerate and re-upload the invoice PDF to cloud storage from live order data")
+    public ResponseEntity<Map<String, Object>> regenerateInvoicePdf(
+            @Parameter(description = "Order ID") @PathVariable Long orderId) {
+        try {
+            invoiceService.regenerateInvoicePdf(orderId);
+            return ResponseEntity.ok(Map.of("message", "Invoice PDF regenerated successfully"));
+        } catch (Exception e) {
+            log.error("Error regenerating invoice PDF for order {}: {}", orderId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 

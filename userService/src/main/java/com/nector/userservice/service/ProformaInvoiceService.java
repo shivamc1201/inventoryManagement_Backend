@@ -373,6 +373,36 @@ public class ProformaInvoiceService {
      */
 
 
+    @Transactional
+    public void regeneratePdf(Long cartId) {
+        log.info("=== PROFORMA INVOICE PDF REGENERATION STARTED === Cart ID: {}", cartId);
+
+        Cart cart = cartRepository.findByIdWithItems(cartId)
+                .orElseThrow(() -> new RuntimeException("Cart not found with ID: " + cartId));
+
+        java.util.Optional<com.nector.userservice.model.ProformaInvoice> piOpt = proformaInvoiceRepository.findByCartId(cartId);
+
+        if (piOpt.isEmpty()) {
+            log.info("No proforma invoice found for cart {} — generating from scratch", cartId);
+            generateProformaInvoice(cartId);
+            return;
+        }
+
+        com.nector.userservice.model.ProformaInvoice pi = piOpt.get();
+        try {
+            ProformaInvoice invoice = createInvoiceFromCart(cart, pi.getPiNumber());
+            String html = generateHtmlFromTemplate(invoice);
+            byte[] pdfBytes = htmlToPdfService.convertHtmlToPdf(html);
+            String newUrl = uploadPdfToCloudinary(pdfBytes, pi.getPiNumber());
+            pi.setPdfUrl(newUrl);
+            proformaInvoiceRepository.save(pi);
+            log.info("=== PROFORMA INVOICE PDF REGENERATION COMPLETED === PI: {}", pi.getPiNumber());
+        } catch (Exception e) {
+            log.error("Proforma invoice PDF regeneration failed for cart {}: {}", cartId, e.getMessage(), e);
+            throw new RuntimeException("Proforma invoice PDF regeneration failed", e);
+        }
+    }
+
     public byte[] downloadProformaInvoicePdf(Long cartId) {
         log.info("=== DOWNLOAD PROFORMA INVOICE PDF ===");
         log.info("Download request - Cart ID: {}, Timestamp: {}", cartId, java.time.LocalDateTime.now());

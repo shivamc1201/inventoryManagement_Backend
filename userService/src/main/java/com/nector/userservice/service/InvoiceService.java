@@ -405,7 +405,7 @@ public class InvoiceService {
         invoice.setTaxInWords(taxAmount == 0 ? "NIL" : convertToWords(taxAmount));
 
         // Additional details
-        invoice.setTermsAndConditions("1. Goods once sold will not be taken back.\n2. Payment should be made as per the terms agreed.\n3. Subject to Bihar Jurisdiction.");
+        invoice.setTermsAndConditions("1. Goods once sold will not be taken back.\n2. Payment should be made as per the terms agreed.\n3. Subject to Bhagalpur Jurisdiction.");
         invoice.setAuthorizedSignatory("Authorized Signatory");
 
         return invoice;

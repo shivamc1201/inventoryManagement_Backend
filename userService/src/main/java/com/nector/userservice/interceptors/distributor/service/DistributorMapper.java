@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.distributor.service;
 
+import com.nector.userservice.enums.IndianStateCode;
 import com.nector.userservice.interceptors.distributor.model.Distributor;
 import com.nector.userservice.interceptors.distributor.model.DistributorRequestDTO;
 import com.nector.userservice.interceptors.distributor.model.DistributorResponseDTO;
@@ -43,6 +44,8 @@ public class DistributorMapper {
         distributor.setBgExpiryDate(dto.getBgExpiryDate());
         distributor.setDistrict(dto.getDistrict());
         distributor.setState(dto.getState());
+        distributor.setStateCode(IndianStateCode.fromStateName(dto.getState())
+                .map(IndianStateCode::getCodeAsString).orElse(null));
         distributor.setPinCode(dto.getPinCode());
         distributor.setKeyperson(dto.getKeyperson());
 
@@ -82,6 +85,7 @@ public class DistributorMapper {
         dto.setBgExpiryDate(entity.getBgExpiryDate());
         dto.setDistrict(entity.getDistrict());
         dto.setState(entity.getState());
+        dto.setStateCode(entity.getStateCode());
         dto.setPinCode(entity.getPinCode());
         dto.setKeyperson(entity.getKeyperson());
         return dto;
@@ -118,6 +122,8 @@ public class DistributorMapper {
         entity.setBgExpiryDate(dto.getBgExpiryDate());
         entity.setDistrict(dto.getDistrict());
         entity.setState(dto.getState());
+        entity.setStateCode(IndianStateCode.fromStateName(dto.getState())
+                .map(IndianStateCode::getCodeAsString).orElse(null));
         entity.setPinCode(dto.getPinCode());
         if (dto.getKeyperson() != null) {
             entity.setKeyperson(dto.getKeyperson());

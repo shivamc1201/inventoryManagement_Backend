@@ -217,9 +217,9 @@ public class ProformaInvoiceService {
             billTo.setName(distributor.getFirstName());
             billTo.setAddress(distributor.getAddress());
             billTo.setGstin(distributor.getGstNumber());
-            billTo.setState("Bihar"); // You may want to add state to distributor entity
-            billTo.setStateCode("10"); // Bihar state code
-            billTo.setPincode("813203"); // Default pincode
+            billTo.setState(distributor.getState() != null ? distributor.getState() : "");
+            billTo.setStateCode(distributor.getStateCode() != null ? distributor.getStateCode() : "");
+            billTo.setPincode(distributor.getPinCode() != null ? distributor.getPinCode() : "");
             billTo.setContact(distributor.getPhoneNumber() != null ? distributor.getPhoneNumber() : "06429-450126");
             invoice.setBillTo(billTo);
 
@@ -228,9 +228,9 @@ public class ProformaInvoiceService {
             shipTo.setName(distributor.getFirstName());
             shipTo.setAddress(cart.getAddress() != null ? cart.getAddress() : distributor.getAddress());
             shipTo.setGstin(distributor.getGstNumber());
-            shipTo.setState("Bihar"); // You may want to add state to distributor entity
-            shipTo.setStateCode("10"); // Bihar state code
-            shipTo.setPincode("813203"); // Default pincode
+            shipTo.setState(distributor.getState() != null ? distributor.getState() : "");
+            shipTo.setStateCode(distributor.getStateCode() != null ? distributor.getStateCode() : "");
+            shipTo.setPincode(distributor.getPinCode() != null ? distributor.getPinCode() : "");
             shipTo.setContact(distributor.getPhoneNumber() != null ? distributor.getPhoneNumber() : "06429-450126");
             invoice.setShipTo(shipTo);
             log.info("ShipTo set with name: {}", shipTo.getName());
@@ -241,16 +241,16 @@ public class ProformaInvoiceService {
             billTo.setName("Customer Name");
             billTo.setAddress(cart.getAddress() != null ? cart.getAddress() : "Customer Address");
             billTo.setGstin("Customer GSTIN");
-            billTo.setState("Bihar");
-            billTo.setStateCode("10");
+            billTo.setState("");
+            billTo.setStateCode("");
             invoice.setBillTo(billTo);
 
             ProformaInvoice.BuyerDetails shipTo = new ProformaInvoice.BuyerDetails();
             shipTo.setName("Customer Name");
             shipTo.setAddress(cart.getAddress() != null ? cart.getAddress() : "Customer Address");
             shipTo.setGstin("Customer GSTIN");
-            shipTo.setState("Bihar");
-            shipTo.setStateCode("10");
+            shipTo.setState("");
+            shipTo.setStateCode("");
             invoice.setShipTo(shipTo);
             log.info("Fallback buyer details created");
         }

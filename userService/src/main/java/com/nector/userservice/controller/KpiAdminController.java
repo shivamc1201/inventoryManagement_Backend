@@ -23,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/kra-kpi")
@@ -297,6 +298,56 @@ public class KpiAdminController {
         return ResponseEntity.ok()
                 .headers(headers)
                 .body(pdfData);
+    }
+
+    // ============ Scheduler Manual Triggers ============
+
+    @PostMapping("/rollover-assignments")
+    @Operation(
+        summary = "Rollover KPI assignments to current month",
+        description = "Manually triggers the monthly rollover that copies previous month's KPI assignments " +
+                      "to the current month with achievedValue reset to 0. Safe to call multiple times — " +
+                      "skips assignments that already exist for the current month."
+    )
+    public ResponseEntity<Map<String, Object>> rolloverAssignments() {
+        log.info("Manual rollover triggered via admin API");
+        try {
+            assignmentService.rolloverAssignmentsToNextMonth();
+            return ResponseEntity.ok(Map.of(
+                "message", "KPI assignments rolled over to current month successfully"
+            ));
+        } catch (Exception e) {
+            log.error("Manual rollover failed: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/generate-monthly-results")
+    @Operation(
+        summary = "Generate monthly KPI results for all employees",
+        description = "Manually triggers result generation for a given month and year. " +
+                      "Defaults to the previous month if no params provided."
+    )
+    public ResponseEntity<Map<String, Object>> generateMonthlyResults(
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year) {
+        java.time.LocalDate ref = (month == null || year == null)
+                ? java.time.LocalDate.now().minusMonths(1)
+                : java.time.LocalDate.of(year, month, 1);
+        int m = ref.getMonthValue();
+        int y = ref.getYear();
+        log.info("Manual monthly result generation triggered for {}/{}", m, y);
+        try {
+            resultService.generateResultsForAllEmployees(m, y);
+            return ResponseEntity.ok(Map.of(
+                "message", "Monthly results generated for " + m + "/" + y
+            ));
+        } catch (Exception e) {
+            log.error("Manual result generation failed: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
 }

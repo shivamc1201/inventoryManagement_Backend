@@ -104,6 +104,9 @@ public class DistributorResponseDTO {
     @Schema(description = "State", example = "Bihar")
     private String state;
 
+    @Schema(description = "State code as per GST", example = "10")
+    private String stateCode;
+
     @Schema(description = "PIN code", example = "800001")
     private String pinCode;
 

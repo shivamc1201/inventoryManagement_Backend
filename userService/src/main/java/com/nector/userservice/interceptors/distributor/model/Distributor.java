@@ -104,6 +104,9 @@ public class Distributor {
     @Column(name = "state", length = 100)
     private String state;
 
+    @Column(name = "state_code", length = 5)
+    private String stateCode;
+
     @Column(name = "pin_code", length = 10)
     private String pinCode;
 

@@ -42,6 +42,12 @@ public interface EmployeeKpiAssignmentService {
 
     void expireOldAssignments();
 
+    /**
+     * Copy all previous month's KPI assignments to the current month with achievedValue reset to 0.
+     * Idempotent — skips if assignment already exists for that employee+KPI in the new month.
+     */
+    void rolloverAssignmentsToNextMonth();
+
     Integer getTotalWeightageForEmployee(Long employeeId);
 
     /**

@@ -438,6 +438,56 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
 
     @Override
     @Transactional
+    public void rolloverAssignmentsToNextMonth() {
+        LocalDate today = LocalDate.now();
+        LocalDate prev = today.minusMonths(1);
+
+        int prevMonth = prev.getMonthValue();
+        int prevYear  = prev.getYear();
+        int newMonth  = today.getMonthValue();
+        int newYear   = today.getYear();
+
+        LocalDate newStart = LocalDate.of(newYear, newMonth, 1);
+        LocalDate newEnd   = newStart.withDayOfMonth(newStart.lengthOfMonth());
+
+        log.info("Rolling over KPI assignments from {}/{} → {}/{}", prevMonth, prevYear, newMonth, newYear);
+
+        List<EmployeeKpiAssignment> previous = assignmentRepository.findAllByMonthAndYear(prevMonth, prevYear);
+        int created = 0, skipped = 0;
+
+        for (EmployeeKpiAssignment src : previous) {
+            boolean exists = assignmentRepository
+                    .findOverlappingByEmployeeAndKpi(src.getEmployeeId(), src.getKpiId(),
+                            KPIStatus.ACTIVE, newStart, newEnd)
+                    .isPresent();
+            if (exists) { skipped++; continue; }
+
+            EmployeeKpiAssignment next = new EmployeeKpiAssignment();
+            next.setEmployeeId(src.getEmployeeId());
+            next.setEmployeeName(src.getEmployeeName());
+            next.setDesignation(src.getDesignation());
+            next.setRoleName(src.getRoleName());
+            next.setKpiId(src.getKpiId());
+            next.setTargetValue(src.getTargetValue());
+            next.setAchievedValue(BigDecimal.ZERO);
+            next.setWeightage(src.getWeightage());
+            next.setScorePercentage(BigDecimal.ZERO);
+            next.setWeightedScore(BigDecimal.ZERO);
+            next.setStartDate(newStart);
+            next.setEndDate(newEnd);
+            next.setStatus(KPIStatus.ACTIVE);
+            next.setRemarks(src.getRemarks());
+            next.setAssignedBy(src.getAssignedBy());
+            assignmentRepository.save(next);
+            created++;
+        }
+
+        log.info("Rollover complete: {} assignments created, {} skipped for {}/{}",
+                created, skipped, newMonth, newYear);
+    }
+
+    @Override
+    @Transactional
     public void expireOldAssignments() {
         log.info("Checking for expired assignments");
         
@@ -488,7 +538,12 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
     public KpiAssignmentWithGradeSummaryResponse getAssignmentsWithGrades(Long employeeId) {
         log.info("Getting assignments with grades for employee ID: {}", employeeId);
 
-        List<EmployeeKpiAssignment> assignments = assignmentRepository.findByEmployeeId(employeeId);
+        int currentMonth = LocalDate.now().getMonthValue();
+        int currentYear  = LocalDate.now().getYear();
+
+        // Only return assignments for the current month
+        List<EmployeeKpiAssignment> assignments =
+                assignmentRepository.findByEmployeeIdAndMonthAndYear(employeeId, currentMonth, currentYear);
 
         List<KpiAssignmentWithGradeResponse> kpiResponses = assignments.stream()
                 .map(this::mapToResponseWithGrade)
@@ -503,9 +558,6 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
         // Derive KPIGrade enum from the string grade for the finalGrade field
         com.nector.userservice.enums.KPIGrade finalGrade =
                 com.nector.userservice.enums.KPIGrade.fromScore(totalWeightedScore.doubleValue());
-
-        int currentMonth = java.time.LocalDate.now().getMonthValue();
-        int currentYear  = java.time.LocalDate.now().getYear();
 
         // Monthly history + yearly aggregate for the current year
         java.util.List<com.nector.userservice.dto.KpiResultResponse> monthlyHistory =

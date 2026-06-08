@@ -32,7 +32,7 @@ public class KpiScheduler {
     }
 
     /**
-     * Run on the 1st of every month at 1 AM to generate results for previous month
+     * Run on the 1st of every month at 1 AM to generate and persist results for the previous month.
      */
     @Scheduled(cron = "0 0 1 1 * ?")
     public void generateMonthlyResults() {
@@ -40,10 +40,25 @@ public class KpiScheduler {
         try {
             LocalDate previousMonth = LocalDate.now().minusMonths(1);
             resultService.generateResultsForAllEmployees(previousMonth.getMonthValue(), previousMonth.getYear());
-            log.info("Completed scheduled task: generateMonthlyResults for {}/{}", 
+            log.info("Completed scheduled task: generateMonthlyResults for {}/{}",
                     previousMonth.getMonthValue(), previousMonth.getYear());
         } catch (Exception e) {
             log.error("Error in generateMonthlyResults scheduled task", e);
+        }
+    }
+
+    /**
+     * Run on the 1st of every month at 2 AM to roll over KPI assignments from the previous month.
+     * Runs after generateMonthlyResults (1 AM) so that results are persisted before new assignments begin.
+     */
+    @Scheduled(cron = "0 0 2 1 * ?")
+    public void rolloverKpiAssignments() {
+        log.info("Running scheduled task: rolloverKpiAssignments at {}", LocalDate.now());
+        try {
+            assignmentService.rolloverAssignmentsToNextMonth();
+            log.info("Completed scheduled task: rolloverKpiAssignments");
+        } catch (Exception e) {
+            log.error("Error in rolloverKpiAssignments scheduled task", e);
         }
     }
 }

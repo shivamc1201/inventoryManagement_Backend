@@ -265,8 +265,8 @@ public class InvoiceService {
             billTo.setName(distributor.getFirstName());
             billTo.setAddress(distributor.getAddress());
             billTo.setGstin(distributor.getGstNumber());
-            billTo.setState("Bihar");
-            billTo.setStateCode("10");
+            billTo.setState(distributor.getState() != null ? distributor.getState() : "");
+            billTo.setStateCode(distributor.getStateCode() != null ? distributor.getStateCode() : "");
             billTo.setPincode(distributor.getPinCode() != null ? distributor.getPinCode() : "");
             billTo.setContact(distributor.getPhoneNumber() != null ? distributor.getPhoneNumber() : "");
             invoice.setBillTo(billTo);
@@ -276,8 +276,8 @@ public class InvoiceService {
             shipTo.setName(distributor.getFirstName());
             shipTo.setAddress(cart.getAddress() != null ? cart.getAddress() : distributor.getAddress());
             shipTo.setGstin(distributor.getGstNumber());
-            shipTo.setState("Bihar");
-            shipTo.setStateCode("10");
+            shipTo.setState(distributor.getState() != null ? distributor.getState() : "");
+            shipTo.setStateCode(distributor.getStateCode() != null ? distributor.getStateCode() : "");
             shipTo.setPincode(distributor.getPinCode() != null ? distributor.getPinCode() : "");
             shipTo.setContact(distributor.getPhoneNumber() != null ? distributor.getPhoneNumber() : "");
             invoice.setShipTo(shipTo);
@@ -289,8 +289,8 @@ public class InvoiceService {
             billTo.setName("Customer Name");
             billTo.setAddress(cart.getAddress() != null ? cart.getAddress() : "Customer Address");
             billTo.setGstin("Customer GSTIN");
-            billTo.setState("Bihar");
-            billTo.setStateCode("10");
+            billTo.setState("");
+            billTo.setStateCode("");
             billTo.setPincode("");
             billTo.setContact("");
             invoice.setBillTo(billTo);
@@ -299,8 +299,8 @@ public class InvoiceService {
             shipTo.setName("Customer Name");
             shipTo.setAddress(cart.getAddress() != null ? cart.getAddress() : "Customer Address");
             shipTo.setGstin("Customer GSTIN");
-            shipTo.setState("Bihar");
-            shipTo.setStateCode("10");
+            shipTo.setState("");
+            shipTo.setStateCode("");
             shipTo.setPincode("");
             shipTo.setContact("");
             invoice.setShipTo(shipTo);

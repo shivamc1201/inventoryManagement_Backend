@@ -78,7 +78,7 @@ public class InvoiceService {
 
             // Step 4: Generate invoice data
             log.info("Step 4/6: Generating invoice data from cart and order confirmation");
-            Invoice invoice = createInvoiceFromData(orderConfirmation, cart, invoiceNumber);
+            Invoice invoice = createInvoiceFromData(orderConfirmation, cart, invoiceNumber, invoiceEntity.getInvoiceDate().toLocalDate());
             log.info("Invoice data created - Invoice Number: {}, Items: {}, Total Amount: {}",
                     invoice.getInvoiceNumber(), invoice.getItems().size(), invoice.getGrandTotal());
 
@@ -230,19 +230,19 @@ public class InvoiceService {
         return invoiceEntity;
     }
 
-    private Invoice createInvoiceFromData(OrderConfirmation orderConfirmation, Cart cart, String invoiceNumber) {
+    private Invoice createInvoiceFromData(OrderConfirmation orderConfirmation, Cart cart, String invoiceNumber, LocalDate invoiceDate) {
         Invoice invoice = new Invoice();
 
         // Invoice details - use provided Invoice number
         invoice.setInvoiceNumber(invoiceNumber);
-        invoice.setInvoiceDate(LocalDate.now());
+        invoice.setInvoiceDate(invoiceDate);
         invoice.setPaymentTerms("Due on Receipt");
         invoice.setOrderNo(String.valueOf(orderConfirmation.getOrderId()));
-        invoice.setOrderDate(LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+        invoice.setOrderDate(cart.getCreatedAt().toLocalDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
         invoice.setGdnNumber(orderConfirmation.getGdnNumber());
         invoice.setDispatchDocNo(orderConfirmation.getGdnNumber());
         invoice.setDeliveryNote(orderConfirmation.getGdnNumber());
-        invoice.setDeliveryNoteDate(LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+        invoice.setDeliveryNoteDate("");
         invoice.setBillOfLading("");
         invoice.setMotorVehicleNo("");
         invoice.setOrderConfirmationRemarks(orderConfirmation.getRemarks());
@@ -559,7 +559,7 @@ public class InvoiceService {
                     orderConfirmation.getItemConfirmations() != null ? orderConfirmation.getItemConfirmations().size() : 0);
 
             // Build the Invoice DTO fresh from live data (reuse existing invoice number)
-            Invoice invoice = createInvoiceFromData(orderConfirmation, cart, invoiceEntity.getInvoiceNumber());
+            Invoice invoice = createInvoiceFromData(orderConfirmation, cart, invoiceEntity.getInvoiceNumber(), invoiceEntity.getInvoiceDate().toLocalDate());
 
             log.info("Invoice regenerated - Items: {}, Grand Total: {}", invoice.getItems().size(), invoice.getGrandTotal());
 

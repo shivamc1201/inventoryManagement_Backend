@@ -71,7 +71,7 @@ public class ProformaInvoiceService {
 
             // Step 3: Generate invoice data
             log.info("Step 3/6: Generating invoice data from cart");
-            ProformaInvoice invoice = createInvoiceFromCart(cart, piNumber);
+            ProformaInvoice invoice = createInvoiceFromCart(cart, piNumber, piEntity.getCreatedAt().toLocalDate());
             log.info("Invoice data created - PI Number: {}, Items: {}, Total Amount: {}",
                     invoice.getPiNumber(), invoice.getItems().size(), invoice.getGrandTotal());
 
@@ -193,12 +193,13 @@ public class ProformaInvoiceService {
     }
 
     // Keep existing methods unchanged
-    private ProformaInvoice createInvoiceFromCart(Cart cart, String piNumber) {
+    private ProformaInvoice createInvoiceFromCart(Cart cart, String piNumber, LocalDate createdAt) {
         ProformaInvoice invoice = new ProformaInvoice();
 
         // Invoice details - use provided PI number
         invoice.setPiNumber(piNumber);
-        invoice.setPiDate(LocalDate.now());
+        invoice.setPiDate(createdAt);
+        invoice.setCreatedAt(createdAt);
         invoice.setModeOfPayment("Bank Transfer");
 
         // Seller details
@@ -309,9 +310,9 @@ public class ProformaInvoiceService {
             log.warn("No Sales Order number found for cart ID: {}", cart.getId());
         }
 
-        invoice.setOrderDate(LocalDate.now());
+        invoice.setOrderDate(cart.getCreatedAt().toLocalDate());
         invoice.setDispatchDocNo("");
-        invoice.setDeliveryNoteDate(LocalDate.now());
+        invoice.setDeliveryNoteDate(null);
         invoice.setTotalQty(String.valueOf(items.stream().mapToInt(InvoiceItem::getQuantity).sum()));
 
         return invoice;
@@ -390,7 +391,7 @@ public class ProformaInvoiceService {
 
         com.nector.userservice.model.ProformaInvoice pi = piOpt.get();
         try {
-            ProformaInvoice invoice = createInvoiceFromCart(cart, pi.getPiNumber());
+            ProformaInvoice invoice = createInvoiceFromCart(cart, pi.getPiNumber(), pi.getCreatedAt().toLocalDate());
             String html = generateHtmlFromTemplate(invoice);
             byte[] pdfBytes = htmlToPdfService.convertHtmlToPdf(html);
             String newUrl = uploadPdfToCloudinary(pdfBytes, pi.getPiNumber());

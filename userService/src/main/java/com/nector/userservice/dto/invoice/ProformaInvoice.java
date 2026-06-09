@@ -8,6 +8,7 @@ import java.util.List;
 public class ProformaInvoice {
     private String piNumber;
     private LocalDate piDate;
+    private LocalDate createdAt;
     private String modeOfPayment;
     
     // Seller details

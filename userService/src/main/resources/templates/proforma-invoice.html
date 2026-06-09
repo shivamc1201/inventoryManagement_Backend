@@ -163,14 +163,14 @@
                 <span class="bold" th:text="${invoice.piNumber}"></span>
             </td>
             <td colspan="3" style="width:25%;">
-                <span class="lbl">Dated</span><br/>
-                <span class="bold" th:text="${invoice.piDate}"></span>
+                <span class="lbl">Date</span><br/>
+                <span class="bold" th:text="${invoice.createdAt}"></span>
             </td>
         </tr>
         <tr>
             <td colspan="2">
                 <span class="lbl">Delivery Note</span><br/>
-                <span th:text="${invoice.deliveryNote}"></span>
+<!--                <span th:text="${invoice.deliveryNote}"></span>-->
             </td>
             <td colspan="3">
                 <span class="lbl">Mode/Terms of Payment</span><br/>
@@ -179,7 +179,7 @@
         </tr>
         <tr>
             <td colspan="2"><span class="lbl">Buyer Order No.</span><br/><span th:text="${invoice.orderNo}"></span></td>
-            <td colspan="3"><span class="lbl">Dated</span><br/><span th:text="${invoice.orderDate}"></span></td>
+            <td colspan="3"><span class="lbl">Date</span><br/><span th:text="${invoice.orderDate}"></span></td>
         </tr>
         <tr>
             <td colspan="2"><span class="lbl">Dispatch Doc No.</span><br/><span th:text="${invoice.dispatchDocNo}"></span></td>
@@ -201,7 +201,7 @@
             </td>
             <td colspan="5" rowspan="2" style="vertical-align:top;">
                 <span class="lbl">Terms of Delivery</span><br/>
-                <div class="bold">Credit / Partial Credit / Advance</div>
+                <div class="bold">Credit / Partial Credit / Advance / Cheque / UPI</div>
             </td>
         </tr>
 
@@ -271,7 +271,7 @@
         <!-- ===== TAXABLE AMOUNT (full-width row, straight lines) ===== -->
         <tr>
             <td colspan="8" style="padding:4px 6px; text-align:right;">
-                Taxable Amount &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                GST &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                 <span class="bold" style="display:inline-block; min-width:90px; text-align:right;" th:text="${invoice.subtotal}"></span>
             </td>
         </tr>
@@ -307,11 +307,11 @@
                         <td>: <span class="bold">State Bank of India</span></td>
                     </tr>
                     <tr>
-                        <td>A/c No.</td>
+                        <td>Account No.</td>
                         <td>: <span class="bold">00000042894533595</span></td>
                     </tr>
                     <tr>
-                        <td>Branch &amp; IFS Code</td>
+                        <td>Branch &amp; IFSC Code</td>
                         <td>: <span class="bold">COLGONG(02929) &amp; SBIN0002929</span></td>
                     </tr>
                     <tr>

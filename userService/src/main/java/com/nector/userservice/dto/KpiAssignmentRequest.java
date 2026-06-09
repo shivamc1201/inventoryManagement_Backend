@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
 
 @Data
 @NoArgsConstructor
@@ -41,9 +42,11 @@ public class KpiAssignmentRequest {
     @NotNull(message = "Start date is required")
     private LocalDate startDate;
 
-    @NotNull(message = "End date is required")
-    private LocalDate endDate;
-
     @Size(max = 500, message = "Remarks cannot exceed 500 characters")
     private String remarks;
+
+    public LocalDate getEndDate() {
+        if (startDate == null) return null;
+        return YearMonth.from(startDate).atEndOfMonth();
+    }
 }

@@ -78,14 +78,8 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
         log.info("Bulk assigning {} KPIs to employee {} by user {}", 
                 request.getAssignments().size(), request.getEmployeeId(), assignedBy);
 
-        // Resolve effective dates (from month+year or explicit dates)
         LocalDate effectiveStartDate = request.getEffectiveStartDate();
         LocalDate effectiveEndDate = request.getEffectiveEndDate();
-
-        if (effectiveStartDate == null || effectiveEndDate == null) {
-            throw new com.nector.userservice.exception.KpiException(
-                "Either provide month+year (recommended) or explicit startDate+endDate for KPI assignment.");
-        }
 
         log.info("Assigning KPIs for period: {} to {} (month={}, year={})",
                 effectiveStartDate, effectiveEndDate, request.getMonth(), request.getYear());

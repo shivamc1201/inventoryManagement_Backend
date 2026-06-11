@@ -14,4 +14,5 @@ public class SimpleGdnRequest {
     private String transportName;
     private String driverName;
     private String driverMobile;
+    private String deliveryMethod;
 }

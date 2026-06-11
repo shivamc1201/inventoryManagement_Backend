@@ -305,6 +305,7 @@ public class GdnService {
         gdn.setTransportName(request.getTransportName());
         gdn.setDriverName(request.getDriverName());
         gdn.setDriverMobile(request.getDriverMobile());
+        gdn.setDeliveryMethod(request.getDeliveryMethod());
 
         // Create GDN items directly from live cart data
         List<GdnItem> gdnItems = cart.getCartItems().stream()
@@ -411,9 +412,16 @@ public class GdnService {
             // Continue without failing the GDN generation
         }
 
-        generateGdnPdf(savedGdn, cart);
-
-        return mapToResponse(savedGdn);
+        PdfGenerationResult pdfResult = generateGdnPdf(savedGdn, cart);
+        GdnResponse response = mapToResponse(savedGdn);
+        if (pdfResult.isSuccess()) {
+            response.setPdfGenerationStatus("SUCCESS");
+            response.setPdfGenerationMessage("PDF generated and uploaded successfully");
+        } else {
+            response.setPdfGenerationStatus("FAILED");
+            response.setPdfGenerationMessage(pdfResult.getMessage());
+        }
+        return response;
     }
     
     public InventoryVerificationResponse verifyInventoryForOrder(Long orderId) {
@@ -679,6 +687,7 @@ public class GdnService {
         // Address details
         data.put("dispatchFromAddress", gdn.getDispatchFromAddress());
         data.put("shippingAddress", gdn.getShippingAddress());
+
         
         // Distributor details
         String distributorName = "N/A";
@@ -713,6 +722,7 @@ public class GdnService {
         data.put("distributorContact", distributorContact);
         
         // Transport details
+        data.put("deliveryMethod",gdn.getDeliveryMethod());
         data.put("vehicleNo", gdn.getVehicleNo());
         data.put("transportName", gdn.getTransportName());
         data.put("driverName", gdn.getDriverName());

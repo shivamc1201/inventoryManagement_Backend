@@ -201,7 +201,7 @@
             </td>
             <td colspan="5" rowspan="2" style="vertical-align:top;">
                 <span class="lbl">Terms of Delivery</span><br/>
-                <div class="bold">Credit / Partial Credit / Advance / Cheque / UPI</div>
+                <div class="bold">Credit / Partial Credit / Advance </div>
             </td>
         </tr>
 
@@ -235,13 +235,13 @@
         <!-- ===== ITEMS ===== -->
         <tr class="item-row" th:each="item, iter : ${invoice.items}">
             <td class="center" th:text="${iter.index + 1}"></td>
-            <td class="bold" th:text="${item.description}"></td>
+            <td class="center" th:text="${item.description}"></td>
             <td class="center" th:text="${item.hsnCode}"></td>
-            <td class="right" th:text="${item.altQty}"></td>
-            <td class="right bold" th:text="${item.quantity}"></td>
-            <td class="right" th:text="${item.ratePerUnit}"></td>
+            <td class="center" th:text="${item.altQty}"></td>
+            <td class="center" th:text="${item.quantity}"></td>
+            <td class="center" th:text="${item.ratePerUnit}"></td>
             <td class="center" th:text="${item.per}"></td>
-            <td class="right bold" th:text="${item.amount}"></td>
+            <td class="center" th:text="${item.amount}"></td>
         </tr>
 
         <!-- filler -->

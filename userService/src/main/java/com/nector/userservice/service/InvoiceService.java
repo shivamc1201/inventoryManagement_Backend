@@ -109,11 +109,11 @@ public class InvoiceService {
             return cloudinaryUrl;
 
         } catch (Exception e) {
-            log.error("=== INVOICE GENERATION FAILED ===");
+            log.error("=== INVOICE PDF GENERATION FAILED - Invoice record saved, PDF pending ===");
             log.error("Failure details - Order Confirmation ID: {}, Error: {}, Timestamp: {}",
                     orderConfirmationId, e.getMessage(), java.time.LocalDateTime.now());
             log.error("Stack trace:", e);
-            throw new RuntimeException("Invoice generation failed", e);
+            return null;
         }
     }
 
@@ -266,7 +266,7 @@ public class InvoiceService {
             billTo.setAddress(distributor.getAddress());
             billTo.setGstin(distributor.getGstNumber());
             billTo.setState(distributor.getState() != null ? distributor.getState() : "");
-            billTo.setStateCode(distributor.getStateCode() != null ? distributor.getStateCode() : "");
+            billTo.setStateCode(resolveStateCode(distributor));
             billTo.setPincode(distributor.getPinCode() != null ? distributor.getPinCode() : "");
             billTo.setContact(distributor.getPhoneNumber() != null ? distributor.getPhoneNumber() : "");
             invoice.setBillTo(billTo);
@@ -277,7 +277,7 @@ public class InvoiceService {
             shipTo.setAddress(cart.getAddress() != null ? cart.getAddress() : distributor.getAddress());
             shipTo.setGstin(distributor.getGstNumber());
             shipTo.setState(distributor.getState() != null ? distributor.getState() : "");
-            shipTo.setStateCode(distributor.getStateCode() != null ? distributor.getStateCode() : "");
+            shipTo.setStateCode(resolveStateCode(distributor));
             shipTo.setPincode(distributor.getPinCode() != null ? distributor.getPinCode() : "");
             shipTo.setContact(distributor.getPhoneNumber() != null ? distributor.getPhoneNumber() : "");
             invoice.setShipTo(shipTo);
@@ -343,7 +343,7 @@ public class InvoiceService {
                         item.setRatePerUnit(cartItem.getPriceAtTime().doubleValue());
                         item.setUnit("Bag");
                         item.setPer("Bag");
-                        java.math.BigDecimal w1 = cartItem.getItem().getWeight();
+                        java.math.BigDecimal w1 = resolveWeight(cartItem.getItem().getName(), cartItem.getItem().getWeight());
                         item.setAltQty(w1 != null
                                 ? w1.multiply(java.math.BigDecimal.valueOf(qty)).stripTrailingZeros().toPlainString()
                                 : "");
@@ -372,7 +372,7 @@ public class InvoiceService {
                         item.setRatePerUnit(cartItem.getPriceAtTime().doubleValue());
                         item.setUnit("Bag");
                         item.setPer("Bag");
-                        java.math.BigDecimal w2 = cartItem.getItem().getWeight();
+                        java.math.BigDecimal w2 = resolveWeight(cartItem.getItem().getName(), cartItem.getItem().getWeight());
                         item.setAltQty(w2 != null
                                 ? w2.multiply(java.math.BigDecimal.valueOf(cartItem.getQuantity())).stripTrailingZeros().toPlainString()
                                 : "");
@@ -420,6 +420,22 @@ public class InvoiceService {
 
     private String convertToWords(double amount) {
         return com.nector.userservice.util.NumberToWordsUtil.convertToWords(amount);
+    }
+
+    private java.math.BigDecimal resolveWeight(String productName, java.math.BigDecimal storedWeight) {
+        if (storedWeight != null && storedWeight.compareTo(java.math.BigDecimal.ZERO) > 0) {
+            return storedWeight;
+        }
+        try {
+            String[] words = productName.split(" ");
+            for (int i = 0; i < words.length - 1; i++) {
+                if (words[i].matches("\\d+(\\.\\d+)?") &&
+                        words[i + 1].equalsIgnoreCase("Kg")) {
+                    return new java.math.BigDecimal(words[i]);
+                }
+            }
+        } catch (Exception ignored) {}
+        return null;
     }
 
     /**
@@ -629,5 +645,14 @@ public class InvoiceService {
             log.error("Failed to retrieve invoices for distributor ID: {} - {}", distributorId, e.getMessage());
             throw new RuntimeException("Failed to retrieve invoices", e);
         }
+    }
+
+    private String resolveStateCode(com.nector.userservice.interceptors.distributor.model.Distributor distributor) {
+        if (distributor.getStateCode() != null && !distributor.getStateCode().isEmpty()) {
+            return distributor.getStateCode();
+        }
+        return com.nector.userservice.enums.IndianStateCode.fromStateName(distributor.getState())
+                .map(com.nector.userservice.enums.IndianStateCode::getCodeAsString)
+                .orElse("");
     }
 }

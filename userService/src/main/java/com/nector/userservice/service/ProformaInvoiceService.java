@@ -102,11 +102,11 @@ public class ProformaInvoiceService {
             return cloudinaryUrl;
 
         } catch (Exception e) {
-            log.error("=== PROFORMA INVOICE GENERATION FAILED ===");
+            log.error("=== PROFORMA INVOICE PDF GENERATION FAILED - PI record saved, PDF pending ===");
             log.error("Failure details - Cart ID: {}, Error: {}, Timestamp: {}",
                     cartId, e.getMessage(), java.time.LocalDateTime.now());
             log.error("Stack trace:", e);
-            throw new RuntimeException("Proforma invoice generation failed", e);
+            return null;
         }
     }
 
@@ -219,7 +219,7 @@ public class ProformaInvoiceService {
             billTo.setAddress(distributor.getAddress());
             billTo.setGstin(distributor.getGstNumber());
             billTo.setState(distributor.getState() != null ? distributor.getState() : "");
-            billTo.setStateCode(distributor.getStateCode() != null ? distributor.getStateCode() : "");
+            billTo.setStateCode(resolveStateCode(distributor));
             billTo.setPincode(distributor.getPinCode() != null ? distributor.getPinCode() : "");
             billTo.setContact(distributor.getPhoneNumber() != null ? distributor.getPhoneNumber() : "06429-450126");
             invoice.setBillTo(billTo);
@@ -230,7 +230,7 @@ public class ProformaInvoiceService {
             shipTo.setAddress(cart.getAddress() != null ? cart.getAddress() : distributor.getAddress());
             shipTo.setGstin(distributor.getGstNumber());
             shipTo.setState(distributor.getState() != null ? distributor.getState() : "");
-            shipTo.setStateCode(distributor.getStateCode() != null ? distributor.getStateCode() : "");
+            shipTo.setStateCode(resolveStateCode(distributor));
             shipTo.setPincode(distributor.getPinCode() != null ? distributor.getPinCode() : "");
             shipTo.setContact(distributor.getPhoneNumber() != null ? distributor.getPhoneNumber() : "06429-450126");
             invoice.setShipTo(shipTo);
@@ -264,8 +264,10 @@ public class ProformaInvoiceService {
                     item.setSrNo(i + 1);
                     item.setDescription(cartItem.getItem().getName());
                     item.setHsnCode(cartItem.getItem().getHsn() != null ? cartItem.getItem().getHsn() : "");
-                    java.math.BigDecimal itemVolume = calculateItemVolume(cartItem);
-                    item.setAltQty(itemVolume.stripTrailingZeros().toPlainString());
+                    java.math.BigDecimal w = resolveWeight(cartItem.getItem().getName(), cartItem.getItem().getWeight());
+                    item.setAltQty(w != null
+                            ? w.multiply(java.math.BigDecimal.valueOf(cartItem.getQuantity())).stripTrailingZeros().toPlainString()
+                            : "");
                     item.setQuantity(cartItem.getQuantity());
                     item.setRatePerUnit(cartItem.getPriceAtTime().doubleValue());
                     item.setUnit("Bag");
@@ -602,6 +604,22 @@ public class ProformaInvoiceService {
         }
     }
 
+    private java.math.BigDecimal resolveWeight(String productName, java.math.BigDecimal storedWeight) {
+        if (storedWeight != null && storedWeight.compareTo(java.math.BigDecimal.ZERO) > 0) {
+            return storedWeight;
+        }
+        try {
+            String[] words = productName.split(" ");
+            for (int i = 0; i < words.length - 1; i++) {
+                if (words[i].matches("\\d+(\\.\\d+)?") &&
+                        words[i + 1].equalsIgnoreCase("Kg")) {
+                    return new java.math.BigDecimal(words[i]);
+                }
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
     private java.math.BigDecimal extractWeightFromProductName(String productName, int quantity) {
         try {
             // Extract weight from product name (e.g., "50 Kg" from "MANKA MAHISHI 50 Kg")
@@ -620,6 +638,15 @@ public class ProformaInvoiceService {
         
         // Fallback to zero if extraction fails
         return java.math.BigDecimal.ZERO;
+    }
+
+    private String resolveStateCode(com.nector.userservice.interceptors.distributor.model.Distributor distributor) {
+        if (distributor.getStateCode() != null && !distributor.getStateCode().isEmpty()) {
+            return distributor.getStateCode();
+        }
+        return com.nector.userservice.enums.IndianStateCode.fromStateName(distributor.getState())
+                .map(com.nector.userservice.enums.IndianStateCode::getCodeAsString)
+                .orElse("");
     }
 
 }

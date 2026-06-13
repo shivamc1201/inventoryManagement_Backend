@@ -186,6 +186,7 @@
             <td colspan="3"><span class="lbl">Delivery Note Date</span><br/><span th:text="${invoice.deliveryNoteDate}"></span></td>
         </tr>
 
+
         <!-- ===== CONSIGNEE + TERMS OF DELIVERY ===== -->
         <tr>
             <td colspan="3">
@@ -251,12 +252,12 @@
 
         <!-- ===== TOTAL ROW ===== -->
         <tr class="total-row">
-            <td colspan="3" class="right">Total</td>
-            <td class="right" th:text="${invoice.totalAltQty}"></td>
-            <td class="right" th:text="${invoice.totalQty}"></td>
+            <td colspan="3" class="center">Total</td>
+            <td class="center" th:text="${invoice.totalAltQty}"></td>
+            <td class="center" th:text="${invoice.totalQty}"></td>
             <td></td>
             <td></td>
-            <td class="right" th:text="${invoice.grandTotal}"></td>
+            <td class="center" th:text="${invoice.grandTotal}"></td>
         </tr>
 
         <!-- ===== AMOUNT CHARGEABLE LABEL + AMOUNT IN WORDS ===== -->
@@ -265,14 +266,6 @@
                 <span class="lbl">Amount Chargeable (in words)</span>
                 <span style="float:right;" class="bold">E &amp; O.E</span><br/>
                 <span class="bold" th:text="${invoice.amountInWords}"></span>
-            </td>
-        </tr>
-
-        <!-- ===== TAXABLE AMOUNT (full-width row, straight lines) ===== -->
-        <tr>
-            <td colspan="8" style="padding:4px 6px; text-align:right;">
-                GST &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                <span class="bold" style="display:inline-block; min-width:90px; text-align:right;" th:text="${invoice.subtotal}"></span>
             </td>
         </tr>
 
@@ -290,16 +283,16 @@
                 <span class="lbl">Tax Amount (in words) :</span>
                 <span class="bold" th:text="${invoice.taxInWords}">NIL</span><br/><br/>
                 <div>Company's PAN : <span class="bold">AAFCN3882K</span></div>
-                <div class="bold" style="margin-top:4px;">Declaration:</div>
+                <div  style="margin-top:4px;">Declaration:</div>
                 <div style="font-size:9px; line-height:1.2;">
                     We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
                 </div>
             </td>
             <td colspan="5" style="border:none; vertical-align:top; padding:6px;">
-                <div class="bold" style="font-size:10px; margin-bottom:3px;">Company's Bank Details</div>
+                <div style="font-size:10px; margin-bottom:3px;">Company's Bank Details</div>
                 <table class="bank-inner">
                     <tr>
-                        <td style="width:38%;">A/c Holder's Name</td>
+                        <td style="width:38%;">A/c Holder Name</td>
                         <td>: <span class="bold">NECTAR ORIGIN PRIVATE LIMITED</span></td>
                     </tr>
                     <tr>

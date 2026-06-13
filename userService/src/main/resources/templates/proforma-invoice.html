@@ -149,10 +149,10 @@
                                 <span style="">GSTIN/UIN: 10AAFCN3882K1ZE</span><br/>
                                 CIN: U74999BR2016PTC032690<br/>
                                 Contact No : 06429-450126,+919797979522<br/>
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" style="vertical-align:middle;"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7"/></svg>
-                                account@nectarorigin.com<br/>
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" style="vertical-align:middle;"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4" ry="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
-                                www.nectarorigin.com
+                                <img th:src="${emailIconPath}" width="10" height="7" style="vertical-align:middle;" alt=""/>
+                                 account@nectarorigin.com<br/>
+                                <img th:src="${webIconPath}" width="10" height="10" style="vertical-align:middle;" alt=""/>
+                                 www.nectarorigin.com
                             </div>
                         </td>
                     </tr>
@@ -251,12 +251,12 @@
 
         <!-- ===== TOTAL ROW ===== -->
         <tr class="total-row">
-            <td colspan="3" class="right">Total</td>
-            <td class="right" th:text="${invoice.totalAltQty}"></td>
-            <td class="right" th:text="${invoice.totalQty}"></td>
+            <td colspan="3" class="center">Total</td>
+            <td class="center" th:text="${invoice.totalAltQty}"></td>
+            <td class="center" th:text="${invoice.totalQty}"></td>
             <td></td>
             <td></td>
-            <td class="right" th:text="${invoice.grandTotal}"></td>
+            <td class="center" th:text="${invoice.grandTotal}"></td>
         </tr>
 
         <!-- ===== AMOUNT CHARGEABLE LABEL + AMOUNT IN WORDS ===== -->
@@ -282,16 +282,16 @@
                 <span class="lbl">Tax Amount (in words) :</span>
                 <span class="bold" th:text="${invoice.taxInWords}">NIL</span><br/><br/>
                 <div>Company's PAN : <span class="bold">AAFCN3882K</span></div>
-                <div class="bold" style="margin-top:4px;">Declaration:</div>
+                <div  style="margin-top:4px;">Declaration:</div>
                 <div style="font-size:9px; line-height:1.2;">
                     We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
                 </div>
             </td>
             <td colspan="5" style="border:none; vertical-align:top; padding:6px;">
-                <div class="bold" style="font-size:10px; margin-bottom:3px;">Company's Bank Details</div>
+                <div  style="font-size:10px; margin-bottom:3px;">Company's Bank Details</div>
                 <table class="bank-inner">
                     <tr>
-                        <td style="width:38%;">A/c Holder's Name</td>
+                        <td style="width:38%;">A/c Holder Name</td>
                         <td>: <span class="bold">NECTAR ORIGIN PRIVATE LIMITED</span></td>
                     </tr>
                     <tr>

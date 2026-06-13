@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8"/>
     <style>
-        @page { size: A4; margin: 15mm; }
+        @page { size: A4; margin: 10mm; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         html {
-            width: 180mm;
+            width: 190mm;
         }
 
         body {
             font-family: 'Arial', sans-serif;
             font-size: 10px;
             color: #000;
-            width: 180mm;
-            min-height: 267mm;
+            width: 190mm;
+            min-height: 277mm;
             padding: 0;
         }
 
@@ -23,15 +23,15 @@
         .header-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
         }
         .header-table td {
             vertical-align: top;
-            padding: 5px;
+            padding: 3px 5px;
         }
-        .logo-cell { width: 15%; text-align: left; }
-        .company-cell { width: 70%; text-align: center; }
-        .side-note-cell { width: 15%; text-align: right; }
+        .logo-cell { width: 15%; text-align: left; vertical-align: top; }
+        .company-cell { width: 70%; text-align: center; vertical-align: middle; }
+        .side-note-cell { width: 15%; text-align: right; vertical-align: middle; }
 
         .comp-name {
             font-size: 18px;
@@ -39,16 +39,19 @@
             font-style: italic;
             font-family: 'Times New Roman', Times, serif;
             margin-bottom: 5px;
+            padding-top: 8px;
         }
         .comp-addr {
-            font-size: 9px;
+            font-size: 11px;
             color: #333;
-            line-height: 1.3;
+            line-height: 1.4;
         }
         .side-note {
-            font-size: 7px;
-            color: #666;
-            line-height: 1.2;
+            font-size: 10px;
+            color: #444;
+            line-height: 1.4;
+            font-weight: bold;
+            padding-top: 8px;
         }
 
         /* TITLE */
@@ -58,7 +61,7 @@
             font-size: 13px;
             text-transform: uppercase;
             text-decoration: underline;
-            margin: 12px 0;
+            margin: 5px 0;
             letter-spacing: 1px;
         }
 
@@ -66,10 +69,10 @@
         .field-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 6px;
+            margin-bottom: 3px;
         }
         .field-table td {
-            padding: 4px 0;
+            padding: 3px 0;
             border-bottom: 1px dotted #000;
         }
         .field-label {
@@ -87,10 +90,10 @@
         .field-row-2col {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 6px;
+            margin-bottom: 3px;
         }
         .field-row-2col td {
-            padding: 4px 0;
+            padding: 3px 0;
         }
         .field-row-2col .field-label {
             font-weight: bold;
@@ -156,13 +159,16 @@
         .items-table td:last-child {
             border-right: none;
         }
+        .items-table tbody tr:last-child td {
+            border-bottom: 1px solid #000;
+        }
 
         /* REMARK */
         .remark-row {
             border: 1px solid #000;
             border-top: none;
-            padding: 8px 10px;
-            min-height: 35px;
+            padding: 5px 10px;
+            min-height: 25px;
         }
         .remark-label {
             font-weight: bold;
@@ -171,7 +177,7 @@
 
         /* SIGNATURES */
         .signature-section {
-            margin-top: 30px;
+            margin-top: 10px;
         }
         .sig-table {
             width: 100%;
@@ -189,10 +195,10 @@
         }
 
         @media print {
-            @page { size: A4; margin: 15mm; }
+            @page { size: A4; margin: 10mm; }
             html, body {
-                width: 180mm;
-                min-height: 267mm;
+                width: 190mm;
+                min-height: 277mm;
                 padding: 0;
                 margin: 0;
                 overflow: visible;
@@ -209,7 +215,7 @@
             <img th:src="${logoPath}" src="../static/Nectar%20Logo.png" width="75" alt="Logo"/>
         </td>
         <td class="company-cell">
-            <div class="comp-name"></div>
+            <div class="comp-name">Nectar Origin Private Limited</div>
             <div class="comp-addr">360 K, Shiv Parwati Nagar, Block Road No-2, Ward No 16, Kahalgaon, Bhagalpur Bihar-813203</div>
         </td>
         <td class="side-note-cell">
@@ -243,41 +249,45 @@
     </tr>
 </table>
 
-<table class="field-row-2col">
+<table style="width:100%; border-collapse:collapse; border:1px solid #000; margin-bottom:8px; font-size:10px;">
     <tr>
-        <td class="field-label">Delivery Method :</td>
-        <td class="field-value" th:text="${deliveryMethod}"></td>
-        <td width="30"></td>
-        <td class="field-label">Vehicle No :</td>
-        <td class="field-value" th:text="${vehicleNo}"></td>
+        <td colspan="3" style="border:1px solid #000; padding:4px 8px;">
+            <span style="font-size:9px; color:#444;">Delivery Method :</span>&nbsp;
+            <strong th:text="${deliveryMethod}"></strong>
+        </td>
+        <td colspan="3" style="border:1px solid #000; padding:4px 8px;">
+            <span style="font-size:9px; color:#444;">Vehicle No :</span>&nbsp;
+            <strong th:text="${vehicleNo}"></strong>
+        </td>
     </tr>
-</table>
-
-<table class="field-row-3col">
     <tr>
-        <td class="field-label">Transport Name</td>
-        <td class="field-value" th:text="${transportName}"></td>
-        <td width="15"></td>
-        <td class="field-label">Driver Name</td>
-        <td class="field-value" th:text="${driverName}"></td>
-        <td width="15"></td>
-        <td class="field-label">Mobile No</td>
-        <td class="field-value" th:text="${driverMobile}"></td>
+        <td colspan="2" style="border:1px solid #000; padding:4px 8px;">
+            <span style="font-size:9px; color:#444;">Transport Name :</span>&nbsp;
+            <strong th:text="${transportName}"></strong>
+        </td>
+        <td colspan="2" style="border:1px solid #000; padding:4px 8px;">
+            <span style="font-size:9px; color:#444;">Driver Name :</span>&nbsp;
+            <strong th:text="${driverName}"></strong>
+        </td>
+        <td colspan="2" style="border:1px solid #000; padding:4px 8px;">
+            <span style="font-size:9px; color:#444;">Mobile No :</span>&nbsp;
+            <strong th:text="${driverMobile}"></strong>
+        </td>
     </tr>
-</table>
-
-<table class="field-row-2col">
     <tr>
-        <td class="field-label">Total No. of Package</td>
-        <td class="field-value" th:text="${totalPackages}"></td>
-        <td width="30"></td>
-        <td class="field-label">Total Weight :</td>
-        <td class="field-value" th:text="${totalWeight}"></td>
+        <td colspan="3" style="border:1px solid #000; padding:4px 8px;">
+            <span style="font-size:9px; color:#444;">Total No. of Package :</span>&nbsp;
+            <strong th:text="${totalPackages}"></strong>
+        </td>
+        <td colspan="3" style="border:1px solid #000; padding:4px 8px;">
+            <span style="font-size:9px; color:#444;">Total Weight :</span>&nbsp;
+            <strong th:text="${totalWeight}"></strong>
+        </td>
     </tr>
 </table>
 
 <!-- ITEMS TABLE -->
-<div class="items-wrapper">
+<div style="border:1px solid #000; margin:4px 0 0 0; min-height:130mm;">
     <table class="items-table">
         <thead>
         <tr>

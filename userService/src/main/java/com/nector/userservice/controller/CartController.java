@@ -155,7 +155,7 @@ public class CartController {
     public ResponseEntity<byte[]> downloadProformaInvoice(@PathVariable Long cartId) {
         log.info("Downloading proforma invoice for cart: {}", cartId);
         try {
-            byte[] pdfBytes = cartService.downloadProformaInvoice(cartId);
+            byte[] pdfBytes = proformaInvoiceService.downloadProformaInvoicePdf(cartId);
 
             return ResponseEntity.ok()
                     .header("Content-Type", "application/pdf")

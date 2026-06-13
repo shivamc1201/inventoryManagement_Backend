@@ -324,6 +324,8 @@ public class ProformaInvoiceService {
         Context context = new Context();
         context.setVariable("invoice", invoice);
         context.setVariable("logoPath", htmlToPdfService.getLogoDataUri());
+        context.setVariable("emailIconPath", htmlToPdfService.getEmailIconUri());
+        context.setVariable("webIconPath", htmlToPdfService.getWebIconUri());
         return templateEngine.process("proforma-invoice", context);
     }
 

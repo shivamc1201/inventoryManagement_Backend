@@ -105,6 +105,7 @@
             border-bottom: 1px dotted #000;
             text-transform: uppercase;
             padding-left: 5px;
+            white-space: pre-line;
         }
 
         /* Three-column layout */
@@ -215,7 +216,6 @@
             <img th:src="${logoPath}" src="../static/Nectar%20Logo.png" width="75" alt="Logo"/>
         </td>
         <td class="company-cell">
-            <div class="comp-name">Nectar Origin Private Limited</div>
             <div class="comp-addr">360 K, Shiv Parwati Nagar, Block Road No-2, Ward No 16, Kahalgaon, Bhagalpur Bihar-813203</div>
         </td>
         <td class="side-note-cell">
@@ -241,7 +241,7 @@
 <table class="field-table">
     <tr>
         <td class="field-label">Dispatch From :</td>
-        <td class="field-value" th:text="${dispatchFromAddress}"></td>
+        <td class="field-value">360 K, Shiv Parwati Nagar, Block Road No-2, Ward No 16, Kahalgaon, Bhagalpur Bihar-813203</td>
     </tr>
     <tr>
         <td class="field-label">Shipping Address :</td>

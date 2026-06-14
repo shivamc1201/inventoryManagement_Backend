@@ -735,7 +735,10 @@ public class GdnService {
                 item.put("srNo", gdn.getGdnItems().indexOf(gdnItem) + 1);
                 item.put("description", gdnItem.getItemDescription());
                 item.put("quantity", gdnItem.getNoOfUnitsDispatch());
-                item.put("unit", gdnItem.getUnitType());
+                BigDecimal totalKg = (gdnItem.getWeightPerUnit() != null && gdnItem.getNoOfUnitsDispatch() != null)
+                    ? new BigDecimal(gdnItem.getNoOfUnitsDispatch()).multiply(gdnItem.getWeightPerUnit())
+                    : BigDecimal.ZERO;
+                item.put("unit", totalKg.stripTrailingZeros().toPlainString() + " " + gdnItem.getUnitType());
                 item.put("weight", gdnItem.getWeightPerUnit());
                 return item;
             })

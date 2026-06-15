@@ -156,6 +156,48 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
     
+    @ExceptionHandler(ReservedLedgerNameException.class)
+    public ResponseEntity<Map<String, String>> handleReservedLedgerName(ReservedLedgerNameException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(DuplicateLedgerNameException.class)
+    public ResponseEntity<Map<String, String>> handleDuplicateLedgerName(DuplicateLedgerNameException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(InvalidLedgerGroupException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidLedgerGroup(InvalidLedgerGroupException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(VoucherNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleVoucherNotFound(VoucherNotFoundException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(LedgerNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleLedgerNotFound(LedgerNotFoundException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(TransactionValidationException.class)
+    public ResponseEntity<Map<String, String>> handleTransactionValidation(TransactionValidationException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGenericException(Exception ex) {
         Map<String, String> error = new HashMap<>();

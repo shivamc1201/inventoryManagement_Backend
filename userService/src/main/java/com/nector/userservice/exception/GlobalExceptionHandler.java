@@ -3,9 +3,12 @@ package com.nector.userservice.exception;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -195,6 +198,42 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleTransactionValidation(TransactionValidationException ex) {
         Map<String, String> error = new HashMap<>();
         error.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, String>> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
+        Map<String, String> error = new HashMap<>();
+        Throwable cause = ex.getCause();
+        if (cause instanceof InvalidFormatException ife && ife.getTargetType() != null) {
+            String typeName = ife.getTargetType().getSimpleName();
+            if ("RoleType".equals(typeName)) {
+                error.put("error", "Invalid roleType. Allowed values are: "
+                        + "PLANT_OFFICER, SALES_OFFICER, ACCOUNT_OFFICER, REGIONAL_SALES_MGR, "
+                        + "ACCOUNT_MGR, LOGISTICS_OFFICER, LOGISTICS_MGR, BUSINESS_DEV_MGR, "
+                        + "HR_EXECUTIVE, PLANT_EXECUTIVE, SALES_EXECUTIVE, ACCOUNT_EXECUTIVE, "
+                        + "STATE_SALES_MGR, NATIONAL_SALES_MGR, HR_MGR, PLANT_MGR, "
+                        + "ZONAL_SALES_MGR, ADMIN, AREA_SALES_MGR");
+            } else {
+                error.put("error", "Invalid value '" + ife.getValue() + "' for field of type " + typeName);
+            }
+        } else {
+            error.put("error", "Invalid or malformed request body");
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<Map<String, String>> handleMissingRequestParam(MissingServletRequestParameterException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "Required parameter '" + ex.getParameterName() + "' is missing");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, String>> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "Invalid value '" + ex.getValue() + "' for parameter '" + ex.getName() + "'");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 

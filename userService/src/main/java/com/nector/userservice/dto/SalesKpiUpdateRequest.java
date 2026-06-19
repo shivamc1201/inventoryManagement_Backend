@@ -23,14 +23,6 @@ public class SalesKpiUpdateRequest {
 
     private Integer noOfMeetings;
 
-    // Visit/onboard counts received from 3rd party — mapped to EmployeeKpiAssignment
-    private Integer farmerVisit;
-    private Integer distributorVisit;
-    private Integer dealerVisit;
-    private Integer dealerOnboard;
-    private Integer distributorOnboard;
-    private Integer retailerVisit;
-
     @Valid
     private List<MeetingDetailRequest> meetingDetails;
 }

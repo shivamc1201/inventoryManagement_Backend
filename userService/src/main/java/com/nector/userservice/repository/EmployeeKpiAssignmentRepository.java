@@ -150,4 +150,18 @@ public interface EmployeeKpiAssignmentRepository extends JpaRepository<EmployeeK
     List<EmployeeKpiAssignment> findActiveByEmployeeIdAndKpiName(
             @Param("employeeId") Long employeeId,
             @Param("kpiName") String kpiName);
+
+    /**
+     * Find assignments for a specific month/year by KPI name — used for backfill recalculation
+     * where date-range constraint would exclude past-month assignments.
+     */
+    @Query("SELECT eka FROM EmployeeKpiAssignment eka JOIN eka.kpiMaster km " +
+           "WHERE eka.employeeId = :employeeId " +
+           "AND eka.assignedMonth = :month AND eka.assignedYear = :year " +
+           "AND km.kpiName = :kpiName")
+    List<EmployeeKpiAssignment> findByEmployeeIdAndKpiNameAndMonthAndYear(
+            @Param("employeeId") Long employeeId,
+            @Param("kpiName") String kpiName,
+            @Param("month") int month,
+            @Param("year") int year);
 }

@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -360,9 +361,12 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
     @Override
     @Transactional(readOnly = true)
     public List<KpiAssignmentResponse> getAllAssignments() {
+        YearMonth currentMonth = YearMonth.now();
         return assignmentRepository.findAll()
                 .stream()
                 .map(this::mapToResponse)
+                .filter(r -> r.getStartDate() != null &&
+                        YearMonth.from(r.getStartDate()).equals(currentMonth))
                 .sorted(Comparator
                         .comparing(KpiAssignmentResponse::getEmployeeId,
                                 Comparator.nullsLast(Comparator.naturalOrder()))

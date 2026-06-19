@@ -136,10 +136,13 @@ public class EmployeeKpiAssignment {
 
     public void calculateScores() {
         if (targetValue != null && targetValue.compareTo(BigDecimal.ZERO) > 0 && achievedValue != null) {
-            this.scorePercentage = achievedValue
+            BigDecimal rawScore = achievedValue
                     .multiply(BigDecimal.valueOf(100))
                     .divide(targetValue, 2, RoundingMode.HALF_UP);
-            
+
+            // Cap at 100 — over-achievement doesn't inflate the score beyond full marks
+            this.scorePercentage = rawScore.min(BigDecimal.valueOf(100));
+
             this.weightedScore = this.scorePercentage
                     .multiply(BigDecimal.valueOf(weightage))
                     .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);

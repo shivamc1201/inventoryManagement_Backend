@@ -19,9 +19,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +33,20 @@ public class SalesKpiUpdateService {
     private final SalesKpiUpdateRepository salesKpiUpdateRepository;
     private final SalesPersonRepository salesPersonRepository;
     private final EmployeeKpiAssignmentRepository assignmentRepository;
+
+    /**
+     * Maps the third-party meeting `type` field value to the exact kpi_master.kpi_name.
+     * Adjust the right-hand values if your kpi_master uses different names.
+     */
+    private static final Map<String, String> MEETING_TYPE_TO_KPI_NAME = new HashMap<>();
+    static {
+        MEETING_TYPE_TO_KPI_NAME.put("Farmer",               "Farmer Visit");
+        MEETING_TYPE_TO_KPI_NAME.put("Dealer",               "Dealer Visit");
+        MEETING_TYPE_TO_KPI_NAME.put("Distributor",          "Distributor Visit");
+        MEETING_TYPE_TO_KPI_NAME.put("Retailer",             "Retailer Visit");
+        MEETING_TYPE_TO_KPI_NAME.put("Dealer Onboard",       "Dealer Onboard");
+        MEETING_TYPE_TO_KPI_NAME.put("Distributor Onboard",  "Distributor Onboard");
+    }
 
     @Transactional
     public CustomResponse saveAll(List<SalesKpiUpdateRequest> requests) {
@@ -49,21 +65,6 @@ public class SalesKpiUpdateService {
             entity.setDate(entryDate);
             entity.setTotalDistanceInKm(req.getTotalDistanceInKm());
             entity.setNoOfMeetings(req.getNoOfMeetings());
-            entity.setFarmerVisit(req.getFarmerVisit());
-            entity.setDistributorVisit(req.getDistributorVisit());
-            entity.setDealerVisit(req.getDealerVisit());
-            entity.setDealerOnboard(req.getDealerOnboard());
-            entity.setDistributorOnboard(req.getDistributorOnboard());
-            entity.setRetailerVisit(req.getRetailerVisit());
-
-            Optional<SalesPerson> spOpt = salesPersonRepository.findByEmployeeRollNo(req.getEmpCode());
-            if (spOpt.isPresent()) {
-                SalesPerson salesPerson = spOpt.get();
-                entity.setSalesPerson(salesPerson);
-                updateKpiAssignments(salesPerson.getId(), req);
-            } else {
-                log.warn("No SalesPerson found for empCode: {}", req.getEmpCode());
-            }
 
             if (req.getMeetingDetails() != null) {
                 for (MeetingDetailRequest mdReq : req.getMeetingDetails()) {
@@ -82,38 +83,143 @@ public class SalesKpiUpdateService {
             }
 
             saved.add(salesKpiUpdateRepository.save(entity));
+
+            // Update KPI achievements AFTER saving so meeting details are persisted
+            Optional<SalesPerson> spOpt = salesPersonRepository.findByEmployeeRollNo(req.getEmpCode());
+            if (spOpt.isPresent()) {
+                updateKpiFromMeetingDetails(spOpt.get().getId(), req.getMeetingDetails());
+            } else {
+                log.warn("No SalesPerson found for empCode: {}", req.getEmpCode());
+            }
         }
 
         return CustomResponse.success(saved, "Sales KPI data saved successfully");
     }
 
-    private void updateKpiAssignments(Long salesPersonId, SalesKpiUpdateRequest req) {
-        Map<String, Integer> kpiValues = Map.of(
-                "Farmer Visit",       req.getFarmerVisit()       != null ? req.getFarmerVisit()       : 0,
-                "Distributor Visit",  req.getDistributorVisit()  != null ? req.getDistributorVisit()  : 0,
-                "Dealer Visit",       req.getDealerVisit()       != null ? req.getDealerVisit()       : 0,
-                "Dealer Onboard",     req.getDealerOnboard()     != null ? req.getDealerOnboard()     : 0,
-                "Distributor Onboard",req.getDistributorOnboard()!= null ? req.getDistributorOnboard(): 0,
-                "Retailer Visit",     req.getRetailerVisit()     != null ? req.getRetailerVisit()     : 0
-        );
+    /**
+     * Count meeting details by their `type` field and increment the matching
+     * active KPI assignment's achievedValue.
+     */
+    private void updateKpiFromMeetingDetails(Long salesPersonId, List<MeetingDetailRequest> meetingDetails) {
+        if (meetingDetails == null || meetingDetails.isEmpty()) {
+            log.warn("No meeting details for salesPersonId={}, skipping KPI update", salesPersonId);
+            return;
+        }
 
-        for (Map.Entry<String, Integer> entry : kpiValues.entrySet()) {
-            if (entry.getValue() <= 0) continue;
+        // Count meetings per type, ignoring unmapped types (NA, LIVE TRACKING, etc.)
+        Map<String, Long> typeCounts = meetingDetails.stream()
+                .filter(md -> md.getType() != null && MEETING_TYPE_TO_KPI_NAME.containsKey(md.getType()))
+                .collect(Collectors.groupingBy(MeetingDetailRequest::getType, Collectors.counting()));
 
-            List<EmployeeKpiAssignment> assignments =
-                    assignmentRepository.findActiveByEmployeeIdAndKpiName(salesPersonId, entry.getKey());
+        if (typeCounts.isEmpty()) {
+            log.info("No mappable meeting types for salesPersonId={}", salesPersonId);
+            return;
+        }
 
-            if (assignments.isEmpty()) {
-                log.warn("No active KPI assignment found for salesPersonId={} kpiName='{}'",
-                        salesPersonId, entry.getKey());
+        for (Map.Entry<String, Long> entry : typeCounts.entrySet()) {
+            String kpiName = MEETING_TYPE_TO_KPI_NAME.get(entry.getKey());
+            incrementActiveKpiAchievement(salesPersonId, kpiName, BigDecimal.valueOf(entry.getValue()));
+        }
+    }
+
+    private void incrementActiveKpiAchievement(Long salesPersonId, String kpiName, BigDecimal increment) {
+        List<EmployeeKpiAssignment> assignments =
+                assignmentRepository.findActiveByEmployeeIdAndKpiName(salesPersonId, kpiName);
+
+        if (assignments.isEmpty()) {
+            log.warn("No active KPI assignment for salesPersonId={} kpiName='{}'", salesPersonId, kpiName);
+            return;
+        }
+
+        for (EmployeeKpiAssignment a : assignments) {
+            a.updateAchievedValue(a.getAchievedValue().add(increment));
+            assignmentRepository.save(a);
+        }
+    }
+
+    /**
+     * Recalculates achieved values for all KPI assignments in a given month by:
+     * 1. Resetting all assignments' achievedValue to 0
+     * 2. Replaying all stored meeting details for that date range
+     *
+     * Safe to call multiple times (idempotent). Handles past-month assignments
+     * that may be EXPIRED (bypasses the date-range constraint used by live updates).
+     */
+    @Transactional
+    public Map<String, Object> recalculateForMonth(int month, int year) {
+        LocalDate startDate = LocalDate.of(year, month, 1);
+        LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+
+        // Step 1: Aggregate meeting type counts per employee across all updates in the month
+        List<SalesKpiUpdate> updates =
+                salesKpiUpdateRepository.findByDateBetweenWithDetails(startDate, endDate);
+
+        // employeeId -> (kpiName -> total count)
+        Map<Long, Map<String, Long>> employeeKpiCounts = new HashMap<>();
+        int processed = 0, skipped = 0;
+
+        for (SalesKpiUpdate update : updates) {
+            if (update.getSalesPerson() == null) {
+                skipped++;
                 continue;
             }
+            Long spId = update.getSalesPerson().getId();
+            Map<String, Long> kpiCounts = employeeKpiCounts.computeIfAbsent(spId, k -> new HashMap<>());
 
-            for (EmployeeKpiAssignment assignment : assignments) {
-                BigDecimal newValue = assignment.getAchievedValue().add(BigDecimal.valueOf(entry.getValue()));
-                assignment.updateAchievedValue(newValue);
-                assignmentRepository.save(assignment);
+            update.getMeetingDetails().stream()
+                    .filter(md -> md.getType() != null && MEETING_TYPE_TO_KPI_NAME.containsKey(md.getType()))
+                    .forEach(md -> {
+                        String kpiName = MEETING_TYPE_TO_KPI_NAME.get(md.getType());
+                        kpiCounts.merge(kpiName, 1L, Long::sum);
+                    });
+            processed++;
+        }
+
+        // Step 2: Reset all assignments for the month to zero
+        List<EmployeeKpiAssignment> allAssignments =
+                assignmentRepository.findAllByMonthAndYear(month, year);
+        for (EmployeeKpiAssignment a : allAssignments) {
+            a.setAchievedValue(BigDecimal.ZERO);
+            a.setScorePercentage(BigDecimal.ZERO);
+            a.setWeightedScore(BigDecimal.ZERO);
+            if (KPIStatus.COMPLETED.equals(a.getStatus())) {
+                a.setStatus(KPIStatus.ACTIVE);
             }
         }
+        assignmentRepository.saveAll(allAssignments);
+        log.info("Reset {} assignments for {}/{}", allAssignments.size(), month, year);
+
+        // Step 3: Apply accumulated counts to each assignment
+        int kpiRecordsUpdated = 0;
+        for (Map.Entry<Long, Map<String, Long>> empEntry : employeeKpiCounts.entrySet()) {
+            Long spId = empEntry.getKey();
+            for (Map.Entry<String, Long> kpiEntry : empEntry.getValue().entrySet()) {
+                String kpiName = kpiEntry.getKey();
+                BigDecimal total = BigDecimal.valueOf(kpiEntry.getValue());
+
+                List<EmployeeKpiAssignment> matching =
+                        assignmentRepository.findByEmployeeIdAndKpiNameAndMonthAndYear(spId, kpiName, month, year);
+                for (EmployeeKpiAssignment a : matching) {
+                    a.updateAchievedValue(total);
+                    assignmentRepository.save(a);
+                    kpiRecordsUpdated++;
+                }
+                if (matching.isEmpty()) {
+                    log.warn("Backfill: no assignment for employeeId={} kpiName='{}' {}/{}", spId, kpiName, month, year);
+                }
+            }
+        }
+
+        log.info("Recalculate complete: {}/{} — reset={} processed={} skipped={} updated={}",
+                month, year, allAssignments.size(), processed, skipped, kpiRecordsUpdated);
+
+        return Map.of(
+                "month", month,
+                "year", year,
+                "assignmentsReset", allAssignments.size(),
+                "salesKpiUpdatesProcessed", processed,
+                "salesKpiUpdatesSkipped", skipped,
+                "kpiRecordsUpdated", kpiRecordsUpdated
+        );
     }
 }

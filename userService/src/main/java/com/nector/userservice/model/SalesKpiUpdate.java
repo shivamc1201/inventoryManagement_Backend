@@ -41,13 +41,6 @@ public class SalesKpiUpdate {
 
     private Integer noOfMeetings;
 
-    private Integer farmerVisit;
-    private Integer distributorVisit;
-    private Integer dealerVisit;
-    private Integer dealerOnboard;
-    private Integer distributorOnboard;
-    private Integer retailerVisit;
-
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

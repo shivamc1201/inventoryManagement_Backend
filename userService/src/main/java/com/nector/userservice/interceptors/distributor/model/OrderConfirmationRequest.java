@@ -60,6 +60,6 @@ public class OrderConfirmationRequest {
     public enum ItemCondition {
         GOOD,
         DAMAGED,
-        MISSING
+        PARTIAL
     }
 }

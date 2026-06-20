@@ -19,6 +19,9 @@ public interface DistributorService {
     OrderConfirmationResponse getOrderConfirmation(Long orderId);
     List<OrderConfirmationResponse> getDistributorConfirmations(Long distributorId);
 
+    List<OrderConfirmationResponse> getPendingApprovalConfirmations();
+    OrderConfirmationResponse processOrderConfirmationApproval(Long confirmationId, String action, String adminComment);
+
     List<CartResponse> getAllOrdersForDistributor(Long distributorId);
 
 AddressResponse getDistributorAddress(Long distributorId);

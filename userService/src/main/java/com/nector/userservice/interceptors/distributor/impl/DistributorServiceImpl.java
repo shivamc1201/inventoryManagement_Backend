@@ -200,11 +200,13 @@ public class DistributorServiceImpl implements DistributorService {
     @Override
     public OrderConfirmationResponse confirmOrderReceived(Long distributorId, OrderConfirmationRequest request) {
         log.info("Processing order confirmation for distributor: {} and order: {}", distributorId, request.getOrderId());
-        
+
         if (orderConfirmationRepository.existsByOrderId(request.getOrderId())) {
             throw new IllegalArgumentException("Order already confirmed: " + request.getOrderId());
         }
-        
+
+        boolean requiresApproval = hasDamagedOrPartialItemCondition(request);
+
         OrderConfirmation confirmation = new OrderConfirmation();
         confirmation.setOrderId(request.getOrderId());
         confirmation.setDistributorId(distributorId);
@@ -213,15 +215,17 @@ public class DistributorServiceImpl implements DistributorService {
         confirmation.setOverallRating(request.getOverallRating());
         confirmation.setFeedback(request.getFeedback());
         confirmation.setRemarks(request.getRemarks());
-        
+        confirmation.setApprovalStatus(requiresApproval ?
+                OrderConfirmation.ApprovalStatus.PENDING_APPROVAL :
+                OrderConfirmation.ApprovalStatus.NOT_REQUIRED);
+
         if (request.getItemConfirmations() != null) {
             List<ItemConfirmationEntity> itemConfirmations = request.getItemConfirmations().stream()
                 .map(item -> {
                     ItemConfirmationEntity entity = new ItemConfirmationEntity();
                     entity.setOrderConfirmation(confirmation);
                     entity.setItemId(item.getItemId());
-                    
-                    // Auto-populate SKU from FinishedProduct if not provided in request
+
                     String sku = item.getSku();
                     if (sku == null || sku.trim().isEmpty()) {
                         sku = finishedProductRepository.findById(item.getItemId())
@@ -234,7 +238,7 @@ public class DistributorServiceImpl implements DistributorService {
                         }
                     }
                     entity.setSku(sku);
-                    
+
                     entity.setDispatchedQuantity(item.getDispatchedQuantity());
                     entity.setReceivedQuantity(item.getReceivedQuantity());
                     entity.setCondition(item.getCondition());
@@ -244,10 +248,15 @@ public class DistributorServiceImpl implements DistributorService {
                 .collect(Collectors.toList());
             confirmation.setItemConfirmations(itemConfirmations);
         }
-        
+
         OrderConfirmation savedConfirmation = orderConfirmationRepository.save(confirmation);
         log.info("Order confirmation saved with ID: {}", savedConfirmation.getId());
-        
+
+        if (requiresApproval) {
+            log.info("Order {} has DAMAGED/PARTIAL items. Pending admin approval — no stock, tracking, or invoice updates.", request.getOrderId());
+            return mapToResponse(savedConfirmation);
+        }
+
         // Add received stock to distributor inventory (+ stock operation)
         if (savedConfirmation.getItemConfirmations() != null) {
             for (ItemConfirmationEntity itemConfirmation : savedConfirmation.getItemConfirmations()) {
@@ -259,72 +268,63 @@ public class DistributorServiceImpl implements DistributorService {
                             itemConfirmation.getSku(),
                             itemConfirmation.getReceivedQuantity()
                         );
-                        log.info("Added {} units of SKU: {} to distributor {} stock", 
-                            itemConfirmation.getReceivedQuantity(), 
-                            itemConfirmation.getSku(), 
+                        log.info("Added {} units of SKU: {} to distributor {} stock",
+                            itemConfirmation.getReceivedQuantity(),
+                            itemConfirmation.getSku(),
                             distributorId);
                     } catch (Exception e) {
-                        log.error("Failed to add stock for itemId: {} - {}", 
-                            itemConfirmation.getItemId(), e.getMessage());
-                        // Continue with other items, don't fail the entire confirmation
+                        log.error("Failed to add stock for itemId: {} - {}", itemConfirmation.getItemId(), e.getMessage());
                     }
                 }
             }
         }
-        
+
         // Check if order has short or damaged remarks
         boolean hasShortOrDamaged = hasShortOrDamagedRemarks(request);
         if (hasShortOrDamaged) {
             log.info("Order {} has short/damaged remarks. Invoice will not be generated.", request.getOrderId());
         }
-        
+
         // Update Order Tracking Step 11: Order Received
         try {
-            com.nector.userservice.ordertracking.entity.OrderTracking order = 
+            com.nector.userservice.ordertracking.entity.OrderTracking order =
                 orderTrackingService.getOrderRepository().findByCartId(request.getOrderId());
-            
+
             if (order != null) {
-                // Determine if order was received (yes/no) based on status
                 boolean isReceived = request.getStatus() == OrderConfirmationRequest.ConfirmationStatus.RECEIVED_COMPLETE ||
                                   request.getStatus() == OrderConfirmationRequest.ConfirmationStatus.RECEIVED_PARTIAL;
-                
+
                 UpdateStepRequest step11Request = new UpdateStepRequest();
-                
-                // Set status based on remarks - order_incomplete if short/damaged found
+
                 if (hasShortOrDamaged) {
-                    step11Request.setStatus("order_incomplete");
+                    step11Request.setStatus("in-progress");
                 } else {
                     step11Request.setStatus(isReceived ? "completed" : "cancelled");
                 }
-                
-                step11Request.setRemarks(isReceived ? 
-                    "Order received by distributor: " + request.getFeedback() : 
+
+                step11Request.setRemarks(isReceived ?
+                    "Order received by distributor: " + request.getFeedback() :
                     "Order not received: " + request.getRemarks());
                 step11Request.setDate(java.time.LocalDate.now().toString());
-                
-                // Add assigned person (distributor) information
+
                 step11Request.setAssignedPersonId(distributorId);
                 step11Request.setHasAction(true);
                 step11Request.setActionResponse(isReceived ? "yes" : "no");
-                
-                // Get distributor details
+
                 distributorRepository.findById(distributorId).ifPresent(distributor -> {
                     step11Request.setAssignedPersonName(distributor.getFirstName() + " " + distributor.getLastName());
                     step11Request.setAssignedPersonRole("DISTRIBUTOR");
                     step11Request.setAssignedPersonEmail(distributor.getContactEmail());
                     step11Request.setAssignedPersonPhone(distributor.getPhoneNumber());
                 });
-                
+
                 orderTrackingService.updateStepBySequence(order.getId(), 11, step11Request);
-                log.info("Order tracking Step 11 updated for order {} - received: {}", 
-                    request.getOrderId(), isReceived);
+                log.info("Order tracking Step 11 updated for order {} - received: {}", request.getOrderId(), isReceived);
             }
         } catch (Exception e) {
-            log.error("Failed to update Order Tracking Step 11 for order {}: {}", 
-                request.getOrderId(), e.getMessage());
-            // Continue without failing the order confirmation
+            log.error("Failed to update Order Tracking Step 11 for order {}: {}", request.getOrderId(), e.getMessage());
         }
-        
+
         // Generate and save invoice after order confirmation (only if no short/damaged remarks)
         if (!hasShortOrDamaged) {
             try {
@@ -332,13 +332,149 @@ public class DistributorServiceImpl implements DistributorService {
                 log.info("Invoice generated successfully for order confirmation ID: {}", savedConfirmation.getId());
             } catch (Exception e) {
                 log.error("Failed to generate invoice for order confirmation ID: {} - {}", savedConfirmation.getId(), e.getMessage());
-                // Don't throw here to avoid breaking order confirmation flow
             }
         }
-        
+
         return mapToResponse(savedConfirmation);
     }
-    
+
+    @Override
+    public List<OrderConfirmationResponse> getPendingApprovalConfirmations() {
+        return orderConfirmationRepository
+                .findByApprovalStatusOrderByConfirmedAtDesc(OrderConfirmation.ApprovalStatus.PENDING_APPROVAL)
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    public OrderConfirmationResponse processOrderConfirmationApproval(Long confirmationId, String action, String adminComment) {
+        OrderConfirmation confirmation = orderConfirmationRepository.findByIdWithItems(confirmationId)
+                .orElseThrow(() -> new com.nector.userservice.exception.ResourceNotFoundException(
+                        "Order confirmation not found: " + confirmationId));
+
+        if (confirmation.getApprovalStatus() != OrderConfirmation.ApprovalStatus.PENDING_APPROVAL) {
+            throw new IllegalArgumentException(
+                    "Order confirmation " + confirmationId + " is not pending approval (current status: " + confirmation.getApprovalStatus() + ")");
+        }
+
+        confirmation.setAdminComment(adminComment);
+
+        if ("APPROVE".equalsIgnoreCase(action)) {
+            // Deferred stock update
+            if (confirmation.getItemConfirmations() != null) {
+                for (ItemConfirmationEntity item : confirmation.getItemConfirmations()) {
+                    if (item.getReceivedQuantity() != null && item.getReceivedQuantity() > 0) {
+                        try {
+                            distributorStockService.addStock(
+                                    confirmation.getDistributorId(),
+                                    item.getItemId(),
+                                    item.getSku(),
+                                    item.getReceivedQuantity()
+                            );
+                            log.info("Post-approval: added {} units of SKU: {} to distributor {} stock",
+                                    item.getReceivedQuantity(), item.getSku(), confirmation.getDistributorId());
+                        } catch (Exception e) {
+                            log.error("Post-approval: failed to add stock for itemId: {} - {}", item.getItemId(), e.getMessage());
+                        }
+                    }
+                }
+            }
+
+            // Deferred order tracking Step 11
+            try {
+                com.nector.userservice.ordertracking.entity.OrderTracking order =
+                        orderTrackingService.getOrderRepository().findByCartId(confirmation.getOrderId());
+
+                if (order != null) {
+                    boolean isReceived = confirmation.getStatus() == OrderConfirmationRequest.ConfirmationStatus.RECEIVED_COMPLETE ||
+                                        confirmation.getStatus() == OrderConfirmationRequest.ConfirmationStatus.RECEIVED_PARTIAL;
+
+                    UpdateStepRequest step11Request = new UpdateStepRequest();
+                    step11Request.setStatus(isReceived ? "completed" : "cancelled");
+                    step11Request.setRemarks("Admin approved order with DAMAGED/PARTIAL items. Comment: " +
+                            (adminComment != null ? adminComment : "None"));
+                    step11Request.setDate(java.time.LocalDate.now().toString());
+                    step11Request.setAssignedPersonId(confirmation.getDistributorId());
+                    step11Request.setHasAction(true);
+                    step11Request.setActionResponse(isReceived ? "yes" : "no");
+
+                    distributorRepository.findById(confirmation.getDistributorId()).ifPresent(distributor -> {
+                        step11Request.setAssignedPersonName(distributor.getFirstName() + " " + distributor.getLastName());
+                        step11Request.setAssignedPersonRole("DISTRIBUTOR");
+                        step11Request.setAssignedPersonEmail(distributor.getContactEmail());
+                        step11Request.setAssignedPersonPhone(distributor.getPhoneNumber());
+                    });
+
+                    orderTrackingService.updateStepBySequence(order.getId(), 11, step11Request);
+                    log.info("Post-approval: order tracking Step 11 updated for order {}", confirmation.getOrderId());
+                }
+            } catch (Exception e) {
+                log.error("Post-approval: failed to update Order Tracking Step 11 for order {}: {}",
+                        confirmation.getOrderId(), e.getMessage());
+            }
+
+            // Deferred invoice generation
+            try {
+                invoiceService.generateInvoice(confirmation.getId());
+                log.info("Post-approval: invoice generated for order confirmation ID: {}", confirmation.getId());
+            } catch (Exception e) {
+                log.error("Post-approval: failed to generate invoice for order confirmation ID: {} - {}",
+                        confirmation.getId(), e.getMessage());
+            }
+
+            confirmation.setApprovalStatus(OrderConfirmation.ApprovalStatus.APPROVED);
+            log.info("Order confirmation {} approved by admin", confirmationId);
+
+        } else if ("REJECT".equalsIgnoreCase(action)) {
+            // Update tracking to reflect rejection
+            try {
+                com.nector.userservice.ordertracking.entity.OrderTracking order =
+                        orderTrackingService.getOrderRepository().findByCartId(confirmation.getOrderId());
+
+                if (order != null) {
+                    UpdateStepRequest step11Request = new UpdateStepRequest();
+                    step11Request.setStatus("cancelled");
+                    step11Request.setRemarks("Order rejected by admin due to DAMAGED/PARTIAL items. Comment: " +
+                            (adminComment != null ? adminComment : "None"));
+                    step11Request.setDate(java.time.LocalDate.now().toString());
+                    step11Request.setAssignedPersonId(confirmation.getDistributorId());
+                    step11Request.setHasAction(true);
+                    step11Request.setActionResponse("no");
+
+                    distributorRepository.findById(confirmation.getDistributorId()).ifPresent(distributor -> {
+                        step11Request.setAssignedPersonName(distributor.getFirstName() + " " + distributor.getLastName());
+                        step11Request.setAssignedPersonRole("DISTRIBUTOR");
+                        step11Request.setAssignedPersonEmail(distributor.getContactEmail());
+                        step11Request.setAssignedPersonPhone(distributor.getPhoneNumber());
+                    });
+
+                    orderTrackingService.updateStepBySequence(order.getId(), 11, step11Request);
+                    log.info("Post-rejection: order tracking Step 11 set to cancelled for order {}", confirmation.getOrderId());
+                }
+            } catch (Exception e) {
+                log.error("Post-rejection: failed to update Order Tracking Step 11 for order {}: {}",
+                        confirmation.getOrderId(), e.getMessage());
+            }
+
+            confirmation.setApprovalStatus(OrderConfirmation.ApprovalStatus.REJECTED);
+            log.info("Order confirmation {} rejected by admin", confirmationId);
+
+        } else {
+            throw new IllegalArgumentException("Invalid action: " + action + ". Must be APPROVE or REJECT.");
+        }
+
+        return mapToResponse(orderConfirmationRepository.save(confirmation));
+    }
+
+    private boolean hasDamagedOrPartialItemCondition(OrderConfirmationRequest request) {
+        if (request.getItemConfirmations() == null) return false;
+        return request.getItemConfirmations().stream()
+                .anyMatch(item -> item.getCondition() == OrderConfirmationRequest.ItemCondition.DAMAGED ||
+                                  item.getCondition() == OrderConfirmationRequest.ItemCondition.PARTIAL);
+    }
+
     /**
      * Check if the order confirmation request has short or damaged remarks
      */
@@ -369,7 +505,7 @@ public class DistributorServiceImpl implements DistributorService {
                 
                 // Check item condition
                 if (item.getCondition() == OrderConfirmationRequest.ItemCondition.DAMAGED ||
-                    item.getCondition() == OrderConfirmationRequest.ItemCondition.MISSING) {
+                    item.getCondition() == OrderConfirmationRequest.ItemCondition.PARTIAL) {
                     return true;
                 }
                 
@@ -410,6 +546,8 @@ public class DistributorServiceImpl implements DistributorService {
         response.setOverallRating(confirmation.getOverallRating());
         response.setFeedback(confirmation.getFeedback());
         response.setRemarks(confirmation.getRemarks());
+        response.setApprovalStatus(confirmation.getApprovalStatus());
+        response.setAdminComment(confirmation.getAdminComment());
         response.setConfirmedAt(confirmation.getConfirmedAt());
         
         if (confirmation.getItemConfirmations() != null) {

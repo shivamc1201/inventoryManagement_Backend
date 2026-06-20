@@ -16,6 +16,8 @@ public class OrderConfirmationResponse {
     private String feedback;
     private String remarks;
     private LocalDateTime confirmedAt;
+    private OrderConfirmation.ApprovalStatus approvalStatus;
+    private String adminComment;
     private List<ItemConfirmationResponse> itemConfirmations;
     
     @Data

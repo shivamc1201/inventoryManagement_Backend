@@ -17,4 +17,9 @@ public interface OrderConfirmationRepository extends JpaRepository<OrderConfirma
 
     @Query("SELECT oc FROM OrderConfirmation oc LEFT JOIN FETCH oc.itemConfirmations WHERE oc.distributorId = :distributorId ORDER BY oc.confirmedAt DESC")
     List<OrderConfirmation> findByDistributorIdWithItems(@Param("distributorId") Long distributorId);
+
+    List<OrderConfirmation> findByApprovalStatusOrderByConfirmedAtDesc(OrderConfirmation.ApprovalStatus approvalStatus);
+
+    @Query("SELECT oc FROM OrderConfirmation oc LEFT JOIN FETCH oc.itemConfirmations WHERE oc.id = :id")
+    Optional<OrderConfirmation> findByIdWithItems(@Param("id") Long id);
 }

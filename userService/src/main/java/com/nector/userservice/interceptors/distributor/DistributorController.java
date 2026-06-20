@@ -244,6 +244,39 @@ public class DistributorController {
         }
     }
 
+    @GetMapping("/order-confirmations/pending-approval")
+    @Operation(summary = "Get pending approval confirmations", description = "Admin: list all order confirmations awaiting review due to DAMAGED/PARTIAL items")
+    public ResponseEntity<ApiResponse<List<OrderConfirmationResponse>>> getPendingApprovalConfirmations() {
+        try {
+            List<OrderConfirmationResponse> response = distributorService.getPendingApprovalConfirmations();
+            return ResponseEntity.ok(new ApiResponse<>(true, "Pending approval confirmations retrieved", response));
+        } catch (Exception e) {
+            log.error("Error retrieving pending approval confirmations: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, "Failed to retrieve pending confirmations", null));
+        }
+    }
+
+    @PostMapping("/order-confirmation/{confirmationId}/approve")
+    @Operation(summary = "Process order confirmation approval", description = "Admin: approve or reject an order confirmation that has DAMAGED/PARTIAL items")
+    public ResponseEntity<ApiResponse<OrderConfirmationResponse>> processOrderConfirmationApproval(
+            @PathVariable Long confirmationId,
+            @RequestParam String action,
+            @RequestParam(required = false) String adminComment) {
+        try {
+            OrderConfirmationResponse response = distributorService.processOrderConfirmationApproval(confirmationId, action, adminComment);
+            String msg = "APPROVE".equalsIgnoreCase(action) ? "approved" : "rejected";
+            return ResponseEntity.ok(new ApiResponse<>(true, "Order confirmation " + msg + " successfully", response));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
+        } catch (Exception e) {
+            log.error("Error processing approval for confirmation {}: {}", confirmationId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, "Failed to process approval", null));
+        }
+    }
+
     @GetMapping("/{distributorId}/dispatch-report")
     @Operation(summary = "Get dispatch report", description = "Get pending, dispatched and delivered order counts for a distributor")
     public ResponseEntity<?> getDispatchReport(@PathVariable Long distributorId) {

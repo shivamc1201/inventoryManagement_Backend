@@ -1,0 +1,660 @@
+package com.nector.userservice.service;
+
+import com.nector.userservice.cloudinary.CloudinaryStorageService;
+import com.nector.userservice.dto.invoice.Invoice;
+import com.nector.userservice.dto.invoice.InvoiceItem;
+import com.nector.userservice.interceptors.distributor.model.OrderConfirmation;
+import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
+import com.nector.userservice.interceptors.distributor.repository.OrderConfirmationRepository;
+import com.nector.userservice.model.Cart;
+import com.nector.userservice.model.CartItem;
+import com.nector.userservice.repository.CartRepository;
+import com.nector.userservice.repository.InvoiceRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.IntStream;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class InvoiceService {
+
+    private final CartRepository cartRepository;
+    private final InvoiceRepository invoiceRepository;
+    private final OrderConfirmationRepository orderConfirmationRepository;
+    private final TemplateEngine templateEngine;
+    private final HtmlToPdfService htmlToPdfService;
+    private final CloudinaryStorageService cloudinaryStorageService;
+    private final DocumentNumberService documentNumberService;
+    private final DistributorRepository distributorRepository;
+
+    @Transactional
+    public String generateInvoice(Long orderConfirmationId) {
+        log.info("=== INVOICE GENERATION STARTED ===");
+        log.info("Request details - Order Confirmation ID: {}, Timestamp: {}", orderConfirmationId, java.time.LocalDateTime.now());
+
+        try {
+            // Step 1: Fetch order confirmation
+            log.info("Step 1/6: Fetching order confirmation for ID: {}", orderConfirmationId);
+            OrderConfirmation orderConfirmation = orderConfirmationRepository.findById(orderConfirmationId)
+                    .orElseThrow(() -> new RuntimeException("Order confirmation not found with ID: " + orderConfirmationId));
+
+            log.info("Order confirmation found - ID: {}, Order ID: {}, Distributor ID: {}, Status: {}",
+                    orderConfirmation.getId(), orderConfirmation.getOrderId(), orderConfirmation.getDistributorId(), orderConfirmation.getStatus());
+
+            // Step 2: Fetch cart with items eagerly loaded
+            log.info("Step 2/6: Fetching cart details for order ID: {}", orderConfirmation.getOrderId());
+            Cart cart = cartRepository.findByIdWithItems(orderConfirmation.getOrderId())
+                    .orElseThrow(() -> new RuntimeException("Cart not found with ID: " + orderConfirmation.getOrderId()));
+
+            log.info("Cart found - ID: {}, Distributor ID: {}, Status: {}, Items: {}",
+                    cart.getId(), cart.getDistributorId(), cart.getStatus(), cart.getCartItems().size());
+
+            // Generate Invoice number once (format: OP/YYYY-YY/NNNN)
+            String invoiceNumber = documentNumberService.generateInvoiceNumber();
+            log.info("Generated Invoice Number: {}", invoiceNumber);
+
+            // Step 3: Create Invoice entity
+            log.info("Step 3/6: Creating Invoice entity in database");
+            com.nector.userservice.model.Invoice invoiceEntity = createInvoiceEntity(orderConfirmation, cart, invoiceNumber);
+            invoiceRepository.save(invoiceEntity);
+            log.info("Invoice entity created - ID: {}, Invoice Number: {}, Amount: {}",
+                    invoiceEntity.getId(), invoiceEntity.getInvoiceNumber(), invoiceEntity.getGrandTotal());
+
+            // Step 4: Generate invoice data
+            log.info("Step 4/6: Generating invoice data from cart and order confirmation");
+            Invoice invoice = createInvoiceFromData(orderConfirmation, cart, invoiceNumber, invoiceEntity.getInvoiceDate().toLocalDate());
+            log.info("Invoice data created - Invoice Number: {}, Items: {}, Total Amount: {}",
+                    invoice.getInvoiceNumber(), invoice.getItems().size(), invoice.getGrandTotal());
+
+            // Step 5: Generate HTML
+            log.info("Step 5/6: Converting invoice to HTML template");
+            String html = generateHtmlFromTemplate(invoice);
+            log.info("HTML generated successfully - Length: {} characters", html.length());
+
+            // Step 6: Convert to PDF
+            log.info("Step 6/6: Converting HTML to PDF bytes");
+            byte[] pdfBytes = htmlToPdfService.convertHtmlToPdf(html);
+            log.info("PDF generated successfully - Size: {} bytes ({} KB)",
+                    pdfBytes.length, pdfBytes.length / 1024.0);
+
+            // Step 7: Upload to Cloudinary
+            log.info("Step 7/7: Uploading PDF to Cloudinary");
+            String cloudinaryUrl = uploadPdfToCloudinary(pdfBytes, invoice.getInvoiceNumber());
+
+            // Update entity with Cloudinary URL
+            invoiceEntity.setPdfUrl(cloudinaryUrl);
+            invoiceRepository.save(invoiceEntity);
+
+            log.info("=== INVOICE GENERATION COMPLETED ===");
+            log.info("Success - Invoice Number: {}, Cloudinary URL: {}, PDF Size: {} KB",
+                    invoice.getInvoiceNumber(), cloudinaryUrl, pdfBytes.length / 1024.0);
+            log.info("Entity updated - ID: {}, PDF URL stored: {}", invoiceEntity.getId(), invoiceEntity.getPdfUrl());
+
+            return cloudinaryUrl;
+
+        } catch (Exception e) {
+            log.error("=== INVOICE PDF GENERATION FAILED - Invoice record saved, PDF pending ===");
+            log.error("Failure details - Order Confirmation ID: {}, Error: {}, Timestamp: {}",
+                    orderConfirmationId, e.getMessage(), java.time.LocalDateTime.now());
+            log.error("Stack trace:", e);
+            return null;
+        }
+    }
+
+    private String uploadPdfToCloudinary(byte[] pdfBytes, String invoiceNumber) {
+        File tempFile = null;
+        try {
+            // Create temporary file
+            tempFile = createTempPdfFile(pdfBytes, invoiceNumber);
+
+            // Upload to Cloudinary
+            String cloudinaryUrl = cloudinaryStorageService.uploadPdf(tempFile);
+
+            log.info("PDF uploaded to Cloudinary: {} -> {}", invoiceNumber, cloudinaryUrl);
+            return cloudinaryUrl;
+
+        } catch (Exception e) {
+            log.error("Failed to upload PDF to Cloudinary: {} - {}", invoiceNumber, e.getMessage());
+            throw new RuntimeException("PDF upload to Cloudinary failed", e);
+        } finally {
+            // Always cleanup temporary file
+            cleanupTempFile(tempFile);
+        }
+    }
+
+    private File createTempPdfFile(byte[] pdfBytes, String invoiceNumber) throws IOException {
+        // Create temp directory if not exists
+        Path tempDir = Path.of("temp");
+        if (!Files.exists(tempDir)) {
+            Files.createDirectories(tempDir);
+        }
+
+        // Create temp file
+        String tempFileName = invoiceNumber.replace("/", "-") + "_" + System.currentTimeMillis() + ".pdf";
+        File tempFile = tempDir.resolve(tempFileName).toFile();
+
+        try (FileOutputStream fos = new FileOutputStream(tempFile)) {
+            fos.write(pdfBytes);
+        }
+
+        log.debug("Created temporary PDF file: {}", tempFile.getAbsolutePath());
+        return tempFile;
+    }
+
+    private void cleanupTempFile(File tempFile) {
+        if (tempFile != null && tempFile.exists()) {
+            try {
+                Files.deleteIfExists(tempFile.toPath());
+                log.debug("Cleaned up temporary file: {}", tempFile.getAbsolutePath());
+            } catch (IOException e) {
+                log.warn("Failed to cleanup temporary file: {} - {}",
+                        tempFile.getAbsolutePath(), e.getMessage());
+            }
+        }
+    }
+
+    private com.nector.userservice.model.Invoice createInvoiceEntity(OrderConfirmation orderConfirmation, Cart cart, String invoiceNumber) {
+        com.nector.userservice.model.Invoice invoiceEntity = new com.nector.userservice.model.Invoice();
+        
+        // Use provided Invoice number in format: OP/YYYY-YY/NNNN (e.g., OP/2026-27/0001)
+        invoiceEntity.setInvoiceNumber(invoiceNumber);
+        invoiceEntity.setOrderId(orderConfirmation.getOrderId());
+        invoiceEntity.setOrderConfirmationId(orderConfirmation.getId());
+        invoiceEntity.setDistributorId(orderConfirmation.getDistributorId());
+        invoiceEntity.setGdnNumber(orderConfirmation.getGdnNumber());
+        invoiceEntity.setRemarks(orderConfirmation.getRemarks());
+
+        if (orderConfirmation.getDistributorId() != null) {
+            distributorRepository.findById(orderConfirmation.getDistributorId())
+                    .ifPresent(distributor -> invoiceEntity.setDistributorName(distributor.getFirstName()));
+        }
+
+        // Calculate total amount; fallback to cart items if confirmations are dummy/empty
+        java.math.BigDecimal totalAmount = java.math.BigDecimal.ZERO;
+        boolean hasConfirmations = orderConfirmation.getItemConfirmations() != null
+                && !orderConfirmation.getItemConfirmations().isEmpty();
+
+        if (hasConfirmations) {
+            for (var itemConfirmation : orderConfirmation.getItemConfirmations()) {
+                if (itemConfirmation.getItemId() == null || itemConfirmation.getItemId() <= 0) continue;
+                int qty = (itemConfirmation.getReceivedQuantity() != null && itemConfirmation.getReceivedQuantity() > 0)
+                        ? itemConfirmation.getReceivedQuantity()
+                        : (itemConfirmation.getDispatchedQuantity() != null && itemConfirmation.getDispatchedQuantity() > 0
+                                ? itemConfirmation.getDispatchedQuantity() : 0);
+                if (qty > 0) {
+                    CartItem cartItem = cart.getCartItems().stream()
+                            .filter(ci -> ci.getItem() != null && ci.getItem().getId().equals(itemConfirmation.getItemId()))
+                            .findFirst().orElse(null);
+                    if (cartItem != null) {
+                        totalAmount = totalAmount.add(
+                            cartItem.getPriceAtTime().multiply(java.math.BigDecimal.valueOf(qty)));
+                    }
+                }
+            }
+        }
+
+        // If total is still zero, fall back to cart items
+        if (totalAmount.compareTo(java.math.BigDecimal.ZERO) == 0) {
+            for (CartItem cartItem : cart.getCartItems()) {
+                if (cartItem.getItem() != null && cartItem.getQuantity() > 0) {
+                    totalAmount = totalAmount.add(
+                        cartItem.getPriceAtTime().multiply(java.math.BigDecimal.valueOf(cartItem.getQuantity())));
+                }
+            }
+        }
+
+        invoiceEntity.setTotalAmount(totalAmount);
+        invoiceEntity.setTaxAmount(totalAmount.multiply(java.math.BigDecimal.valueOf(0.18))); // 18% GST
+        invoiceEntity.setGrandTotal(totalAmount.add(invoiceEntity.getTaxAmount()));
+        invoiceEntity.setInvoiceStatus(com.nector.userservice.model.Invoice.InvoiceStatus.GENERATED);
+        
+        log.info("Invoice entity created with status: {} for invoice: {}", 
+                invoiceEntity.getInvoiceStatus(), invoiceEntity.getInvoiceNumber());
+
+        return invoiceEntity;
+    }
+
+    private Invoice createInvoiceFromData(OrderConfirmation orderConfirmation, Cart cart, String invoiceNumber, LocalDate invoiceDate) {
+        Invoice invoice = new Invoice();
+
+        // Invoice details - use provided Invoice number
+        invoice.setInvoiceNumber(invoiceNumber);
+        invoice.setInvoiceDate(invoiceDate);
+        invoice.setPaymentTerms("Due on Receipt");
+        invoice.setOrderNo(String.valueOf(orderConfirmation.getOrderId()));
+        invoice.setOrderDate(cart.getCreatedAt().toLocalDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+        invoice.setGdnNumber(orderConfirmation.getGdnNumber());
+        invoice.setDispatchDocNo(orderConfirmation.getGdnNumber());
+        invoice.setDeliveryNote(orderConfirmation.getGdnNumber());
+        invoice.setDeliveryNoteDate("");
+        invoice.setBillOfLading("");
+        invoice.setMotorVehicleNo("");
+        invoice.setOrderConfirmationRemarks(orderConfirmation.getRemarks());
+
+        // Seller details
+        invoice.setCompanyName("Nectar Origin Private Limited");
+        invoice.setCompanyAddress("360 K, Shiv Parwati Nagar, Block Road No-2, Ward No 16, Kahalgaon, Bhagalpur Bihar, Bihar - 813203, India");
+        invoice.setGstin("U74999BR2016PTC032690");
+        invoice.setContactNumber("06429-450126,9797979522");
+        invoice.setEmail("nectarorigin@gmail.com");
+        invoice.setPanNumber("AAFCN7425K");
+        invoice.setBankDetails("Bank of Baroda, Kahalgaon Branch\nA/c No: 1234567890\nIFSC: BARB0KAHXXX");
+
+        // Buyer details from distributor
+        var distributor = distributorRepository.findById(orderConfirmation.getDistributorId()).orElse(null);
+        log.info("Distributor found for ID {}: {}", orderConfirmation.getDistributorId(), distributor != null ? distributor.getFirstName() : "NOT FOUND");
+        if (distributor != null) {
+            // Bill To details
+            Invoice.BuyerDetails billTo = new Invoice.BuyerDetails();
+            billTo.setName(distributor.getFirstName());
+            billTo.setAddress(distributor.getAddress());
+            billTo.setGstin(distributor.getGstNumber());
+            billTo.setState(distributor.getState() != null ? distributor.getState() : "");
+            billTo.setStateCode(resolveStateCode(distributor));
+            billTo.setPincode(distributor.getPinCode() != null ? distributor.getPinCode() : "");
+            billTo.setContact(distributor.getPhoneNumber() != null ? distributor.getPhoneNumber() : "");
+            invoice.setBillTo(billTo);
+
+            // Ship To details (same as bill to for now)
+            Invoice.BuyerDetails shipTo = new Invoice.BuyerDetails();
+            shipTo.setName(distributor.getFirstName());
+            shipTo.setAddress(cart.getAddress() != null ? cart.getAddress() : distributor.getAddress());
+            shipTo.setGstin(distributor.getGstNumber());
+            shipTo.setState(distributor.getState() != null ? distributor.getState() : "");
+            shipTo.setStateCode(resolveStateCode(distributor));
+            shipTo.setPincode(distributor.getPinCode() != null ? distributor.getPinCode() : "");
+            shipTo.setContact(distributor.getPhoneNumber() != null ? distributor.getPhoneNumber() : "");
+            invoice.setShipTo(shipTo);
+            log.info("ShipTo set with name: {}", shipTo.getName());
+        } else {
+            log.error("Distributor not found for ID: {}, creating fallback buyer details", orderConfirmation.getDistributorId());
+            // Create fallback buyer details
+            Invoice.BuyerDetails billTo = new Invoice.BuyerDetails();
+            billTo.setName("Customer Name");
+            billTo.setAddress(cart.getAddress() != null ? cart.getAddress() : "Customer Address");
+            billTo.setGstin("Customer GSTIN");
+            billTo.setState("");
+            billTo.setStateCode("");
+            billTo.setPincode("");
+            billTo.setContact("");
+            invoice.setBillTo(billTo);
+
+            Invoice.BuyerDetails shipTo = new Invoice.BuyerDetails();
+            shipTo.setName("Customer Name");
+            shipTo.setAddress(cart.getAddress() != null ? cart.getAddress() : "Customer Address");
+            shipTo.setGstin("Customer GSTIN");
+            shipTo.setState("");
+            shipTo.setStateCode("");
+            shipTo.setPincode("");
+            shipTo.setContact("");
+            invoice.setShipTo(shipTo);
+        }
+
+        // Items from order confirmation (received/dispatched quantities), fallback to cart items
+        List<InvoiceItem> items;
+        boolean hasItemConfirmations = orderConfirmation.getItemConfirmations() != null
+                && !orderConfirmation.getItemConfirmations().isEmpty();
+
+        if (hasItemConfirmations) {
+            items = IntStream.range(0, orderConfirmation.getItemConfirmations().size())
+                    .mapToObj(i -> {
+                        var itemConfirmation = orderConfirmation.getItemConfirmations().get(i);
+
+                        // Use receivedQuantity; fall back to dispatchedQuantity if receivedQuantity is null/0
+                        int qty = (itemConfirmation.getReceivedQuantity() != null && itemConfirmation.getReceivedQuantity() > 0)
+                                ? itemConfirmation.getReceivedQuantity()
+                                : (itemConfirmation.getDispatchedQuantity() != null && itemConfirmation.getDispatchedQuantity() > 0
+                                        ? itemConfirmation.getDispatchedQuantity() : 0);
+
+                        if (qty <= 0) return null;
+                        if (itemConfirmation.getItemId() == null || itemConfirmation.getItemId() <= 0) return null;
+
+                        CartItem cartItem = cart.getCartItems().stream()
+                                .filter(ci -> ci.getItem() != null && ci.getItem().getId().equals(itemConfirmation.getItemId()))
+                                .findFirst()
+                                .orElse(null);
+
+                        if (cartItem == null) {
+                            log.warn("Cart item not found for item ID: {}", itemConfirmation.getItemId());
+                            return null;
+                        }
+
+                        InvoiceItem item = new InvoiceItem();
+                        item.setSrNo(i + 1);
+                        item.setDescription(cartItem.getItem().getName());
+                        item.setHsnCode(cartItem.getItem().getHsn() != null ? cartItem.getItem().getHsn() : "");
+                        item.setQuantity(qty);
+                        item.setRatePerUnit(cartItem.getPriceAtTime().doubleValue());
+                        item.setUnit("Bag");
+                        item.setPer("Bag");
+                        java.math.BigDecimal w1 = resolveWeight(cartItem.getItem().getName(), cartItem.getItem().getWeight());
+                        item.setAltQty(w1 != null
+                                ? w1.multiply(java.math.BigDecimal.valueOf(qty)).stripTrailingZeros().toPlainString()
+                                : "");
+                        item.setAmount(cartItem.getPriceAtTime().doubleValue() * qty);
+                        return item;
+                    })
+                    .filter(item -> item != null)
+                    .toList();
+        } else {
+            items = java.util.Collections.emptyList();
+        }
+
+        // If items list is still empty (no confirmations, all qty=0, or all itemId=0), fall back to cart items
+        if (items.isEmpty()) {
+            log.warn("Items empty after confirmation processing for order {} — falling back to cart items (cart has {} items)",
+                    orderConfirmation.getOrderId(), cart.getCartItems().size());
+            final java.util.concurrent.atomic.AtomicInteger srNo = new java.util.concurrent.atomic.AtomicInteger(1);
+            items = cart.getCartItems().stream()
+                    .filter(ci -> ci.getItem() != null && ci.getQuantity() > 0)
+                    .map(cartItem -> {
+                        InvoiceItem item = new InvoiceItem();
+                        item.setSrNo(srNo.getAndIncrement());
+                        item.setDescription(cartItem.getItem().getName());
+                        item.setHsnCode(cartItem.getItem().getHsn() != null ? cartItem.getItem().getHsn() : "");
+                        item.setQuantity(cartItem.getQuantity());
+                        item.setRatePerUnit(cartItem.getPriceAtTime().doubleValue());
+                        item.setUnit("Bag");
+                        item.setPer("Bag");
+                        java.math.BigDecimal w2 = resolveWeight(cartItem.getItem().getName(), cartItem.getItem().getWeight());
+                        item.setAltQty(w2 != null
+                                ? w2.multiply(java.math.BigDecimal.valueOf(cartItem.getQuantity())).stripTrailingZeros().toPlainString()
+                                : "");
+                        item.setAmount(cartItem.getPriceAtTime().doubleValue() * cartItem.getQuantity());
+                        return item;
+                    })
+                    .toList();
+            log.info("Fallback loaded {} cart items for order {}", items.size(), orderConfirmation.getOrderId());
+        }
+
+        invoice.setItems(items);
+
+        // Calculate totals - no tax, grand total equals subtotal
+        double subtotal = items.stream().mapToDouble(InvoiceItem::getAmount).sum();
+        double taxAmount = 0.0; // No tax calculation
+        double grandTotal = subtotal; // Same as subtotal, no tax added
+        int totalQuantity = items.stream().mapToInt(InvoiceItem::getQuantity).sum();
+
+        invoice.setSubtotal(subtotal);
+        invoice.setTaxAmount(taxAmount);
+        invoice.setGrandTotal(grandTotal);
+        invoice.setTotalQty(String.valueOf(totalQuantity));
+        java.math.BigDecimal totalAltQtyVal = items.stream()
+                .map(InvoiceItem::getAltQty)
+                .filter(s -> s != null && !s.isEmpty())
+                .map(java.math.BigDecimal::new)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        invoice.setTotalAltQty(totalAltQtyVal.stripTrailingZeros().toPlainString());
+        invoice.setAmountInWords(convertToWords(grandTotal));
+        invoice.setTaxInWords(taxAmount == 0 ? "NIL" : convertToWords(taxAmount));
+
+        // Additional details
+        invoice.setTermsAndConditions("1. Goods once sold will not be taken back.\n2. Payment should be made as per the terms agreed.\n3. Subject to Bhagalpur Jurisdiction.");
+        invoice.setAuthorizedSignatory("Authorized Signatory");
+
+        return invoice;
+    }
+
+    private String generateHtmlFromTemplate(Invoice invoice) {
+        Context context = new Context();
+        context.setVariable("invoice", invoice);
+        context.setVariable("logoPath", htmlToPdfService.getLogoDataUri());
+        context.setVariable("emailIconPath", htmlToPdfService.getEmailIconUri());
+        context.setVariable("webIconPath", htmlToPdfService.getWebIconUri());
+        return templateEngine.process("invoice", context);
+    }
+
+    private String convertToWords(double amount) {
+        return com.nector.userservice.util.NumberToWordsUtil.convertToWords(amount);
+    }
+
+    private java.math.BigDecimal resolveWeight(String productName, java.math.BigDecimal storedWeight) {
+        if (storedWeight != null && storedWeight.compareTo(java.math.BigDecimal.ZERO) > 0) {
+            return storedWeight;
+        }
+        try {
+            String[] words = productName.split(" ");
+            for (int i = 0; i < words.length - 1; i++) {
+                if (words[i].matches("\\d+(\\.\\d+)?") &&
+                        words[i + 1].equalsIgnoreCase("Kg")) {
+                    return new java.math.BigDecimal(words[i]);
+                }
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    /**
+     * Get Invoice details by order confirmation ID
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getInvoiceDetailsByOrderConfirmation(Long orderConfirmationId) {
+        log.info("=== GET INVOICE DETAILS ===");
+        log.info("Request - Order Confirmation ID: {}, Timestamp: {}", orderConfirmationId, java.time.LocalDateTime.now());
+
+        try {
+            com.nector.userservice.model.Invoice invoice = invoiceRepository.findByOrderConfirmationId(orderConfirmationId)
+                    .orElseThrow(() -> new RuntimeException("Invoice not found for order confirmation ID: " + orderConfirmationId));
+
+            log.info("Invoice found - ID: {}, Invoice Number: {}, Amount: {}, PDF URL: {}",
+                    invoice.getId(), invoice.getInvoiceNumber(), invoice.getGrandTotal(), invoice.getPdfUrl());
+
+            Map<String, Object> response = Map.ofEntries(
+                    Map.entry("id", invoice.getId()),
+                    Map.entry("invoiceNumber", invoice.getInvoiceNumber()),
+                    Map.entry("orderId", invoice.getOrderId()),
+                    Map.entry("orderConfirmationId", invoice.getOrderConfirmationId()),
+                    Map.entry("distributorId", invoice.getDistributorId()),
+                    Map.entry("distributorName", invoice.getDistributorName() != null ? invoice.getDistributorName() : ""),
+                    Map.entry("gdnNumber", invoice.getGdnNumber() != null ? invoice.getGdnNumber() : ""),
+                    Map.entry("totalAmount", invoice.getTotalAmount()),
+                    Map.entry("taxAmount", invoice.getTaxAmount()),
+                    Map.entry("grandTotal", invoice.getGrandTotal()),
+                    Map.entry("invoiceStatus", invoice.getInvoiceStatus() != null ? invoice.getInvoiceStatus().toString() : "UNKNOWN"),
+                    Map.entry("invoiceDate", invoice.getInvoiceDate()),
+                    Map.entry("pdfUrl", invoice.getPdfUrl()),
+                    Map.entry("hasPdf", invoice.getPdfUrl() != null && !invoice.getPdfUrl().isEmpty()),
+                    Map.entry("paymentTerms", invoice.getPaymentTerms() != null ? invoice.getPaymentTerms() : ""),
+                    Map.entry("remarks", invoice.getRemarks() != null ? invoice.getRemarks() : ""),
+                    Map.entry("createdAt", invoice.getCreatedAt())
+            );
+
+            log.info("Invoice details sent successfully for order confirmation ID: {}", orderConfirmationId);
+            return response;
+
+        } catch (Exception e) {
+            log.error("Failed to retrieve Invoice for order confirmation ID: {} - {}", orderConfirmationId, e.getMessage());
+            throw new RuntimeException("Invoice not found", e);
+        }
+    }
+
+    /**
+     * Get Invoice details by order ID
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getInvoiceDetailsByOrder(Long orderId) {
+        log.info("=== GET INVOICE DETAILS BY ORDER ===");
+        log.info("Request - Order ID: {}, Timestamp: {}", orderId, java.time.LocalDateTime.now());
+
+        try {
+            com.nector.userservice.model.Invoice invoice = invoiceRepository.findByOrderId(orderId)
+                    .orElseThrow(() -> new RuntimeException("Invoice not found for order ID: " + orderId));
+
+            log.info("Invoice found - ID: {}, Invoice Number: {}, Amount: {}, PDF URL: {}",
+                    invoice.getId(), invoice.getInvoiceNumber(), invoice.getGrandTotal(), invoice.getPdfUrl());
+
+            // Debug log for potential null fields
+            log.info("Debug - Invoice fields: status={}, date={}, paymentTerms={}, remarks={}, createdAt={}",
+                    invoice.getInvoiceStatus(), invoice.getInvoiceDate(), invoice.getPaymentTerms(), 
+                    invoice.getRemarks(), invoice.getCreatedAt());
+
+            Map<String, Object> response = Map.ofEntries(
+                    Map.entry("id", invoice.getId()),
+                    Map.entry("invoiceNumber", invoice.getInvoiceNumber()),
+                    Map.entry("orderId", invoice.getOrderId()),
+                    Map.entry("orderConfirmationId", invoice.getOrderConfirmationId()),
+                    Map.entry("distributorId", invoice.getDistributorId()),
+                    Map.entry("distributorName", invoice.getDistributorName() != null ? invoice.getDistributorName() : ""),
+                    Map.entry("gdnNumber", invoice.getGdnNumber() != null ? invoice.getGdnNumber() : ""),
+                    Map.entry("totalAmount", invoice.getTotalAmount()),
+                    Map.entry("taxAmount", invoice.getTaxAmount()),
+                    Map.entry("grandTotal", invoice.getGrandTotal()),
+                    Map.entry("invoiceStatus", invoice.getInvoiceStatus() != null ? invoice.getInvoiceStatus().toString() : "UNKNOWN"),
+                    Map.entry("invoiceDate", invoice.getInvoiceDate()),
+                    Map.entry("pdfUrl", invoice.getPdfUrl()),
+                    Map.entry("hasPdf", invoice.getPdfUrl() != null && !invoice.getPdfUrl().isEmpty()),
+                    Map.entry("paymentTerms", invoice.getPaymentTerms() != null ? invoice.getPaymentTerms() : ""),
+                    Map.entry("remarks", invoice.getRemarks() != null ? invoice.getRemarks() : ""),
+                    Map.entry("createdAt", invoice.getCreatedAt())
+            );
+
+            log.info("Invoice details sent successfully for order ID: {}", orderId);
+            return response;
+
+        } catch (Exception e) {
+            log.error("Failed to retrieve Invoice for order ID: {} - {}", orderId, e.getMessage());
+            throw new RuntimeException("Invoice not found", e);
+        }
+    }
+
+    @Transactional
+    public void regenerateInvoicePdf(Long orderId) {
+        log.info("=== INVOICE PDF REGENERATION STARTED === Order ID: {}", orderId);
+
+        if (invoiceRepository.findByOrderId(orderId).isEmpty()) {
+            log.info("No invoice found for order {} — generating from scratch", orderId);
+            OrderConfirmation orderConfirmation = orderConfirmationRepository.findByOrderId(orderId)
+                    .orElseThrow(() -> new RuntimeException(
+                            "No OrderConfirmation found for order ID: " + orderId + ". Invoice cannot be generated."));
+            generateInvoice(orderConfirmation.getId());
+            return;
+        }
+
+        downloadInvoicePdf(orderId); // already regenerates from live data and re-uploads to Cloudinary
+        log.info("=== INVOICE PDF REGENERATION COMPLETED === Order ID: {}", orderId);
+    }
+
+    /**
+     * Download Invoice PDF - regenerates PDF on-the-fly from live data so items always appear correctly.
+     */
+    @Transactional
+    public byte[] downloadInvoicePdf(Long orderId) {
+        log.info("=== DOWNLOAD INVOICE PDF (regenerate) ===");
+        log.info("Download request - Order ID: {}, Timestamp: {}", orderId, java.time.LocalDateTime.now());
+
+        try {
+            com.nector.userservice.model.Invoice invoiceEntity = invoiceRepository.findByOrderId(orderId)
+                    .orElseThrow(() -> new RuntimeException("Invoice not found for order ID: " + orderId));
+
+            log.info("Invoice found - ID: {}, Invoice Number: {}", invoiceEntity.getId(), invoiceEntity.getInvoiceNumber());
+
+            // Fetch order confirmation and cart to regenerate the PDF with latest data
+            Long orderConfirmationId = invoiceEntity.getOrderConfirmationId();
+            OrderConfirmation orderConfirmation = orderConfirmationRepository.findById(orderConfirmationId)
+                    .orElseThrow(() -> new RuntimeException("Order confirmation not found with ID: " + orderConfirmationId));
+
+            Cart cart = cartRepository.findByIdWithItems(orderConfirmation.getOrderId())
+                    .orElseThrow(() -> new RuntimeException("Cart not found with ID: " + orderConfirmation.getOrderId()));
+
+            log.info("Regenerating invoice PDF - Cart items: {}, Item confirmations: {}",
+                    cart.getCartItems().size(),
+                    orderConfirmation.getItemConfirmations() != null ? orderConfirmation.getItemConfirmations().size() : 0);
+
+            // Build the Invoice DTO fresh from live data (reuse existing invoice number)
+            Invoice invoice = createInvoiceFromData(orderConfirmation, cart, invoiceEntity.getInvoiceNumber(), invoiceEntity.getInvoiceDate().toLocalDate());
+
+            log.info("Invoice regenerated - Items: {}, Grand Total: {}", invoice.getItems().size(), invoice.getGrandTotal());
+
+            // Generate HTML & convert to PDF
+            String html = generateHtmlFromTemplate(invoice);
+            byte[] pdfBytes = htmlToPdfService.convertHtmlToPdf(html);
+
+            log.info("PDF regenerated successfully - Size: {} bytes ({} KB)", pdfBytes.length, pdfBytes.length / 1024.0);
+
+            // Update stored PDF in Cloudinary & DB so subsequent downloads are also correct
+            try {
+                String newUrl = uploadPdfToCloudinary(pdfBytes, invoice.getInvoiceNumber());
+                invoiceEntity.setPdfUrl(newUrl);
+                invoiceRepository.save(invoiceEntity);
+                log.info("Cloudinary PDF updated for invoice: {}", invoice.getInvoiceNumber());
+            } catch (Exception uploadEx) {
+                log.warn("Could not update Cloudinary PDF (returning bytes anyway): {}", uploadEx.getMessage());
+            }
+
+            return pdfBytes;
+
+        } catch (Exception e) {
+            log.error("Failed to download/regenerate PDF for order ID: {} - {}", orderId, e.getMessage());
+            throw new RuntimeException("Failed to download PDF", e);
+        }
+    }
+
+    /**
+     * Get all invoices for a distributor
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getInvoicesByDistributor(Long distributorId) {
+        log.info("=== GET DISTRIBUTOR INVOICES ===");
+        log.info("Request - Distributor ID: {}, Timestamp: {}", distributorId, java.time.LocalDateTime.now());
+
+        try {
+            List<com.nector.userservice.model.Invoice> invoices = invoiceRepository.findByDistributorIdOrderByCreatedAtDesc(distributorId);
+
+            List<Map<String, Object>> response = invoices.stream()
+                    .map(invoice -> {
+                        Map<String, Object> invoiceMap = new HashMap<>();
+                        invoiceMap.put("id", invoice.getId());
+                        invoiceMap.put("invoiceNumber", invoice.getInvoiceNumber());
+                        invoiceMap.put("orderId", invoice.getOrderId());
+                        invoiceMap.put("orderConfirmationId", invoice.getOrderConfirmationId());
+                        invoiceMap.put("distributorId", invoice.getDistributorId());
+                        invoiceMap.put("distributorName", invoice.getDistributorName());
+                        invoiceMap.put("gdnNumber", invoice.getGdnNumber());
+                        invoiceMap.put("totalAmount", invoice.getTotalAmount());
+                        invoiceMap.put("taxAmount", invoice.getTaxAmount());
+                        invoiceMap.put("grandTotal", invoice.getGrandTotal());
+                        invoiceMap.put("invoiceStatus", invoice.getInvoiceStatus().toString());
+                        invoiceMap.put("invoiceDate", invoice.getInvoiceDate());
+                        invoiceMap.put("pdfUrl", invoice.getPdfUrl());
+                        invoiceMap.put("hasPdf", invoice.getPdfUrl() != null && !invoice.getPdfUrl().isEmpty());
+                        invoiceMap.put("paymentTerms", invoice.getPaymentTerms());
+                        invoiceMap.put("remarks", invoice.getRemarks());
+                        invoiceMap.put("createdAt", invoice.getCreatedAt());
+                        return invoiceMap;
+                    })
+                    .toList();
+
+            log.info("Retrieved {} invoices for distributor ID: {}", response.size(), distributorId);
+            return response;
+
+        } catch (Exception e) {
+            log.error("Failed to retrieve invoices for distributor ID: {} - {}", distributorId, e.getMessage());
+            throw new RuntimeException("Failed to retrieve invoices", e);
+        }
+    }
+
+    private String resolveStateCode(com.nector.userservice.interceptors.distributor.model.Distributor distributor) {
+        if (distributor.getStateCode() != null && !distributor.getStateCode().isEmpty()) {
+            return distributor.getStateCode();
+        }
+        return com.nector.userservice.enums.IndianStateCode.fromStateName(distributor.getState())
+                .map(com.nector.userservice.enums.IndianStateCode::getCodeAsString)
+                .orElse("");
+    }
+}

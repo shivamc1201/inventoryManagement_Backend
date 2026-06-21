@@ -23,7 +23,7 @@ public class UserRequest {
     
     @NotBlank(message = "Password is required")
     @Size(min = 8, message = "Password must be at least 8 characters")
-    @Schema(description = "User password", example = "SecurePass123!")
+    @Schema(description = "User password", example = "password123")
     private String password;
     
     @NotNull(message = "Status is required")
@@ -82,4 +82,9 @@ public class UserRequest {
     @NotNull(message = "Role type is required")
     @Schema(description = "ACCOUNT_MGR", example = "ACCOUNT_MGR")
     private RoleType roleType;
+
+    @NotBlank(message = "Employee roll number is required")
+    @Size(max = 50, message = "Employee roll number must not exceed 50 characters")
+    @Schema(description = "Employee roll number", example = "EMP001")
+    private String employeeRollNo;
 }

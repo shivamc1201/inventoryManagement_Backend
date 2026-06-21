@@ -26,7 +26,7 @@ public class UserApproval {
     
     @ManyToOne
     @JoinColumn(name = "reviewed_by")
-    private SuperAdmin reviewedBy;
+    private HrMaster reviewedBy;
     
     private String reviewComments;
     

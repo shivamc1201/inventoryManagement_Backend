@@ -12,12 +12,28 @@ public enum Features {
     HR("HR", "/hr"),
     DISTRIBUTOR("Distributor", "/distributor"),
     INVENTORY("Inventory", "/inventory"), // Parent for all Inventory sub-features
+    SALES("Sales", "/sales"), // Parent for all Sales sub-features
     REPORTS("Reports", "/reports"),
+    COMPLAINT("Complaint", "/complaint"),
+    PRODUCTS("Products", "/products"), // Parent for all Product sub-features
+    ORDER_DETAILS("OrderDetails", "/order-details"),
+    LOGISTIC("LOGISTIC", "/logistic" ),
     USER_RIGHTS("User Rights", "/user-rights"),
+    DISPATCH("Dispatch", "/dispatch"),
+
+
+    // --- Product Sub-Items ---
+    PRODUCTS_FINISHED_PRODUCTS("Finished Products", "/products/finished-products"),
+    PRODUCTS_RAW_MATERIALS("Raw Materials", "/products/raw-materials"),
+    PRODUCTS_MACHINE_PARTS("Machine Parts", "/products/machine-parts"),
 
     // --- Inventory Sub-Items ---
     // Masters
-    INVENTORY_MASTERS("Masters", "/inventory/masters"),
+    INVENTORY_MASTERS("Master Inventory", "/inventory/masters"),
+
+    // Inward / Outward
+    INVENTORY_INWARD("Inward Inventory", "/inventory/inward"),
+    INVENTORY_OUTWARD("Outward Inventory", "/inventory/outward"),
 
     // Transactions
     INVENTORY_TRANSACTIONS("Transactions", "/inventory/transactions"), // Parent for all Inventory Transactions
@@ -25,7 +41,11 @@ public enum Features {
     INVENTORY_TRANSACTIONS_PO_DEPOSIT_RECEIPTS_LIST("PO Deposit Receipts List", "/inventory/transactions/po-deposit-receipts-list"),
     INVENTORY_TRANSACTIONS_PO_LIST("PO List", "/inventory/transactions/po-list"),
     INVENTORY_TRANSACTIONS_OUTWARD_CHALLAN("Outward Challan", "/inventory/transactions/outward-challan"),
-    INVENTORY_TRANSACTIONS_SALE_INVOICE("Sale Invoice", "/inventory/transactions/sale-invoice");
+    INVENTORY_TRANSACTIONS_SALE_INVOICE("Sale Invoice", "/inventory/transactions/sale-invoice"),
+
+    // --- Transaction Sub-Items ---
+    TRANSACTION_CASHBOOK("Cashbook", "/transaction/cashbook"),
+    TRANSACTION_MASTER("Transaction Master", "/transaction/master");
 
     // Getters
     // --- Enum Attributes ---

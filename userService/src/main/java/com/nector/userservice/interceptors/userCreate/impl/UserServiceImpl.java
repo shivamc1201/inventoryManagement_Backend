@@ -1,6 +1,11 @@
 package com.nector.userservice.interceptors.userCreate.impl;
 
+import com.nector.userservice.common.RoleType;
 import com.nector.userservice.common.UserStatus;
+import com.nector.userservice.interceptors.distributor.model.Distributor;
+import com.nector.userservice.interceptors.distributor.model.DistributorRequestDTO;
+import com.nector.userservice.interceptors.distributor.service.DistributorMapper;
+import com.nector.userservice.interceptors.distributor.service.DistributorService;
 import com.nector.userservice.interceptors.userCreate.model.UserRequest;
 import com.nector.userservice.interceptors.userCreate.model.UserResponse;
 import com.nector.userservice.exception.UsernameAlreadyExistsException;
@@ -9,6 +14,7 @@ import com.nector.userservice.model.User;
 import com.nector.userservice.model.UserApproval;
 import com.nector.userservice.repository.UserRepository;
 import com.nector.userservice.repository.UserApprovalRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,8 +26,11 @@ public class UserServiceImpl implements UserService {
     
     private final UserRepository userRepository;
     private final UserApprovalRepository userApprovalRepository;
+    private final DistributorService distributorService;
+    private final DistributorMapper distributorMapper;
     
     @Override
+    @Transactional
     public UserResponse registerNewUser(UserRequest request) throws UsernameAlreadyExistsException {
         log.info("Entering registerNewUser() for username: {}, email: {}", request.getUsername(), request.getEmail());
         
@@ -34,29 +43,45 @@ public class UserServiceImpl implements UserService {
             log.warn("Exiting registerNewUser() - Email already exists: {}", request.getEmail());
             throw new UsernameAlreadyExistsException("Email already exists: " + request.getEmail());
         }
+//  For later use if needed
+//        if (request.getRoleType() == RoleType.Distributor) {
+//            DistributorRequestDTO distributorRequest = new DistributorRequestDTO();
+//            distributorRequest.setContactEmail(request.getEmail());
+//            distributorRequest.setPhoneNumber(request.getContactNo());
+//            distributorRequest.setAlternateContact(request.getAlternateContactNo());
+//            distributorRequest.setName(request.getFirstName() + " " + request.getLastName());
+//            distributorRequest.setAddress(request.getCompleteAddress());
+//            log.info("Creating distributor for user: {}", request.getUsername());
+//            distributorService.createDistributor(distributorRequest);
+//        }
         
         User user = new User();
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         user.setPassword(request.getPassword());
-        user.setStatus(request.getStatus());
+        user.setStatus(UserStatus.PENDING);
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setContactNo(request.getContactNo());
+        user.setAlternateContactNo(request.getAlternateContactNo());
+        user.setBloodGroup(request.getBloodGroup());
+        user.setCompleteAddress(request.getCompleteAddress());
+        user.setGender(request.getGender());
         user.setCity(request.getCity());
         user.setCountry(request.getCountry());
         user.setZip(request.getZip());
         user.setRoleType(request.getRoleType());
-        user.setStatus(UserStatus.PENDING);
+        user.setDateOfBirth(request.getDateOfBirth());
         user.setOtp("1234"); // Default OTP since OTP service is disabled
-        
+        user.setEmployeeRollNo(request.getEmployeeRollNo());
+
         User savedUser = userRepository.save(user);
         
         // Create approval request for maker-checker flow
         UserApproval approval = new UserApproval();
         approval.setUser(savedUser);
         userApprovalRepository.save(approval);
-        
+
         UserResponse response = new UserResponse();
         response.setId(savedUser.getId());
         response.setUsername(savedUser.getUsername());
@@ -64,8 +89,21 @@ public class UserServiceImpl implements UserService {
         response.setFirstName(savedUser.getFirstName());
         response.setLastName(savedUser.getLastName());
         response.setStatus(savedUser.getStatus());
+        response.setContactNo(savedUser.getContactNo());
+        response.setAlternateContactNo(savedUser.getAlternateContactNo());
+        response.setBloodGroup(savedUser.getBloodGroup());
+        response.setCompleteAddress(savedUser.getCompleteAddress());
+        response.setGender(savedUser.getGender());
+        response.setCity(savedUser.getCity());
+        response.setCountry(savedUser.getCountry());
+        response.setZip(savedUser.getZip());
         response.setRoleType(savedUser.getRoleType());
+        response.setDateOfBirth(savedUser.getDateOfBirth());
         response.setCreatedOn(savedUser.getCreatedOn());
+        response.setLastLoginTime(savedUser.getLastLoginTime());
+        response.setLoggedIn(savedUser.isLoggedIn());
+        response.setPasswordSetDate(savedUser.getPasswordSetDate());
+        response.setEmployeeRollNo(savedUser.getEmployeeRollNo());
         
         log.info("Exiting registerNewUser() - User registered successfully with ID: {}", savedUser.getId());
         return response;

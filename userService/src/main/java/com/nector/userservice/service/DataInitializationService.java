@@ -20,14 +20,11 @@ public class DataInitializationService implements CommandLineRunner {
     
     @Override
     public void run(String... args) throws Exception {
-        log.info("Entering run() - Starting data initialization");
         initializeDefaultPermissions();
-        log.info("Exiting run() - Data initialization completed");
     }
     
     private void initializeDefaultPermissions() {
-        log.info("Entering initializeDefaultPermissions()");
-        
+
         try {
             assignAllPermissionsToAdmin();
             
@@ -57,34 +54,39 @@ public class DataInitializationService implements CommandLineRunner {
                 Features.DASHBOARD, Features.DISTRIBUTOR);
             
             assignPermissionsToRole(RoleType.HR_MGR, 
-                Features.DASHBOARD, Features.HR, Features.USER_RIGHTS, Features.REPORTS);
+                Features.DASHBOARD, Features.HR, Features.REPORTS);
             assignPermissionsToRole(RoleType.HR_EXECUTIVE, 
                 Features.DASHBOARD, Features.HR);
             
-            assignPermissionsToRole(RoleType.LOGISTICS_MGR, 
-                Features.DASHBOARD, Features.INVENTORY, Features.REPORTS);
-            assignPermissionsToRole(RoleType.LOGISTICS_OFFICER, 
-                Features.DASHBOARD, Features.INVENTORY);
-            
-            assignPermissionsToRole(RoleType.PLANT_MGR, 
-                Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_MASTERS, 
+            assignPermissionsToRole(RoleType.LOGISTICS_MGR,
+                Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_INWARD,
+                Features.INVENTORY_OUTWARD, Features.REPORTS);
+            assignPermissionsToRole(RoleType.LOGISTICS_OFFICER,
+                Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_INWARD,
+                Features.INVENTORY_OUTWARD);
+
+            assignPermissionsToRole(RoleType.PLANT_MGR,
+                Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_MASTERS,
+                Features.INVENTORY_INWARD, Features.INVENTORY_OUTWARD,
                 Features.INVENTORY_TRANSACTIONS, Features.REPORTS);
-            assignPermissionsToRole(RoleType.PLANT_OFFICER, 
-                Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_MASTERS);
-            assignPermissionsToRole(RoleType.PLANT_EXECUTIVE, 
-                Features.DASHBOARD, Features.INVENTORY);
+            assignPermissionsToRole(RoleType.PLANT_OFFICER,
+                Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_MASTERS,
+                Features.INVENTORY_INWARD, Features.INVENTORY_OUTWARD);
+            assignPermissionsToRole(RoleType.PLANT_EXECUTIVE,
+                Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_INWARD,
+                Features.INVENTORY_OUTWARD);
             
-            log.info("Default role-permission mappings initialized successfully");
+            // Explicit SALES permission assignment to ensure it's available
+            assignPermissionsToRole(RoleType.ADMIN, Features.SALES);
+            
         } catch (Exception e) {
             log.error("Error initializing default permissions: {}", e.getMessage());
         }
         
-        log.info("Exiting initializeDefaultPermissions()");
     }
     
     private void assignAllPermissionsToAdmin() {
-        log.debug("Entering assignAllPermissionsToAdmin()");
-        
+
         for (Features feature : Features.values()) {
             try {
                 roleManagementService.assignPermissionToRole(RoleType.ADMIN, feature);
@@ -93,12 +95,10 @@ public class DataInitializationService implements CommandLineRunner {
             }
         }
         
-        log.debug("Exiting assignAllPermissionsToAdmin()");
     }
     
     private void assignPermissionsToRole(RoleType roleType, Features... features) {
-        log.debug("Entering assignPermissionsToRole() for role: {} with {} features", roleType, features.length);
-        
+
         for (Features feature : features) {
             try {
                 roleManagementService.assignPermissionToRole(roleType, feature);
@@ -107,6 +107,5 @@ public class DataInitializationService implements CommandLineRunner {
             }
         }
         
-        log.debug("Exiting assignPermissionsToRole() for role: {}", roleType);
     }
 }

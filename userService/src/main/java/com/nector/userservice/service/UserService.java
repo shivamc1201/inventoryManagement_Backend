@@ -1,5 +1,6 @@
 package com.nector.userservice.service;
 
+import com.nector.userservice.common.UserStatus;
 import com.nector.userservice.common.UserUpdateRequest;
 import com.nector.userservice.model.User;
 import com.nector.userservice.repository.UserRepository;
@@ -7,6 +8,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -41,10 +43,57 @@ public class UserService {
         Optional.ofNullable(req.getCountry()).ifPresent(user::setCountry);
         Optional.ofNullable(req.getZip()).ifPresent(user::setZip);
         Optional.ofNullable(req.getRoleType()).ifPresent(user::setRoleType);
+        Optional.ofNullable(req.getPassword()).ifPresent(password -> {
+            user.setPassword(password);
+            user.setPasswordSetDate(java.time.LocalDateTime.now());
+        });
 
         User updatedUser = userRepository.save(user);
         log.info("Exiting updateUser() - User updated successfully for userId: {}", userId);
         return updatedUser;
+    }
+
+    public User suspendUser(Long userId){
+        log.info("Entering updateUser() for userId: {}", userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.warn("Exiting updateUser() - User not found: {}", userId);
+                    return new EntityNotFoundException("User not found");
+                });
+        user.setStatus(UserStatus.SUSPENDED);
+
+        User updatedUser = userRepository.save(user);
+        log.info("Exiting updateUser() - User updated successfully for userId: {}", userId);
+        return updatedUser;
+    }
+
+    @Transactional
+    public void deleteUser(Long userId) {
+        log.info("Entering deleteUser() for userId: {}", userId);
+        
+        if (!userRepository.existsById(userId)) {
+            log.warn("Exiting deleteUser() - User not found: {}", userId);
+            throw new EntityNotFoundException("User not found");
+        }
+        // Delete related records first
+        userRepository.deleteUserApprovalsByUserId(userId);
+        // Then delete the user
+        userRepository.deleteById(userId);
+        log.info("Exiting deleteUser() - User deleted successfully for userId: {}", userId);
+    }
+
+    public User getUserByUsername(String username) {
+        log.info("Entering getUserByUsername() for username: {}", username);
+        
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> {
+                    log.warn("Exiting getUserByUsername() - User not found: {}", username);
+                    return new EntityNotFoundException("User not found with username: " + username);
+                });
+        
+        log.info("Exiting getUserByUsername() - User found for username: {}", username);
+        return user;
     }
 
 }

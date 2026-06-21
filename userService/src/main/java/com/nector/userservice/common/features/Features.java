@@ -41,7 +41,11 @@ public enum Features {
     INVENTORY_TRANSACTIONS_PO_DEPOSIT_RECEIPTS_LIST("PO Deposit Receipts List", "/inventory/transactions/po-deposit-receipts-list"),
     INVENTORY_TRANSACTIONS_PO_LIST("PO List", "/inventory/transactions/po-list"),
     INVENTORY_TRANSACTIONS_OUTWARD_CHALLAN("Outward Challan", "/inventory/transactions/outward-challan"),
-    INVENTORY_TRANSACTIONS_SALE_INVOICE("Sale Invoice", "/inventory/transactions/sale-invoice");
+    INVENTORY_TRANSACTIONS_SALE_INVOICE("Sale Invoice", "/inventory/transactions/sale-invoice"),
+
+    // --- Transaction Sub-Items ---
+    TRANSACTION_CASHBOOK("Cashbook", "/transaction/cashbook"),
+    TRANSACTION_MASTER("Transaction Master", "/transaction/master");
 
     // Getters
     // --- Enum Attributes ---

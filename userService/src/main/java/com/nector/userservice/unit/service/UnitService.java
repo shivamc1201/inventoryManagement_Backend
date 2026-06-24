@@ -79,7 +79,6 @@ public class UnitService {
         FinishedProduct unit = new FinishedProduct();
         unit.setName(request.getUnitName());
         unit.setSku(request.getUnitCode());
-        unit.setPrice(java.math.BigDecimal.ZERO);
         unit.setUnitType(request.getUnitType());
         unit.setProductSize(request.getProductSize());
         unit.setUnitName(request.getUnitName());

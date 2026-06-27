@@ -10,9 +10,11 @@ import com.nector.userservice.interceptors.products.service.RawProductService;
 import com.nector.userservice.interceptors.products.service.PromotionalItemService;
 import com.nector.userservice.interceptors.products.service.ScrapItemService;
 import com.nector.userservice.interceptors.products.service.OutwardItemService;
+import com.nector.userservice.interceptors.products.service.ScrapOutwardApprovalService;
 import com.nector.userservice.model.MachinePart;
 import com.nector.userservice.model.OutwardItemTransaction;
 import com.nector.userservice.model.ProductInwardApproval;
+import com.nector.userservice.model.ScrapOutwardApproval;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -46,6 +48,7 @@ public class ProductsController {
     private final ScrapItemService scrapItemService;
     private final OutwardItemService outwardItemService;
     private final ProductInwardApprovalService productInwardApprovalService;
+    private final ScrapOutwardApprovalService scrapOutwardApprovalService;
 
     // ==================== FINISHED PRODUCTS ====================
 
@@ -637,6 +640,26 @@ public class ProductsController {
             @RequestBody InwardApprovalRequest request,
             @RequestHeader("Admin-Username") String adminUsername) {
         Map<String, Object> response = productInwardApprovalService.processApproval(
+                approvalId, request.getAction(), adminUsername, request.getComments());
+        return ResponseEntity.ok(response);
+    }
+
+    // ==================== SCRAP OUTWARD APPROVAL (ADMIN) ====================
+
+    @GetMapping("/scrap-outward-approvals/pending")
+    @Operation(summary = "Get pending scrap outward approvals", description = "Retrieves all pending scrap outward approval requests awaiting admin review")
+    public ResponseEntity<List<ScrapOutwardApproval>> getPendingScrapOutwardApprovals() {
+        List<ScrapOutwardApproval> approvals = scrapOutwardApprovalService.getPendingApprovals();
+        return ResponseEntity.ok(approvals);
+    }
+
+    @PostMapping("/scrap-outward-approvals/{approvalId}/process")
+    @Operation(summary = "Process scrap outward approval", description = "Approves or rejects a scrap outward request. On approval, a cashbook entry is created under 'Sale From Scrap' (quantity × quotedSellingPrice).")
+    public ResponseEntity<Map<String, Object>> processScrapOutwardApproval(
+            @PathVariable Long approvalId,
+            @RequestBody InwardApprovalRequest request,
+            @RequestHeader("Admin-Username") String adminUsername) {
+        Map<String, Object> response = scrapOutwardApprovalService.processApproval(
                 approvalId, request.getAction(), adminUsername, request.getComments());
         return ResponseEntity.ok(response);
     }

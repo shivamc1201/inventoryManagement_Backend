@@ -4,6 +4,7 @@ import com.nector.userservice.exception.ResourceNotFoundException;
 import com.nector.userservice.interceptors.products.model.OutwardItemRequest;
 import com.nector.userservice.interceptors.products.model.OutwardItemResponse;
 import com.nector.userservice.interceptors.products.service.OutwardItemService;
+import com.nector.userservice.interceptors.products.service.ScrapOutwardApprovalService;
 import com.nector.userservice.model.OutwardItemTransaction;
 import com.nector.userservice.repository.OutwardItemTransactionRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 public class OutwardItemServiceImpl implements OutwardItemService {
 
     private final OutwardItemTransactionRepository outwardItemRepository;
+    private final ScrapOutwardApprovalService scrapOutwardApprovalService;
 
     @Override
     @Transactional
@@ -40,6 +42,12 @@ public class OutwardItemServiceImpl implements OutwardItemService {
 
         OutwardItemTransaction savedTransaction = outwardItemRepository.save(transaction);
         log.info("Outward item transaction created successfully with ID: {}", savedTransaction.getId());
+
+        if (OutwardItemTransaction.ItemType.SCRAP_MATERIAL == savedTransaction.getItemType()
+                && OutwardItemTransaction.TransactionType.OUTWARD_GIVING == savedTransaction.getTransactionType()) {
+            scrapOutwardApprovalService.createApproval(savedTransaction);
+            log.info("Scrap outward approval created for transaction ID: {}", savedTransaction.getId());
+        }
 
         return mapToResponse(savedTransaction);
     }

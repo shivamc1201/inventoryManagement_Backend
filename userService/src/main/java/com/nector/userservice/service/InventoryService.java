@@ -35,7 +35,6 @@ public class InventoryService {
         finishedProduct.setName(request.getName());
         finishedProduct.setDescription(request.getDescription());
         finishedProduct.setSku(request.getSku());
-        finishedProduct.setPrice(request.getPrice());
         finishedProduct.setQuantity(request.getQuantity());
         
         FinishedProduct savedItem = finishedProductRepository.save(finishedProduct);
@@ -53,7 +52,6 @@ public class InventoryService {
         
         finishedProduct.setName(request.getName());
         finishedProduct.setDescription(request.getDescription());
-        finishedProduct.setPrice(request.getPrice());
         finishedProduct.setQuantity(request.getQuantity());
         
         FinishedProduct updatedItem = finishedProductRepository.save(finishedProduct);

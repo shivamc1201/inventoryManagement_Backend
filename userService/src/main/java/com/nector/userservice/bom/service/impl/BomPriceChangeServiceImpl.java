@@ -8,9 +8,7 @@ import com.nector.userservice.bom.repository.*;
 import com.nector.userservice.bom.service.BomPriceChangeService;
 import com.nector.userservice.bom.service.BomService;
 import com.nector.userservice.exception.ResourceNotFoundException;
-import com.nector.userservice.model.FinishedProduct;
 import com.nector.userservice.model.RawProduct;
-import com.nector.userservice.repository.FinishedProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,14 +28,18 @@ public class BomPriceChangeServiceImpl implements BomPriceChangeService {
     private final BomPriceChangeRequestRepository priceChangeRequestRepository;
     private final RawMaterialPriceHistoryRepository priceHistoryRepository;
     private final BomComponentRepository bomComponentRepository;
-    private final BillOfMaterialRepository billOfMaterialRepository;
-    private final FinishedProductRepository finishedProductRepository;
     private final BomService bomService;
 
     @Override
     @Transactional
     public void handleRawMaterialPriceChange(RawProduct rawProduct, BigDecimal oldPrice, BigDecimal newPrice) {
         BigDecimal changePercent = computeChangePercent(oldPrice, newPrice);
+
+        if (rawProduct.getName() == null) {
+            throw new IllegalStateException(
+                "Raw material ID " + rawProduct.getId() + " (code: " + rawProduct.getMaterialCode() + ") has no name. Update the product name before processing this approval."
+            );
+        }
 
         RawMaterialPriceHistory history = RawMaterialPriceHistory.builder()
                 .rawMaterialId(rawProduct.getId())
@@ -63,16 +65,6 @@ public class BomPriceChangeServiceImpl implements BomPriceChangeService {
                 .distinct()
                 .forEach(bomId -> {
                     bomService.recomputeBomCosts(bomId);
-
-                    BillOfMaterial bom = billOfMaterialRepository.findById(bomId).orElse(null);
-                    if (bom != null && bom.getEffectiveRatePerUnit() != null) {
-                        finishedProductRepository.findById(bom.getFinishedProductId()).ifPresent(fp -> {
-                            fp.setPrice(bom.getEffectiveRatePerUnit());
-                            finishedProductRepository.save(fp);
-                            log.info("Auto-updated finished product '{}' price to {} via FIFO recompute",
-                                    fp.getName(), bom.getEffectiveRatePerUnit());
-                        });
-                    }
                     log.info("Auto-recomputed BOM costs for BOM ID {} after raw material '{}' price change {} → {}",
                             bomId, rawProduct.getName(), oldPrice, newPrice);
                 });
@@ -214,20 +206,6 @@ public class BomPriceChangeServiceImpl implements BomPriceChangeService {
 
         // Recompute all BOM cost fields (totalComponentCost, effectiveCost, effectiveRatePerUnit, etc.)
         bomService.recomputeBomCosts(request.getBomId());
-
-        // Sync the finished product's selling price to the new effective rate per unit
-        BillOfMaterial bom = billOfMaterialRepository.findById(request.getBomId())
-                .orElseThrow(() -> new ResourceNotFoundException("BOM not found with ID: " + request.getBomId()));
-
-        if (bom.getEffectiveRatePerUnit() != null) {
-            FinishedProduct fp = finishedProductRepository.findById(request.getFinishedProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Finished product not found with ID: " + request.getFinishedProductId()));
-            fp.setPrice(bom.getEffectiveRatePerUnit());
-            finishedProductRepository.save(fp);
-            log.info("Updated finished product '{}' price to {} (new BOM effective rate per unit)",
-                    fp.getName(), bom.getEffectiveRatePerUnit());
-        }
     }
 
     private void resolveRequest(BomPriceChangeRequest request, BomPriceChangeStatus status, PriceChangeActionDto action) {

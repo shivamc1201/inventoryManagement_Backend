@@ -208,6 +208,7 @@ public class DealerInvoiceService {
     private String generateHtml(DealerInvoiceDto dto) {
         Context context = new Context();
         context.setVariable("invoice", dto);
+        context.setVariable("logoPath", htmlToPdfService.getDealerInvoiceLogoDataUri());
         return templateEngine.process("dealer-invoice", context);
     }
 

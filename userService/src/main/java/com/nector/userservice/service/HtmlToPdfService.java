@@ -21,6 +21,7 @@ public class HtmlToPdfService {
     private ResourceLoader resourceLoader;
 
     private volatile String logoUri;
+    private volatile String dealerInvoiceLogoUri;
     private volatile String emailIconUri;
     private volatile String webIconUri;
 
@@ -48,6 +49,17 @@ public class HtmlToPdfService {
             }
         }
         return logoUri;
+    }
+
+    public String getDealerInvoiceLogoDataUri() {
+        if (dealerInvoiceLogoUri == null) {
+            synchronized (this) {
+                if (dealerInvoiceLogoUri == null) {
+                    dealerInvoiceLogoUri = loadResourceToTempFile("classpath:templates/dealer_invoice_logo.jpeg", "dealer-invoice-logo", ".jpeg");
+                }
+            }
+        }
+        return dealerInvoiceLogoUri;
     }
 
     public String getEmailIconUri() {

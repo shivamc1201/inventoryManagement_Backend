@@ -45,7 +45,10 @@ public enum Features {
 
     // --- Transaction Sub-Items ---
     TRANSACTION_CASHBOOK("Cashbook", "/transaction/cashbook"),
-    TRANSACTION_MASTER("Transaction Master", "/transaction/master");
+    TRANSACTION_MASTER("Transaction Master", "/transaction/master"),
+
+    // --- HR Sub-Items ---
+    ADMIN_APPROVAL("Admin Approval", "/hr/admin-approval");
 
     // Getters
     // --- Enum Attributes ---

@@ -194,12 +194,9 @@ public class RoleFeaturePermissionController {
             }
             
             User user = userOpt.get();
-            Integer roleId = getUserRoleId(user);
-            
-            if (roleId == null) {
-                return ResponseEntity.badRequest().build();
-            }
-            
+            // Use userId as roleId — login service queries by userId, not by roleType
+            Integer roleId = userId.intValue();
+
             // Delegate to the existing role-based method
             return createOrUpdatePermission(roleId, featureId, permissionRequest);
             
@@ -319,6 +316,7 @@ public class RoleFeaturePermissionController {
             case 25 -> Features.INVENTORY_OUTWARD;
             case 26 -> Features.TRANSACTION_CASHBOOK;
             case 27 -> Features.TRANSACTION_MASTER;
+            case 28 -> Features.ADMIN_APPROVAL;
             default -> throw new IllegalArgumentException("Unknown feature ID: " + featureId);
         };
     }
@@ -327,28 +325,8 @@ public class RoleFeaturePermissionController {
      * Get user permissions based on their role(s)
      */
     private List<FeaturePermissionDTO> getUserPermissions(User user) {
-        List<FeaturePermissionDTO> allPermissions = new ArrayList<>();
-        
-        // Get permissions from primary roleType
-        if (user.getRoleType() != null) {
-            Integer roleId = RoleFeatureMapping.getRoleId(user.getRoleType());
-            List<FeaturePermissionDTO> roleTypePermissions = getPermissionsByRoleId(roleId);
-            allPermissions.addAll(roleTypePermissions);
-        }
-        
-        // Get permissions from additional roles (many-to-many)
-        if (!user.getRoles().isEmpty()) {
-            for (var role : user.getRoles()) {
-                Integer roleId = RoleFeatureMapping.getRoleId(role.getRoleType());
-                List<FeaturePermissionDTO> rolePermissions = getPermissionsByRoleId(roleId);
-                allPermissions.addAll(rolePermissions);
-            }
-        }
-        
-        // Remove duplicates based on roleId and featureId
-        return allPermissions.stream()
-                .distinct()
-                .collect(Collectors.toList());
+        // Query by userId — login service stores and reads permissions keyed by userId
+        return getPermissionsByRoleId(user.getId().intValue());
     }
     
     /**

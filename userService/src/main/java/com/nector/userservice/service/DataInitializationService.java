@@ -53,9 +53,9 @@ public class DataInitializationService implements CommandLineRunner {
             assignPermissionsToRole(RoleType.SALES_EXECUTIVE, 
                 Features.DASHBOARD, Features.DISTRIBUTOR);
             
-            assignPermissionsToRole(RoleType.HR_MGR, 
-                Features.DASHBOARD, Features.HR, Features.REPORTS);
-            assignPermissionsToRole(RoleType.HR_EXECUTIVE, 
+            assignPermissionsToRole(RoleType.HR_MGR,
+                Features.DASHBOARD, Features.HR, Features.REPORTS, Features.ADMIN_APPROVAL);
+            assignPermissionsToRole(RoleType.HR_EXECUTIVE,
                 Features.DASHBOARD, Features.HR);
             
             assignPermissionsToRole(RoleType.LOGISTICS_MGR,

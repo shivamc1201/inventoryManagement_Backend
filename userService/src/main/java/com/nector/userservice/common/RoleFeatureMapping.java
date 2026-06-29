@@ -59,7 +59,8 @@ public enum RoleFeatureMapping {
     FEATURE_INVENTORY_INWARD(24),
     FEATURE_INVENTORY_OUTWARD(25),
     FEATURE_TRANSACTION_CASHBOOK(26),
-    FEATURE_TRANSACTION_MASTER(27);
+    FEATURE_TRANSACTION_MASTER(27),
+    FEATURE_ADMIN_APPROVAL(28);
 
     private final int id;
 
@@ -123,6 +124,7 @@ public enum RoleFeatureMapping {
             case INVENTORY_OUTWARD -> FEATURE_INVENTORY_OUTWARD.getId();
             case TRANSACTION_CASHBOOK -> FEATURE_TRANSACTION_CASHBOOK.getId();
             case TRANSACTION_MASTER -> FEATURE_TRANSACTION_MASTER.getId();
+            case ADMIN_APPROVAL -> FEATURE_ADMIN_APPROVAL.getId();
         };
     }
 }

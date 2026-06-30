@@ -13,14 +13,14 @@ import java.util.Optional;
 @Repository
 public interface RoleFeaturePermissionRepository extends JpaRepository<RoleFeaturePermission, Long> {
     
-    @Query("SELECT rfp FROM RoleFeaturePermission rfp WHERE rfp.roleId = :roleId AND rfp.featureId = :featureId")
-    Optional<RoleFeaturePermission> findByRoleIdAndFeatureId(@Param("roleId") Integer roleId, 
-                                                           @Param("featureId") Integer featureId);
-    
     @Query("SELECT rfp FROM RoleFeaturePermission rfp WHERE rfp.roleId = :roleId AND rfp.feature = :feature")
-    Optional<RoleFeaturePermission> findByRoleIdAndFeature(@Param("roleId") Integer roleId, 
+    Optional<RoleFeaturePermission> findByRoleIdAndFeature(@Param("roleId") Integer roleId,
                                                           @Param("feature") Features feature);
-    
+
+    @Query("SELECT rfp FROM RoleFeaturePermission rfp WHERE rfp.roleId = :roleId AND rfp.featureId = :featureId")
+    Optional<RoleFeaturePermission> findByRoleIdAndFeatureId(@Param("roleId") Integer roleId,
+                                                             @Param("featureId") Integer featureId);
+
     @Query("SELECT rfp FROM RoleFeaturePermission rfp WHERE rfp.roleId = :roleId")
     List<RoleFeaturePermission> findByRoleId(@Param("roleId") Integer roleId);
     

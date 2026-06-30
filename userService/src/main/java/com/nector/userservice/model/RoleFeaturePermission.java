@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import java.time.LocalDateTime;
 
 /**
  * Simplified role-feature permission entity using numeric IDs
@@ -45,20 +46,20 @@ public class RoleFeaturePermission {
     private Boolean canDelete = false;
     
     @Column(name = "created_at")
-    private Long createdAt;
-    
+    private LocalDateTime createdAt;
+
     @Column(name = "updated_at")
-    private Long updatedAt;
-    
+    private LocalDateTime updatedAt;
+
     @PrePersist
     protected void onCreate() {
-        createdAt = System.currentTimeMillis();
-        updatedAt = System.currentTimeMillis();
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
-    
+
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = System.currentTimeMillis();
+        updatedAt = LocalDateTime.now();
     }
     
     public RoleFeaturePermission() {}

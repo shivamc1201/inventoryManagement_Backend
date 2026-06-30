@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -108,10 +109,49 @@ public class SalesMappingServiceImpl implements SalesMappingService {
         allIds.add(salespersonId);
         collectSubordinateIds(salespersonId, allIds);
 
-        return salesMappingRepository.findBySalespersonIdIn(allIds)
+        // Build a lookup of existing mapping records keyed by distributorId
+        Map<Long, SalespersonDistributorMapping> mappingByDistributorId =
+                salesMappingRepository.findBySalespersonIdIn(allIds)
+                        .stream()
+                        .collect(Collectors.toMap(
+                                SalespersonDistributorMapping::getDistributorId,
+                                m -> m,
+                                (a, b) -> a));
+
+        // Use distributor table as source of truth — includes all distributors
+        // assigned via salesperson_id column, not just those with a mapping record
+        return distributorRepository.findBySalespersonIdIn(allIds)
                 .stream()
-                .map(this::buildResponseDTO)
+                .map(distributor -> {
+                    SalespersonDistributorMapping mapping = mappingByDistributorId.get(distributor.getId());
+                    LedgerAccount ledgerAccount = mapping != null
+                            ? ledgerAccountRepository.findByCompanyIdAndDistributorId(
+                                    mapping.getCompanyId(), distributor.getId()).orElse(null)
+                            : null;
+
+                    MappingResponseDTO dto = new MappingResponseDTO();
+                    dto.setId(mapping != null ? mapping.getId() : null);
+                    dto.setSalespersonId(distributor.getSalespersonId());
+                    dto.setSalespersonName(resolveSalespersonName(distributor.getSalespersonId()));
+                    dto.setDistributorId(distributor.getId());
+                    dto.setDistributorName(distributor.getFirstName() + " " + distributor.getLastName());
+                    dto.setCompanyId(mapping != null ? mapping.getCompanyId() : null);
+                    dto.setStatus(mapping != null ? mapping.getStatus() : MappingStatus.ACTIVE);
+                    dto.setLedgerAccountId(ledgerAccount != null ? ledgerAccount.getId() : null);
+                    dto.setCreatedOn(mapping != null ? mapping.getCreatedOn() : null);
+                    dto.setCreatedBy(mapping != null ? mapping.getCreatedBy() : null);
+                    return dto;
+                })
                 .collect(Collectors.toList());
+    }
+
+    private String resolveSalespersonName(Long spId) {
+        if (spId == null) return "Unknown";
+        return salesPersonRepository.findById(spId)
+                .map(sp -> sp.getFirstName() + " " + sp.getLastName())
+                .orElseGet(() -> userRepository.findById(spId)
+                        .map(u -> u.getFirstName() + " " + u.getLastName())
+                        .orElse("Unknown"));
     }
 
     private void collectSubordinateIds(Long managerId, List<Long> ids) {

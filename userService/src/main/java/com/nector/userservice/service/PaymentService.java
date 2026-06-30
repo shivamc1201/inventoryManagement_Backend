@@ -621,6 +621,20 @@ public class PaymentService {
         return payments;
     }
 
+    public java.util.Map<String, BigDecimal> getCollectionAnalytics(Long distributorId) {
+        java.time.LocalDate today = java.time.LocalDate.now();
+        LocalDateTime monthStart = today.withDayOfMonth(1).atStartOfDay();
+        LocalDateTime monthEnd = today.withDayOfMonth(today.lengthOfMonth()).atTime(java.time.LocalTime.MAX);
+
+        BigDecimal monthly = paymentApprovalRepository.sumApprovedPaymentsByDistributorAndDateRange(distributorId, monthStart, monthEnd);
+        BigDecimal yearly = paymentApprovalRepository.sumAllLedgerUpdatedByDistributor(distributorId);
+
+        java.util.Map<String, BigDecimal> result = new java.util.LinkedHashMap<>();
+        result.put("collectionMonthly", monthly);
+        result.put("collectionYearly", yearly);
+        return result;
+    }
+
     public void processJournalVoucher(Long distributorId, JournalVoucherRequest request) {
         for (JournalVoucherEntry entry : request.getEntries()) {
             if (entry.getDebit() != null && entry.getDebit().compareTo(BigDecimal.ZERO) > 0) {

@@ -19,6 +19,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.List;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
@@ -235,6 +236,14 @@ public class AccountsController {
             @RequestParam(required = false) Long distributorId) {
         List<PaymentApproval> ledgerUpdatedPayments = paymentService.getLedgerUpdatedPayments(salespersonId, distributorId);
         return ResponseEntity.ok(ledgerUpdatedPayments);
+    }
+
+    @GetMapping("/collection-analytics")
+    @Operation(summary = "Get collection analytics", description = "Returns collectionMonthly (current month) and collectionYearly (all-time total) for LEDGER_UPDATED CREDIT payments by distributorId")
+    @ApiResponse(responseCode = "200", description = "Collection analytics retrieved successfully")
+    public ResponseEntity<Map<String, BigDecimal>> getCollectionAnalytics(
+            @RequestParam Long distributorId) {
+        return ResponseEntity.ok(paymentService.getCollectionAnalytics(distributorId));
     }
 
     private void populateDistributorNames(List<PaymentApproval> payments) {

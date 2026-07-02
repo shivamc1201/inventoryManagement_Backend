@@ -125,6 +125,8 @@ public class LoginServiceImpl implements LoginService {
         List<Object> featureDetails = getSalesPersonFeatures(roleType);
         Set<String> featureNames = getSalesPersonFeatureNames(roleType);
 
+        log.info(" SALESPERSON LOGGED IN .......", request.getUsername());
+
         LoginResponse response = new LoginResponse(
                 token,
                 "Bearer",
@@ -239,14 +241,13 @@ public class LoginServiceImpl implements LoginService {
                     .collect(Collectors.toSet());
             log.info("[DEBUG] Admin user - all features: {}", features.size());
         } else {
-            // Fetch features from role_feature_permissions table
-            // Note: Database stores userId as role_id, so we query by userId
+            // Fetch features from role_feature_permissions table by role ID (1–21)
             features = new HashSet<>();
-            
-            Integer userIdAsRoleId = user.getId().intValue();
-            log.info("[DEBUG] Querying role_feature_permissions by userId (used as role_id): {}", userIdAsRoleId);
-            List<RoleFeaturePermission> permissions = roleFeaturePermissionRepository.findByRoleId(userIdAsRoleId);
-            log.info("[DEBUG] Found {} permissions for userId: {}", permissions.size(), userIdAsRoleId);
+
+            Integer roleId = RoleFeatureMapping.getRoleId(user.getRoleType());
+            log.info("[DEBUG] Querying role_feature_permissions by roleId: {} for user: {}", roleId, user.getId());
+            List<RoleFeaturePermission> permissions = roleFeaturePermissionRepository.findByRoleId(roleId);
+            log.info("[DEBUG] Found {} permissions for userId: {}", permissions.size(), roleId);
             
             // Filter to only include features where at least one of create/read/update is true
             // Ignore features that only have delete permission
@@ -311,6 +312,8 @@ public class LoginServiceImpl implements LoginService {
         );
 
         Set<String> featureNames = Set.of("ORDER_DETAILS", "PRODUCTS", "DASHBOARD", "REPORTS", "COMPLAINT","PLACE_ORDER");
+
+        log.info(" DISTRUBTOR LOGGED IN .......", request.getUsername());
 
         return new DistributorLoginResponse(
                 token,
@@ -416,7 +419,9 @@ public class LoginServiceImpl implements LoginService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
         
         List<FeaturePermissionDTO> rolePermissions = getUserPermissions(user);
-        
+
+        log.info(" USER ON WEB LOGGED IN .......", request.getUsername());
+
         return new UnifiedLoginResponse(
                 loginResponse.getToken(),
                 loginResponse.getType(),
@@ -437,10 +442,10 @@ public class LoginServiceImpl implements LoginService {
      * Only returns permissions where at least one CRUD operation is allowed
      */
     private List<FeaturePermissionDTO> getUserPermissions(User user) {
-        Integer userIdAsRoleId = user.getId().intValue();
-        log.info("[DEBUG] getUserPermissions - querying by userId: {}", userIdAsRoleId);
-        
-        return roleFeaturePermissionRepository.findByRoleId(userIdAsRoleId)
+        Integer roleId = RoleFeatureMapping.getRoleId(user.getRoleType());
+        log.info("[DEBUG] getUserPermissions - querying by roleId: {} for user: {}", roleId, user.getId());
+
+        return roleFeaturePermissionRepository.findByRoleId(roleId)
                 .stream()
                 .filter(perm -> Boolean.TRUE.equals(perm.getCanCreate()) || 
                                Boolean.TRUE.equals(perm.getCanRead()) || 

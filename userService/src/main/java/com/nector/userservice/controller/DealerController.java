@@ -112,7 +112,7 @@ public class DealerController {
         return 1L; // Placeholder - replace with actual extraction logic
     }
 
-    @GetMapping("/salesperson/{salespersonId}")
+    @GetMapping("analytics/salesperson/{salespersonId}")
     @Operation(summary = "Get distributors by salesperson ID", description = "Retrieve all distributors for a specific salesperson")
     public ResponseEntity<ApiResponse<List<DistributorResponseDTO>>> getDistributorsBySalespersonId(
             @Parameter(description = "Salesperson ID")

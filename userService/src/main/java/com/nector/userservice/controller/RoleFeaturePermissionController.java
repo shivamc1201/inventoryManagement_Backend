@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -132,7 +133,7 @@ public class RoleFeaturePermissionController {
     /**
      * Create or update role-feature permission
      */
-    @PutMapping("/role/{roleId}/feature/{featureId}")
+    @PutMapping(value = "/role/{roleId}/feature/{featureId}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Create or update permission", description = "Creates or updates role-feature permission with specific CRUD permissions")
     @ApiResponse(responseCode = "200", description = "Permission updated successfully")
     @ApiResponse(responseCode = "400", description = "Invalid request body")
@@ -177,7 +178,7 @@ public class RoleFeaturePermissionController {
     /**
      * Create or update user-feature permission
      */
-    @PutMapping("/user/{userId}/feature/{featureId}")
+    @PutMapping(value = "/user/{userId}/feature/{featureId}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Create or update user permission", description = "Creates or updates user-feature permission based on user's role")
     @ApiResponse(responseCode = "200", description = "User permission updated successfully")
     @ApiResponse(responseCode = "404", description = "User not found")
@@ -194,10 +195,8 @@ public class RoleFeaturePermissionController {
             }
             
             User user = userOpt.get();
-            // Use userId as roleId — login service queries by userId, not by roleType
-            Integer roleId = userId.intValue();
+            Integer roleId = RoleFeatureMapping.getRoleId(user.getRoleType());
 
-            // Delegate to the existing role-based method
             return createOrUpdatePermission(roleId, featureId, permissionRequest);
             
         } catch (Exception e) {
@@ -241,7 +240,7 @@ public class RoleFeaturePermissionController {
     /**
      * Bulk update permissions for a role
      */
-    @PutMapping("/role/{roleId}/bulk")
+    @PutMapping(value = "/role/{roleId}/bulk", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Bulk update permissions", description = "Updates multiple permissions for a role in a single request")
     @ApiResponse(responseCode = "200", description = "Permissions updated successfully")
     @ApiResponse(responseCode = "400", description = "Invalid request body")
@@ -325,8 +324,7 @@ public class RoleFeaturePermissionController {
      * Get user permissions based on their role(s)
      */
     private List<FeaturePermissionDTO> getUserPermissions(User user) {
-        // Query by userId — login service stores and reads permissions keyed by userId
-        return getPermissionsByRoleId(user.getId().intValue());
+        return getPermissionsByRoleId(RoleFeatureMapping.getRoleId(user.getRoleType()));
     }
     
     /**

@@ -82,8 +82,7 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
         LocalDate effectiveStartDate = request.getEffectiveStartDate();
         LocalDate effectiveEndDate = request.getEffectiveEndDate();
 
-        log.info("Assigning KPIs for period: {} to {} (month={}, year={})",
-                effectiveStartDate, effectiveEndDate, request.getMonth(), request.getYear());
+        log.info("Assigning KPIs for period: {} to {}", effectiveStartDate, effectiveEndDate);
         
         // Get current weightage for employee
         Integer currentWeightage = getTotalWeightageForEmployee(request.getEmployeeId());

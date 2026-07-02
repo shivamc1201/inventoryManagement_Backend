@@ -79,60 +79,68 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
         log.info("Bulk assigning {} KPIs to employee {} by user {}", 
                 request.getAssignments().size(), request.getEmployeeId(), assignedBy);
 
-        LocalDate effectiveStartDate = request.getEffectiveStartDate();
-        LocalDate effectiveEndDate = request.getEffectiveEndDate();
+        // Always normalize to the full month of startDate — assignments are month-scoped
+        YearMonth assignedMonth = YearMonth.from(request.getEffectiveStartDate());
+        LocalDate effectiveStartDate = assignedMonth.atDay(1);
+        LocalDate effectiveEndDate = assignedMonth.atEndOfMonth();
 
-        log.info("Assigning KPIs for period: {} to {}", effectiveStartDate, effectiveEndDate);
-        
-        // Get current weightage for employee
-        Integer currentWeightage = getTotalWeightageForEmployee(request.getEmployeeId());
-        if (currentWeightage == null) {
-            currentWeightage = 0;
-        }
-        
-        // Calculate total weightage from new assignments
-        int newWeightageTotal = request.getAssignments().stream()
-                .mapToInt(KpiBulkAssignmentItem::getWeightage)
-                .sum();
-        
-        int totalAfterAssignment = currentWeightage + newWeightageTotal;
-        
-        log.info("Current weightage: {}, New assignments: {}, Total after: {}", 
-                currentWeightage, newWeightageTotal, totalAfterAssignment);
-        
-        // Validate total doesn't exceed 100
-        if (totalAfterAssignment > 100) {
-            throw new com.nector.userservice.exception.KpiException(
-                String.format("Total weightage would exceed 100%%. Current: %d%%, Adding: %d%%, Would be: %d%%", 
-                        currentWeightage, newWeightageTotal, totalAfterAssignment));
-        }
+        log.info("Assigning KPIs for month: {}/{} (period: {} to {})",
+                assignedMonth.getMonthValue(), assignedMonth.getYear(), effectiveStartDate, effectiveEndDate);
         
         // Validate date range
         if (effectiveEndDate.isBefore(effectiveStartDate)) {
             throw KpiAssignmentException.invalidDateRange();
         }
-        
-        // Create assignments
-        List<KpiAssignmentResponse> createdAssignments = new java.util.ArrayList<>();
-        
+
+        // Pre-filter: validate KPI existence and skip already-assigned KPIs for this period
+        List<KpiBulkAssignmentItem> itemsToCreate = new ArrayList<>();
         for (KpiBulkAssignmentItem item : request.getAssignments()) {
-            // Validate KPI exists
             if (!kpiMasterRepository.existsById(item.getKpiId())) {
                 throw new KpiNotFoundException(item.getKpiId());
             }
-            
-            // Check for overlapping assignments
-            var overlapping = assignmentRepository.findOverlappingByEmployeeAndKpi(
+            boolean alreadyAssigned = assignmentRepository.findOverlappingByEmployeeAndKpi(
                     request.getEmployeeId(),
                     item.getKpiId(),
                     KPIStatus.ACTIVE,
                     effectiveStartDate,
                     effectiveEndDate
-            );
-            
-            if (overlapping.isPresent()) {
-                throw KpiAssignmentException.duplicateAssignment(request.getEmployeeId(), item.getKpiId());
+            ).isPresent();
+            if (alreadyAssigned) {
+                log.info("Skipping kpiId={} for employee {} — already assigned for this period",
+                        item.getKpiId(), request.getEmployeeId());
+            } else {
+                itemsToCreate.add(item);
             }
+        }
+
+        // Get current weightage for this employee scoped to the target month only
+        Integer currentWeightage = assignmentRepository.sumWeightageByEmployeeIdAndStatusAndMonth(
+                request.getEmployeeId(), KPIStatus.ACTIVE, assignedMonth.getMonthValue(), assignedMonth.getYear());
+        if (currentWeightage == null) {
+            currentWeightage = 0;
+        }
+
+        // Calculate weightage only for KPIs that will actually be created
+        int newWeightageTotal = itemsToCreate.stream()
+                .mapToInt(KpiBulkAssignmentItem::getWeightage)
+                .sum();
+
+        int totalAfterAssignment = currentWeightage + newWeightageTotal;
+
+        log.info("Current weightage: {}, New assignments: {}, Total after: {}",
+                currentWeightage, newWeightageTotal, totalAfterAssignment);
+
+        // Validate total doesn't exceed 100
+        if (totalAfterAssignment > 100) {
+            throw new com.nector.userservice.exception.KpiException(
+                String.format("Total weightage would exceed 100%%. Current: %d%%, Adding: %d%%, Would be: %d%%",
+                        currentWeightage, newWeightageTotal, totalAfterAssignment));
+        }
+
+        // Create assignments
+        List<KpiAssignmentResponse> createdAssignments = new java.util.ArrayList<>();
+
+        for (KpiBulkAssignmentItem item : itemsToCreate) {
             
             EmployeeKpiAssignment assignment = new EmployeeKpiAssignment();
             assignment.setEmployeeId(request.getEmployeeId());

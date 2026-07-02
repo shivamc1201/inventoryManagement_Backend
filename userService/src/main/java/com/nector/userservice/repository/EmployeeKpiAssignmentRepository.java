@@ -43,6 +43,14 @@ public interface EmployeeKpiAssignmentRepository extends JpaRepository<EmployeeK
     Integer sumWeightageByEmployeeIdAndStatus(@Param("employeeId") Long employeeId,
                                               @Param("status") KPIStatus status);
 
+    @Query("SELECT SUM(eka.weightage) FROM EmployeeKpiAssignment eka " +
+           "WHERE eka.employeeId = :employeeId AND eka.status = :status " +
+           "AND eka.assignedMonth = :month AND eka.assignedYear = :year")
+    Integer sumWeightageByEmployeeIdAndStatusAndMonth(@Param("employeeId") Long employeeId,
+                                                      @Param("status") KPIStatus status,
+                                                      @Param("month") int month,
+                                                      @Param("year") int year);
+
     /**
      * Find assignments that OVERLAP a given date range (used for monthly result generation).
      * An assignment overlaps the month if it starts before month end AND ends after month start.

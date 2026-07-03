@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -41,16 +42,18 @@ public class DashboardService {
         LocalDate now = LocalDate.now();
         LocalDate startDate = getStartDate(now, period);
 
-        DashboardResponse.SalesMetrics monthToDate = getSalesMetrics(startDate, now);
-        DashboardResponse.SalesMetrics weekToDate = getSalesMetrics(now.minusWeeks(1), now);
+        LocalDate monthStart = now.withDayOfMonth(1);
+        LocalDate weekStart = now.with(DayOfWeek.MONDAY);
+        DashboardResponse.SalesMetrics monthToDate = getSalesMetrics(monthStart, now);
+        DashboardResponse.SalesMetrics weekToDate = getSalesMetrics(weekStart, now);
         DashboardResponse.SalesMetrics yearToDate = getSalesMetrics(now.withDayOfYear(1), now);
 
-        Map<String, BigDecimal> regionSales = getSalesByRegion(startDate, now);
-        Map<String, BigDecimal> categorySales = getSalesByCategory(startDate, now);
+        Map<String, BigDecimal> regionSales = getSalesByRegion(monthStart, now);
+        Map<String, BigDecimal> categorySales = getSalesByCategory(monthStart, now);
 
-        // Get total GDN orders and amount for the selected period
-        Long totalOrders = orderRepository.countGdnOrdersBetweenDates(startDate.atStartOfDay(), now.atTime(LocalTime.MAX));
-        BigDecimal totalAmount = orderRepository.sumGdnAmountBetweenDates(startDate.atStartOfDay(), now.atTime(LocalTime.MAX));
+        // Get total GDN orders and amount for the current calendar month
+        Long totalOrders = orderRepository.countGdnOrdersBetweenDates(monthStart.atStartOfDay(), now.atTime(LocalTime.MAX));
+        BigDecimal totalAmount = orderRepository.sumGdnAmountBetweenDates(monthStart.atStartOfDay(), now.atTime(LocalTime.MAX));
         totalOrders = totalOrders != null ? totalOrders : 0L;
         totalAmount = totalAmount != null ? totalAmount : BigDecimal.ZERO;
 
@@ -95,10 +98,9 @@ public class DashboardService {
     private DashboardResponse.SalesMetrics getSalesMetrics(LocalDate start, LocalDate end) {
         log.debug("Entering getSalesMetrics() from {} to {}", start, end);
 
-        BigDecimal totalSales = orderRepository.getTotalAmountBetweenDates(start.atStartOfDay(), end.atTime(LocalTime.MAX));
-        Long transactionCount = orderRepository.countOrdersBetweenDates(start.atStartOfDay(), end.atTime(LocalTime.MAX));
+        BigDecimal totalSales = orderRepository.sumGdnAmountBetweenDates(start.atStartOfDay(), end.atTime(LocalTime.MAX));
+        Long transactionCount = orderRepository.countGdnOrdersBetweenDates(start.atStartOfDay(), end.atTime(LocalTime.MAX));
 
-        // Handle null values
         totalSales = totalSales != null ? totalSales : BigDecimal.ZERO;
         transactionCount = transactionCount != null ? transactionCount : 0L;
 
@@ -127,8 +129,7 @@ public class DashboardService {
     private Map<String, BigDecimal> getSalesByRegion(LocalDate startDate, LocalDate endDate) {
         log.debug("Getting sales by region from {} to {}", startDate, endDate);
 
-        // Get all orders in the date range and group by salesperson region
-        List<com.nector.userservice.model.OrderWithSalesPerson> orders = orderRepository.findByCreatedAtBetween(startDate.atStartOfDay(), endDate.atTime(LocalTime.MAX));
+        List<com.nector.userservice.model.OrderWithSalesPerson> orders = orderRepository.findGdnOrdersByCreatedAtBetween(startDate.atStartOfDay(), endDate.atTime(LocalTime.MAX));
 
         return orders.stream()
                 .filter(order -> order.getSalespersonId() != null)
@@ -152,10 +153,8 @@ public class DashboardService {
     private Map<String, BigDecimal> getSalesByCategory(LocalDate startDate, LocalDate endDate) {
         log.debug("Getting sales by category from {} to {}", startDate, endDate);
 
-        // Since carts table doesn't have product category, we'll return a placeholder
-        // In a real implementation, this would come from order_items or products table
         Map<String, BigDecimal> categorySales = new HashMap<>();
-        BigDecimal totalAmount = orderRepository.getTotalAmountBetweenDates(startDate.atStartOfDay(), endDate.atTime(LocalTime.MAX));
+        BigDecimal totalAmount = orderRepository.sumGdnAmountBetweenDates(startDate.atStartOfDay(), endDate.atTime(LocalTime.MAX));
         categorySales.put("General", totalAmount != null ? totalAmount : BigDecimal.ZERO);
         return categorySales;
     }

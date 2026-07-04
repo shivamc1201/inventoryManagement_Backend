@@ -108,6 +108,28 @@ public class RoleFeaturePermissionController {
     }
 
     // ----------------------------------------------------------------
+    // Legacy aliases — /role/{userId}/... forwards to /user/{userId}/...
+    // (frontend still uses the old path)
+    // ----------------------------------------------------------------
+
+    @Transactional
+    @PutMapping(value = "/role/{userId}/feature/{featureId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> createOrUpdatePermissionLegacy(
+            @PathVariable Long userId,
+            @PathVariable Integer featureId,
+            @RequestBody PermissionRequest req) {
+        return createOrUpdatePermission(userId, featureId, req);
+    }
+
+    @Transactional
+    @PutMapping(value = "/role/{userId}/bulk", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> bulkUpdatePermissionsLegacy(
+            @PathVariable Long userId,
+            @RequestBody Map<Integer, PermissionRequest> featurePermissions) {
+        return bulkUpdatePermissions(userId, featurePermissions);
+    }
+
+    // ----------------------------------------------------------------
     // PUT — bulk features
     // ----------------------------------------------------------------
 

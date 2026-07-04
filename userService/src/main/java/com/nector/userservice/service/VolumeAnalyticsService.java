@@ -50,31 +50,31 @@ public class VolumeAnalyticsService {
         if (period == null) period = "all";
         LocalDate now = LocalDate.now();
         LocalDate startDate = getStartDate(now, period);
+        LocalDate monthStart = now.withDayOfMonth(1);
 
-        VolumeAnalyticsResponse.VolumeMetrics monthToDate = getVolumeMetrics(startDate, now, salespersonId, distributorId);
+        VolumeAnalyticsResponse.VolumeMetrics monthToDate = getVolumeMetrics(monthStart, now, salespersonId, distributorId);
         VolumeAnalyticsResponse.VolumeMetrics yearToDate = getVolumeMetrics(now.withDayOfYear(1), now, salespersonId, distributorId);
 
-        Map<String, Long> regionVolume = getVolumeByRegion(startDate, now, salespersonId, distributorId);
-        Map<String, Long> categoryVolume = getVolumeByCategory(startDate, now, salespersonId, distributorId);
+        Map<String, Long> regionVolume = getVolumeByRegion(monthStart, now, salespersonId, distributorId);
+        Map<String, Long> categoryVolume = getVolumeByCategory(monthStart, now, salespersonId, distributorId);
 
-        // Combined order summary (total GDN orders + amount for the selected period)
+        // Combined order summary (total GDN orders + amount for the current calendar month)
         Long totalOrders;
         BigDecimal totalAmount;
         if (salespersonId != null) {
-            totalOrders = orderRepository.countGdnOrdersBySalespersonBetweenDates(salespersonId, toDateTime(startDate), toEndOfDay(now));
-            totalAmount = orderRepository.sumGdnAmountBySalespersonBetweenDates(salespersonId, toDateTime(startDate), toEndOfDay(now));
+            totalOrders = orderRepository.countGdnOrdersBySalespersonBetweenDates(salespersonId, toDateTime(monthStart), toEndOfDay(now));
+            totalAmount = orderRepository.sumGdnAmountBySalespersonBetweenDates(salespersonId, toDateTime(monthStart), toEndOfDay(now));
         } else if (distributorId != null) {
-            totalOrders = orderRepository.countGdnOrdersByDistributorBetweenDates(distributorId, toDateTime(startDate), toEndOfDay(now));
-            totalAmount = orderRepository.sumGdnAmountByDistributorBetweenDates(distributorId, toDateTime(startDate), toEndOfDay(now));
+            totalOrders = orderRepository.countGdnOrdersByDistributorBetweenDates(distributorId, toDateTime(monthStart), toEndOfDay(now));
+            totalAmount = orderRepository.sumGdnAmountByDistributorBetweenDates(distributorId, toDateTime(monthStart), toEndOfDay(now));
         } else {
-            totalOrders = orderRepository.countGdnOrdersBetweenDates(toDateTime(startDate), toEndOfDay(now));
-            totalAmount = orderRepository.sumGdnAmountBetweenDates(toDateTime(startDate), toEndOfDay(now));
+            totalOrders = orderRepository.countGdnOrdersBetweenDates(toDateTime(monthStart), toEndOfDay(now));
+            totalAmount = orderRepository.sumGdnAmountBetweenDates(toDateTime(monthStart), toEndOfDay(now));
         }
         totalOrders = totalOrders != null ? totalOrders : 0L;
         totalAmount = totalAmount != null ? totalAmount : BigDecimal.ZERO;
 
         // Monthly total (current month MTD)
-        LocalDate monthStart = now.withDayOfMonth(1);
         BigDecimal totalAmountMonthly;
         if (salespersonId != null) {
             totalAmountMonthly = orderRepository.sumGdnAmountBySalespersonBetweenDates(salespersonId, toDateTime(monthStart), toEndOfDay(now));
@@ -85,8 +85,10 @@ public class VolumeAnalyticsService {
         }
         totalAmountMonthly = totalAmountMonthly != null ? totalAmountMonthly : BigDecimal.ZERO;
 
-        // Yearly total (current year YTD)
-        LocalDate yearStart = now.withDayOfYear(1);
+        // Yearly total (Indian financial year: Apr 1 to today)
+        LocalDate yearStart = now.getMonthValue() >= 4
+                ? LocalDate.of(now.getYear(), 4, 1)
+                : LocalDate.of(now.getYear() - 1, 4, 1);
         BigDecimal totalAmountYearly;
         if (salespersonId != null) {
             totalAmountYearly = orderRepository.sumGdnAmountBySalespersonBetweenDates(salespersonId, toDateTime(yearStart), toEndOfDay(now));
@@ -161,7 +163,9 @@ public class VolumeAnalyticsService {
 
         LocalDate now = LocalDate.now();
         LocalDate monthStart = now.withDayOfMonth(1);
-        LocalDate yearStart = now.withDayOfYear(1);
+        LocalDate yearStart = now.getMonthValue() >= 4
+                ? LocalDate.of(now.getYear(), 4, 1)
+                : LocalDate.of(now.getYear() - 1, 4, 1);
 
         Long transactionsMTD = orderRepository.countGdnOrdersBySalespersonIdsBetweenDates(allIds, toDateTime(monthStart), toEndOfDay(now));
         BigDecimal valueMTD = orderRepository.sumGdnAmountBySalespersonIdsBetweenDates(allIds, toDateTime(monthStart), toEndOfDay(now));

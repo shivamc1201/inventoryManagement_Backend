@@ -18,6 +18,9 @@ public class SalesKpiMeetingDetail {
     @JoinColumn(name = "sales_kpi_update_id", nullable = false)
     private SalesKpiUpdate salesKpiUpdate;
 
+    @Column(name = "sales_person_id")
+    private Long salesPersonId;
+
     @Column(length = 150)
     private String clientName;
 

@@ -207,15 +207,20 @@ public class GlobalExceptionHandler {
         Throwable cause = ex.getCause();
         if (cause instanceof InvalidFormatException ife && ife.getTargetType() != null) {
             String typeName = ife.getTargetType().getSimpleName();
-            if ("RoleType".equals(typeName)) {
-                error.put("error", "Invalid roleType. Allowed values are: "
+            switch (typeName) {
+                case "RoleType" -> error.put("error", "Invalid roleType. Allowed values are: "
                         + "PLANT_OFFICER, SALES_OFFICER, ACCOUNT_OFFICER, REGIONAL_SALES_MGR, "
                         + "ACCOUNT_MGR, LOGISTICS_OFFICER, LOGISTICS_MGR, BUSINESS_DEV_MGR, "
                         + "HR_EXECUTIVE, PLANT_EXECUTIVE, SALES_EXECUTIVE, ACCOUNT_EXECUTIVE, "
                         + "STATE_SALES_MGR, NATIONAL_SALES_MGR, HR_MGR, PLANT_MGR, "
                         + "ZONAL_SALES_MGR, ADMIN, AREA_SALES_MGR");
-            } else {
-                error.put("error", "Invalid value '" + ife.getValue() + "' for field of type " + typeName);
+                case "KPICategory" -> error.put("error",
+                        "Invalid kpiCategory '" + ife.getValue() + "'. Allowed values are: KRA, KPI");
+                case "KPIMeasurementUnit" -> error.put("error",
+                        "Invalid measurementUnit '" + ife.getValue() + "'. Allowed values are: AMOUNT, COUNT, PERCENTAGE, VISITS");
+                case "KPIFrequency" -> error.put("error",
+                        "Invalid frequency '" + ife.getValue() + "'. Allowed values are: DAILY, WEEKLY, MONTHLY, YEARLY");
+                default -> error.put("error", "Invalid value '" + ife.getValue() + "' for field of type " + typeName);
             }
         } else {
             error.put("error", "Invalid or malformed request body");

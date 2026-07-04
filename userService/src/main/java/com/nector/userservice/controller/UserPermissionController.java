@@ -87,6 +87,7 @@ public class UserPermissionController {
     @ApiResponse(responseCode = "200", description = "Users retrieved successfully")
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         List<UserResponse> users = userRepository.findAll().stream()
+            .filter(user -> user.getRoleType() != RoleType.SUPER_ADMIN)
             .map(this::mapToUserResponse)
             .collect(Collectors.toList());
         return ResponseEntity.ok(users);

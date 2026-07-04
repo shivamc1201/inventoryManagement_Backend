@@ -98,12 +98,12 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
             if (!kpiMasterRepository.existsById(item.getKpiId())) {
                 throw new KpiNotFoundException(item.getKpiId());
             }
-            boolean alreadyAssigned = assignmentRepository.findOverlappingByEmployeeAndKpi(
+            boolean alreadyAssigned = assignmentRepository.findByEmployeeIdAndKpiIdAndStatusAndMonth(
                     request.getEmployeeId(),
                     item.getKpiId(),
                     KPIStatus.ACTIVE,
-                    effectiveStartDate,
-                    effectiveEndDate
+                    assignedMonth.getMonthValue(),
+                    assignedMonth.getYear()
             ).isPresent();
             if (alreadyAssigned) {
                 log.info("Skipping kpiId={} for employee {} — already assigned for this period",
@@ -462,8 +462,8 @@ public class EmployeeKpiAssignmentServiceImpl implements EmployeeKpiAssignmentSe
 
         for (EmployeeKpiAssignment src : previous) {
             boolean exists = assignmentRepository
-                    .findOverlappingByEmployeeAndKpi(src.getEmployeeId(), src.getKpiId(),
-                            KPIStatus.ACTIVE, newStart, newEnd)
+                    .findByEmployeeIdAndKpiIdAndStatusAndMonth(src.getEmployeeId(), src.getKpiId(),
+                            KPIStatus.ACTIVE, newMonth, newYear)
                     .isPresent();
             if (exists) { skipped++; continue; }
 

@@ -103,6 +103,16 @@ public interface EmployeeKpiAssignmentRepository extends JpaRepository<EmployeeK
                                                                        @Param("endDate") LocalDate endDate);
 
     @Query("SELECT eka FROM EmployeeKpiAssignment eka " +
+           "WHERE eka.employeeId = :employeeId AND eka.kpiId = :kpiId " +
+           "AND eka.status = :status " +
+           "AND eka.assignedMonth = :month AND eka.assignedYear = :year")
+    Optional<EmployeeKpiAssignment> findByEmployeeIdAndKpiIdAndStatusAndMonth(@Param("employeeId") Long employeeId,
+                                                                               @Param("kpiId") Long kpiId,
+                                                                               @Param("status") KPIStatus status,
+                                                                               @Param("month") int month,
+                                                                               @Param("year") int year);
+
+    @Query("SELECT eka FROM EmployeeKpiAssignment eka " +
            "WHERE eka.employeeId = :employeeId " +
            "AND eka.startDate <= CURRENT_DATE AND eka.endDate >= CURRENT_DATE " +
            "AND eka.status = 'ACTIVE'")

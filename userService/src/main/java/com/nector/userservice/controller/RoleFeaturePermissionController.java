@@ -67,7 +67,12 @@ public class RoleFeaturePermissionController {
     public ResponseEntity<RoleFeaturePermission> getUserFeaturePermission(
             @PathVariable Long userId, @PathVariable Integer featureId) {
         List<RoleFeaturePermission> results = permissionRepository.findByUserIdAndFeatureId(userId, featureId);
-        return results.isEmpty() ? ResponseEntity.notFound().build() : ResponseEntity.ok(results.get(0));
+        if (!results.isEmpty()) {
+            return ResponseEntity.ok(results.get(0));
+        }
+        // No record yet — return default all-false so frontend can display current state
+        Features feature = findFeatureById(featureId);
+        return ResponseEntity.ok(new RoleFeaturePermission(userId, featureId, feature));
     }
 
     // ----------------------------------------------------------------
@@ -123,7 +128,6 @@ public class RoleFeaturePermissionController {
         return getUserFeaturePermission(userId, featureId);
     }
 
-    @Transactional
     @PutMapping(value = "/role/{userId}/feature/{featureId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> createOrUpdatePermissionLegacy(
             @PathVariable Long userId,
@@ -132,7 +136,6 @@ public class RoleFeaturePermissionController {
         return createOrUpdatePermission(userId, featureId, req);
     }
 
-    @Transactional
     @PutMapping(value = "/role/{userId}/bulk", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> bulkUpdatePermissionsLegacy(
             @PathVariable Long userId,

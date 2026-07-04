@@ -112,6 +112,17 @@ public class RoleFeaturePermissionController {
     // (frontend still uses the old path)
     // ----------------------------------------------------------------
 
+    @GetMapping("/role/{userId}")
+    public ResponseEntity<List<FeaturePermissionDTO>> getPermissionsByUserLegacy(@PathVariable Long userId) {
+        return getPermissionsByUser(userId);
+    }
+
+    @GetMapping("/role/{userId}/feature/{featureId}")
+    public ResponseEntity<RoleFeaturePermission> getUserFeaturePermissionLegacy(
+            @PathVariable Long userId, @PathVariable Integer featureId) {
+        return getUserFeaturePermission(userId, featureId);
+    }
+
     @Transactional
     @PutMapping(value = "/role/{userId}/feature/{featureId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> createOrUpdatePermissionLegacy(

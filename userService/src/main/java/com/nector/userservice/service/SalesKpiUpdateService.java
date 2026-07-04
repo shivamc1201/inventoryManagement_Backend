@@ -66,10 +66,20 @@ public class SalesKpiUpdateService {
             entity.setTotalDistanceInKm(req.getTotalDistanceInKm());
             entity.setNoOfMeetings(req.getNoOfMeetings());
 
+            Optional<SalesPerson> spOpt = salesPersonRepository.findByEmployeeRollNo(req.getEmpCode());
+            Long salesPersonId = null;
+            if (spOpt.isPresent()) {
+                entity.setSalesPerson(spOpt.get());
+                salesPersonId = spOpt.get().getId();
+            } else {
+                log.warn("No SalesPerson found for empCode: {}", req.getEmpCode());
+            }
+
             if (req.getMeetingDetails() != null) {
                 for (MeetingDetailRequest mdReq : req.getMeetingDetails()) {
                     SalesKpiMeetingDetail detail = new SalesKpiMeetingDetail();
                     detail.setSalesKpiUpdate(entity);
+                    detail.setSalesPersonId(salesPersonId);
                     detail.setClientName(mdReq.getClientName());
                     detail.setContactPerson(mdReq.getContactPerson());
                     detail.setClientContactNo(mdReq.getClientContactNo());
@@ -85,11 +95,8 @@ public class SalesKpiUpdateService {
             saved.add(salesKpiUpdateRepository.save(entity));
 
             // Update KPI achievements AFTER saving so meeting details are persisted
-            Optional<SalesPerson> spOpt = salesPersonRepository.findByEmployeeRollNo(req.getEmpCode());
             if (spOpt.isPresent()) {
                 updateKpiFromMeetingDetails(spOpt.get().getId(), req.getMeetingDetails());
-            } else {
-                log.warn("No SalesPerson found for empCode: {}", req.getEmpCode());
             }
         }
 
@@ -159,11 +166,21 @@ public class SalesKpiUpdateService {
         int processed = 0, skipped = 0;
 
         for (SalesKpiUpdate update : updates) {
-            if (update.getSalesPerson() == null) {
-                skipped++;
-                continue;
+            SalesPerson sp = update.getSalesPerson();
+            if (sp == null) {
+                // Backfill: row was saved before the FK was populated — resolve by empCode
+                Optional<SalesPerson> spOpt = salesPersonRepository.findByEmployeeRollNo(update.getEmpCode());
+                if (spOpt.isEmpty()) {
+                    log.warn("Recalculate: no SalesPerson for empCode={}, skipping", update.getEmpCode());
+                    skipped++;
+                    continue;
+                }
+                sp = spOpt.get();
+                // Persist the FK so future recalculations don't need the fallback
+                update.setSalesPerson(sp);
+                salesKpiUpdateRepository.save(update);
             }
-            Long spId = update.getSalesPerson().getId();
+            Long spId = sp.getId();
             Map<String, Long> kpiCounts = employeeKpiCounts.computeIfAbsent(spId, k -> new HashMap<>());
 
             update.getMeetingDetails().stream()

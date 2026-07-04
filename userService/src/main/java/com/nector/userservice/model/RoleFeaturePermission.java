@@ -7,44 +7,40 @@ import lombok.EqualsAndHashCode;
 import lombok.ToString;
 import java.time.LocalDateTime;
 
-/**
- * Simplified role-feature permission entity using numeric IDs
- * Replaces the complex role-permission-feature relationship
- */
 @Entity
-@Table(name = "role_feature_permissions", 
-       uniqueConstraints = @UniqueConstraint(columnNames = {"role_id", "feature_id"}))
+@Table(name = "role_feature_permissions",
+       uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "feature_id"}))
 @Data
 @EqualsAndHashCode(exclude = {})
 @ToString(exclude = {})
 public class RoleFeaturePermission {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    @Column(name = "role_id", nullable = false)
-    private Integer roleId;
-    
+
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
     @Column(name = "feature_id", nullable = false)
     private Integer featureId;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(name = "feature", nullable = false)
     private Features feature;
-    
+
     @Column(nullable = false)
     private Boolean canCreate = false;
-    
+
     @Column(nullable = false)
     private Boolean canRead = false;
-    
+
     @Column(nullable = false)
     private Boolean canUpdate = false;
-    
+
     @Column(nullable = false)
     private Boolean canDelete = false;
-    
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -61,22 +57,22 @@ public class RoleFeaturePermission {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
-    
+
     public RoleFeaturePermission() {}
-    
-    public RoleFeaturePermission(Integer roleId, Integer featureId, Features feature) {
-        this.roleId = roleId;
+
+    public RoleFeaturePermission(Long userId, Integer featureId, Features feature) {
+        this.userId = userId;
         this.featureId = featureId;
         this.feature = feature;
     }
-    
+
     public boolean hasPermission(String operation) {
         return switch (operation.toUpperCase()) {
             case "CREATE" -> canCreate;
-            case "READ" -> canRead;
+            case "READ"   -> canRead;
             case "UPDATE" -> canUpdate;
             case "DELETE" -> canDelete;
-            default -> false;
+            default       -> false;
         };
     }
 }

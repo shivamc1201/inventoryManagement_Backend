@@ -27,6 +27,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import com.nector.userservice.common.RoleFeatureMapping;
+
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -232,6 +234,15 @@ public class LoginServiceImpl implements LoginService {
 
     private List<FeaturePermissionDTO> getUserPermissions(User user) {
         Long userId = user.getId();
+        boolean isAdmin = user.getRoleType() == RoleType.ADMIN || user.getRoleType() == RoleType.SUPER_ADMIN;
+
+        if (isAdmin) {
+            return Arrays.stream(Features.values())
+                    .map(f -> new FeaturePermissionDTO(userId, RoleFeatureMapping.getFeatureId(f), f.name(),
+                            true, true, true, true))
+                    .collect(Collectors.toList());
+        }
+
         log.info("[DEBUG] getUserPermissions - querying by userId: {}", userId);
         return roleFeaturePermissionRepository.findByUserId(userId)
                 .stream()

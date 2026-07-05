@@ -48,7 +48,18 @@ public enum Features {
     TRANSACTION_MASTER("Transaction Master", "/transaction/master"),
 
     // --- HR Sub-Items ---
-    ADMIN_APPROVAL("Admin Approval", "/hr/admin-approval");
+    ADMIN_APPROVAL("Admin Approval", "/hr/admin-approval"),
+
+    // --- Accounts Sub-Items ---
+    ACCOUNTS_MASTER("Accounts Master", "/accounts/master"),
+    ACCOUNTS_PAYMENT_REQUESTS("Payment Requests", "/accounts/payment-requests"),
+    ACCOUNTS_PI_UPDATE("PI Update", "/accounts/pi-update"),
+
+    // --- HR KRA/KPI ---
+    HR_KRA_KPI("HR KRA / KPI", "/hr/kra-kpi"),
+
+    // --- Support Sub-Items ---
+    COMPLAINTS_MANAGEMENT("Complaints Management", "/complaint/management");
 
     // Getters
     // --- Enum Attributes ---

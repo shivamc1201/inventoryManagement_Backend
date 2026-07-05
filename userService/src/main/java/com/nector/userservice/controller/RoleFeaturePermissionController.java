@@ -251,6 +251,11 @@ public class RoleFeaturePermissionController {
             case 26 -> Features.TRANSACTION_CASHBOOK;
             case 27 -> Features.TRANSACTION_MASTER;
             case 28 -> Features.ADMIN_APPROVAL;
+            case 29 -> Features.ACCOUNTS_MASTER;
+            case 30 -> Features.ACCOUNTS_PAYMENT_REQUESTS;
+            case 31 -> Features.ACCOUNTS_PI_UPDATE;
+            case 32 -> Features.HR_KRA_KPI;
+            case 33 -> Features.COMPLAINTS_MANAGEMENT;
             default -> throw new IllegalArgumentException("Unknown feature ID: " + featureId);
         };
     }

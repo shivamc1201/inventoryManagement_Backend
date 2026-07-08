@@ -59,7 +59,7 @@ public enum Features {
     HR_KRA_KPI("HR KRA / KPI", "/hr/kra-kpi"),
 
     // --- Support Sub-Items ---
-    COMPLAINTS_MANAGEMENT("Complaints Management", "/complaint/management");
+    COMPLAINTS_MANAGEMENT("Complaints Management", "/complaint/complaints_management");
 
     // Getters
     // --- Enum Attributes ---

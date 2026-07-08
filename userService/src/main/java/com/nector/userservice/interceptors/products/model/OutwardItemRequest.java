@@ -20,9 +20,4 @@ public class OutwardItemRequest {
 
     private String comments;
 
-    private java.math.BigDecimal quotedSellingPrice;
-
-    private String referenceNumber;
-
-    private String issuedTo;
 }

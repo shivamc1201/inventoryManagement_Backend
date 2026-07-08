@@ -499,6 +499,13 @@ public class ProductsController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PostMapping("/outward-items/bulk")
+    @Operation(summary = "Bulk create outward item transactions", description = "Creates multiple outward item transactions in a single request. All items are saved in one transaction — if any item fails, none are saved.")
+    public ResponseEntity<List<OutwardItemResponse>> bulkCreateOutwardItems(@RequestBody List<OutwardItemRequest> requests) {
+        List<OutwardItemResponse> responses = outwardItemService.bulkCreateOutwardItems(requests);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responses);
+    }
+
     @GetMapping("/outward-items")
     @Operation(summary = "Get all outward item transactions", description = "Retrieves all outward item transactions")
     public ResponseEntity<List<OutwardItemResponse>> getAllOutwardItems() {

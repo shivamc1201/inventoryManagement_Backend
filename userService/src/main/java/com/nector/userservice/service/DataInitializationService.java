@@ -29,21 +29,21 @@ public class DataInitializationService implements CommandLineRunner {
             assignAllPermissionsToAdmin();
             
             assignPermissionsToRole(RoleType.BUSINESS_DEV_MGR, 
-                Features.DASHBOARD, Features.DISTRIBUTOR, Features.REPORTS);
+                Features.DASHBOARD, Features.DISTRIBUTOR, Features.REPORTING_MANAGER);
             
             assignPermissionsToRole(RoleType.ACCOUNT_MGR, 
-                Features.DASHBOARD, Features.ACCOUNTS, Features.REPORTS);
+                Features.DASHBOARD, Features.ACCOUNTS, Features.REPORTING_MANAGER);
             assignPermissionsToRole(RoleType.ACCOUNT_OFFICER, 
                 Features.DASHBOARD, Features.ACCOUNTS);
             assignPermissionsToRole(RoleType.ACCOUNT_EXECUTIVE, 
                 Features.DASHBOARD, Features.ACCOUNTS);
             
             assignPermissionsToRole(RoleType.NATIONAL_SALES_MGR, 
-                Features.DASHBOARD, Features.DISTRIBUTOR, Features.REPORTS);
+                Features.DASHBOARD, Features.DISTRIBUTOR, Features.REPORTING_MANAGER);
             assignPermissionsToRole(RoleType.STATE_SALES_MGR, 
-                Features.DASHBOARD, Features.DISTRIBUTOR, Features.REPORTS);
+                Features.DASHBOARD, Features.DISTRIBUTOR, Features.REPORTING_MANAGER);
             assignPermissionsToRole(RoleType.ZONAL_SALES_MGR, 
-                Features.DASHBOARD, Features.DISTRIBUTOR, Features.REPORTS);
+                Features.DASHBOARD, Features.DISTRIBUTOR, Features.REPORTING_MANAGER);
             assignPermissionsToRole(RoleType.REGIONAL_SALES_MGR, 
                 Features.DASHBOARD, Features.DISTRIBUTOR);
             assignPermissionsToRole(RoleType.AREA_SALES_MGR, 
@@ -54,13 +54,13 @@ public class DataInitializationService implements CommandLineRunner {
                 Features.DASHBOARD, Features.DISTRIBUTOR);
             
             assignPermissionsToRole(RoleType.HR_MGR,
-                Features.DASHBOARD, Features.HR, Features.REPORTS, Features.ADMIN_APPROVAL);
+                Features.DASHBOARD, Features.HR, Features.REPORTING_MANAGER, Features.ADMIN_APPROVAL);
             assignPermissionsToRole(RoleType.HR_EXECUTIVE,
                 Features.DASHBOARD, Features.HR);
             
             assignPermissionsToRole(RoleType.LOGISTICS_MGR,
                 Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_INWARD,
-                Features.INVENTORY_OUTWARD, Features.REPORTS);
+                Features.INVENTORY_OUTWARD, Features.REPORTING_MANAGER);
             assignPermissionsToRole(RoleType.LOGISTICS_OFFICER,
                 Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_INWARD,
                 Features.INVENTORY_OUTWARD);
@@ -68,7 +68,7 @@ public class DataInitializationService implements CommandLineRunner {
             assignPermissionsToRole(RoleType.PLANT_MGR,
                 Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_MASTERS,
                 Features.INVENTORY_INWARD, Features.INVENTORY_OUTWARD,
-                Features.INVENTORY_TRANSACTIONS, Features.REPORTS);
+                Features.INVENTORY_TRANSACTIONS, Features.REPORTING_MANAGER);
             assignPermissionsToRole(RoleType.PLANT_OFFICER,
                 Features.DASHBOARD, Features.INVENTORY, Features.INVENTORY_MASTERS,
                 Features.INVENTORY_INWARD, Features.INVENTORY_OUTWARD);

@@ -170,12 +170,11 @@ public class LoginServiceImpl implements LoginService {
         List<Object> featureDetails = List.of(
                 Map.of("displayName", "OrderDetails",  "name", "ORDER_DETAILS",  "path", "/order-details"),
                 Map.of("displayName", "Dashboard",     "name", "DASHBOARD",      "path", "/dashboard"),
-                Map.of("displayName", "Reports",       "name", "REPORTS",        "path", "/reports"),
                 Map.of("displayName", "Products",      "name", "PRODUCTS",       "path", "/products"),
                 Map.of("displayName", "Complaint",     "name", "COMPLAINT",      "path", "/complaint"),
                 Map.of("displayName", "PlaceOrder",    "name", "PLACE_ORDER",    "path", "/placeOrder")
         );
-        Set<String> featureNames = Set.of("ORDER_DETAILS", "PRODUCTS", "DASHBOARD", "REPORTS", "COMPLAINT", "PLACE_ORDER");
+        Set<String> featureNames = Set.of("ORDER_DETAILS", "PRODUCTS", "DASHBOARD", "COMPLAINT", "PLACE_ORDER");
 
         log.info("Distributor logged in: {}", request.getUsername());
         return new DistributorLoginResponse(
@@ -190,14 +189,14 @@ public class LoginServiceImpl implements LoginService {
                 Map.of("displayName", "Dashboard",    "name", "DASHBOARD",    "path", "/dashboard"),
                 Map.of("displayName", "OrderDetails", "name", "ORDER_DETAILS","path", "/order-details"),
                 Map.of("displayName", "Products",     "name", "PRODUCTS",     "path", "/products"),
-                Map.of("displayName", "Reports",      "name", "REPORTS",      "path", "/reports"),
+                Map.of("displayName", "Reporting Manager", "name", "REPORTING_MANAGER", "path", "/sales/salesperson-onboarding"),
                 Map.of("displayName", "Analytics",    "name", "ANALYTICS",    "path", "/analytics"),
                 Map.of("displayName", "Sales",        "name", "SALES",        "path", "/sales")
         );
     }
 
     private Set<String> getSalesPersonFeatureNames(RoleType roleType) {
-        return Set.of("DASHBOARD", "ORDER_DETAILS", "SALES", "REPORTS", "ANALYTICS", "COMPLAINT");
+        return Set.of("DASHBOARD", "ORDER_DETAILS", "SALES", "REPORTING_MANAGER", "ANALYTICS", "COMPLAINT");
     }
 
     @Override
@@ -289,4 +288,5 @@ public class LoginServiceImpl implements LoginService {
         dto.setRoleType(user.getRoleType());
         return dto;
     }
+
 }

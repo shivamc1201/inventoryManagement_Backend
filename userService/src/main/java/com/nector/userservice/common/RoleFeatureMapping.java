@@ -39,7 +39,7 @@ public enum RoleFeatureMapping {
     FEATURE_DISTRIBUTOR(4),
     FEATURE_INVENTORY(5),
     FEATURE_SALES(6),
-    FEATURE_REPORTS(7),
+    FEATURE_REPORTING_MANAGER(7),
     FEATURE_COMPLAINT(8),
     FEATURE_PRODUCTS(9),
     FEATURE_ORDER_DETAILS(10),
@@ -108,7 +108,7 @@ public enum RoleFeatureMapping {
             case DISTRIBUTOR -> FEATURE_DISTRIBUTOR.getId();
             case INVENTORY -> FEATURE_INVENTORY.getId();
             case SALES -> FEATURE_SALES.getId();
-            case REPORTS -> FEATURE_REPORTS.getId();
+            case REPORTING_MANAGER -> FEATURE_REPORTING_MANAGER.getId();
             case COMPLAINT -> FEATURE_COMPLAINT.getId();
             case PRODUCTS -> FEATURE_PRODUCTS.getId();
             case ORDER_DETAILS -> FEATURE_ORDER_DETAILS.getId();

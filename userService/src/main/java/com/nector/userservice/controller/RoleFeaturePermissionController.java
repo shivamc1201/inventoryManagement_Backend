@@ -229,7 +229,7 @@ public class RoleFeaturePermissionController {
             case 4  -> Features.DISTRIBUTOR;
             case 5  -> Features.INVENTORY;
             case 6  -> Features.SALES;
-            case 7  -> Features.REPORTS;
+            case 7  -> Features.REPORTING_MANAGER;
             case 8  -> Features.COMPLAINT;
             case 9  -> Features.PRODUCTS;
             case 10 -> Features.ORDER_DETAILS;

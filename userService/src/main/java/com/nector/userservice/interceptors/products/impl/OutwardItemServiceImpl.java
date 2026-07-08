@@ -53,6 +53,15 @@ public class OutwardItemServiceImpl implements OutwardItemService {
     }
 
     @Override
+    @Transactional
+    public List<OutwardItemResponse> bulkCreateOutwardItems(List<OutwardItemRequest> requests) {
+        log.info("Bulk creating {} outward item transactions", requests.size());
+        return requests.stream()
+                .map(this::createOutwardItem)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public OutwardItemResponse getOutwardItemById(Long id) {
         log.info("Fetching outward item transaction with ID: {}", id);

@@ -10,6 +10,8 @@ public interface OutwardItemService {
 
     OutwardItemResponse createOutwardItem(OutwardItemRequest request);
 
+    List<OutwardItemResponse> bulkCreateOutwardItems(List<OutwardItemRequest> requests);
+
     OutwardItemResponse getOutwardItemById(Long id);
 
     List<OutwardItemResponse> getAllOutwardItems();

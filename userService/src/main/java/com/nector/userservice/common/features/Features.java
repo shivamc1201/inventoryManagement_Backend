@@ -13,7 +13,7 @@ public enum Features {
     DISTRIBUTOR("Distributor", "/distributor"),
     INVENTORY("Inventory", "/inventory"), // Parent for all Inventory sub-features
     SALES("Sales", "/sales"), // Parent for all Sales sub-features
-    REPORTS("Reports", "/reports"),
+    REPORTING_MANAGER("Reporting Manager", "/sales/salesperson-onboarding"),
     COMPLAINT("Complaint", "/complaint"),
     PRODUCTS("Products", "/products"), // Parent for all Product sub-features
     ORDER_DETAILS("OrderDetails", "/order-details"),
@@ -59,7 +59,7 @@ public enum Features {
     HR_KRA_KPI("HR KRA / KPI", "/hr/kra-kpi"),
 
     // --- Support Sub-Items ---
-    COMPLAINTS_MANAGEMENT("Complaints Management", "/complaint/management");
+    COMPLAINTS_MANAGEMENT("Complaints Management", "/complaint/complaints_management");
 
     // Getters
     // --- Enum Attributes ---

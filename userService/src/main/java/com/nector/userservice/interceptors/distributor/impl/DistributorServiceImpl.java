@@ -32,7 +32,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.nector.userservice.common.RoleType;
 import com.nector.userservice.model.User;
 import com.nector.userservice.model.SalesPerson;
 import com.nector.userservice.repository.UserRepository;

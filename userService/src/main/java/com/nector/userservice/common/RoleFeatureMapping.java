@@ -2,35 +2,8 @@ package com.nector.userservice.common;
 
 import lombok.Getter;
 
-/**
- * Numeric mapping for roles and features to simplify permission management
- */
 @Getter
 public enum RoleFeatureMapping {
-
-    // Role IDs (based on RoleType enum order)
-    ROLE_SUPER_ADMIN(1),
-    ROLE_ADMIN(2),
-    ROLE_BUSINESS_DEV_MGR(3),
-    ROLE_PLANT_MGR(4),
-    ROLE_HR_MGR(5),
-    ROLE_LOGISTICS_MGR(6),
-    ROLE_ACCOUNT_MGR(7),
-    ROLE_ACCOUNT_OFFICER(8),
-    ROLE_ACCOUNT_EXECUTIVE(9),
-    ROLE_NATIONAL_SALES_MGR(10),
-    ROLE_STATE_SALES_MGR(11),
-    ROLE_ZONAL_SALES_MGR(12),
-    ROLE_REGIONAL_SALES_MGR(13),
-    ROLE_AREA_SALES_MGR(14),
-    ROLE_SALES_OFFICER(15),
-    ROLE_SALES_EXECUTIVE(16),
-    ROLE_LOGISTICS_OFFICER(17),
-    ROLE_DISPATCH(18),
-    ROLE_HR_EXECUTIVE(19),
-    ROLE_PLANT_OFFICER(20),
-    ROLE_PLANT_EXECUTIVE(21),
-    ROLE_DISTRIBUTOR(22),
 
     // Feature IDs (based on Features enum order)
     FEATURE_DASHBOARD(1),
@@ -71,33 +44,6 @@ public enum RoleFeatureMapping {
 
     RoleFeatureMapping(int id) {
         this.id = id;
-    }
-
-    public static int getRoleId(RoleType roleType) {
-        return switch (roleType) {
-            case SUPER_ADMIN -> ROLE_SUPER_ADMIN.getId();
-            case ADMIN -> ROLE_ADMIN.getId();
-            case BUSINESS_DEV_MGR -> ROLE_BUSINESS_DEV_MGR.getId();
-            case PLANT_MGR -> ROLE_PLANT_MGR.getId();
-            case HR_MGR -> ROLE_HR_MGR.getId();
-            case LOGISTICS_MGR -> ROLE_LOGISTICS_MGR.getId();
-            case ACCOUNT_MGR -> ROLE_ACCOUNT_MGR.getId();
-            case ACCOUNT_OFFICER -> ROLE_ACCOUNT_OFFICER.getId();
-            case ACCOUNT_EXECUTIVE -> ROLE_ACCOUNT_EXECUTIVE.getId();
-            case NATIONAL_SALES_MGR -> ROLE_NATIONAL_SALES_MGR.getId();
-            case STATE_SALES_MGR -> ROLE_STATE_SALES_MGR.getId();
-            case ZONAL_SALES_MGR -> ROLE_ZONAL_SALES_MGR.getId();
-            case REGIONAL_SALES_MGR -> ROLE_REGIONAL_SALES_MGR.getId();
-            case AREA_SALES_MGR -> ROLE_AREA_SALES_MGR.getId();
-            case SALES_OFFICER -> ROLE_SALES_OFFICER.getId();
-            case SALES_EXECUTIVE -> ROLE_SALES_EXECUTIVE.getId();
-            case LOGISTICS_OFFICER -> ROLE_LOGISTICS_OFFICER.getId();
-            case DISPATCH -> ROLE_DISPATCH.getId();
-            case HR_EXECUTIVE -> ROLE_HR_EXECUTIVE.getId();
-            case PLANT_OFFICER -> ROLE_PLANT_OFFICER.getId();
-            case PLANT_EXECUTIVE -> ROLE_PLANT_EXECUTIVE.getId();
-            case Distributor -> ROLE_DISTRIBUTOR.getId();
-        };
     }
 
     public static int getFeatureId(com.nector.userservice.common.features.Features feature) {

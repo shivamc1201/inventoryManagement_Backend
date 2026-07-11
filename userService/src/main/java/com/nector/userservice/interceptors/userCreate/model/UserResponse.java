@@ -1,6 +1,5 @@
 package com.nector.userservice.interceptors.userCreate.model;
 
-import com.nector.userservice.common.RoleType;
 import com.nector.userservice.common.UserStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -34,7 +33,7 @@ public class UserResponse {
     private LocalDateTime passwordSetDate;
     private String password;
     private String employeeRollNo;
-    private RoleType roleType;
+    private String roleType;
     // Optional: expose roles only if required
     private Set<String> roles;
 }

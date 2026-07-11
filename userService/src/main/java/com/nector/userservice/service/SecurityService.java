@@ -1,6 +1,5 @@
 package com.nector.userservice.service;
 
-import com.nector.userservice.common.RoleType;
 import com.nector.userservice.common.RoleFeatureMapping;
 import com.nector.userservice.common.features.Features;
 import com.nector.userservice.model.User;
@@ -13,19 +12,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class SecurityService {
 
+    private static final Set<String> ADMIN_ROLES = Set.of("ADMIN", "SUPER_ADMIN");
+
     private final UserRepository userRepository;
     private final RoleFeaturePermissionRepository roleFeaturePermissionRepository;
-
-    @Transactional(readOnly = true)
-    public boolean currentUserCanCreate(String resourceType) {
-        return hasPermission(getCurrentUserId(), "CREATE", resourceType);
-    }
 
     @Transactional(readOnly = true)
     public boolean currentUserCanRead(String resourceType) {
@@ -35,11 +32,6 @@ public class SecurityService {
     @Transactional(readOnly = true)
     public boolean currentUserCanUpdate(String resourceType) {
         return hasPermission(getCurrentUserId(), "UPDATE", resourceType);
-    }
-
-    @Transactional(readOnly = true)
-    public boolean currentUserCanDelete(String resourceType) {
-        return hasPermission(getCurrentUserId(), "DELETE", resourceType);
     }
 
     // TODO: Replace with actual Spring Security context implementation
@@ -74,23 +66,10 @@ public class SecurityService {
                 return canPerform;
             }
 
-            // Fallback to role-based defaults when no explicit permission is set
-            boolean canPerform = switch (user.getRoleType()) {
-                case SUPER_ADMIN, ADMIN -> true;
-                case BUSINESS_DEV_MGR, PLANT_MGR, HR_MGR, LOGISTICS_MGR,
-                     ACCOUNT_MGR, NATIONAL_SALES_MGR, STATE_SALES_MGR,
-                     ZONAL_SALES_MGR, REGIONAL_SALES_MGR, AREA_SALES_MGR ->
-                        !"DELETE".equals(operation);
-                case ACCOUNT_OFFICER, ACCOUNT_EXECUTIVE, SALES_OFFICER,
-                     SALES_EXECUTIVE, LOGISTICS_OFFICER, DISPATCH, HR_EXECUTIVE,
-                     PLANT_OFFICER, PLANT_EXECUTIVE ->
-                        !"CREATE".equals(operation) && !"DELETE".equals(operation);
-                case Distributor -> "READ".equals(operation);
-                default -> false;
-            };
-
-            log.debug("Fallback permission: {} for userId: {}, operation: {}, feature: {}", canPerform, userId, operation, resourceType);
-            return canPerform;
+            // Fallback: admins always have access when no explicit record exists
+            boolean isAdmin = ADMIN_ROLES.contains(user.getRoleType());
+            log.debug("Fallback permission: {} for userId: {}, operation: {}", isAdmin, userId, operation);
+            return isAdmin;
 
         } catch (Exception e) {
             log.error("Error checking permission for userId: {}", userId, e);

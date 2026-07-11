@@ -1,7 +1,6 @@
 package com.nector.userservice.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.nector.userservice.common.RoleType;
 import com.nector.userservice.common.UserStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
@@ -83,9 +82,8 @@ public class User {
     @Column(nullable = false)
     private LocalDateTime passwordSetDate;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private RoleType roleType;
+    private String roleType;
 
     @Column(length = 50)
     private String employeeRollNo;

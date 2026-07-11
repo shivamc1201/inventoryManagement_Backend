@@ -1,6 +1,5 @@
 package com.nector.userservice.interceptors.userCreate.model;
 
-import com.nector.userservice.common.RoleType;
 import com.nector.userservice.common.UserStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
@@ -79,9 +78,9 @@ public class UserRequest {
     @Schema(description = "ZIP code", example = "10001")
     private String zip;
     
-    @NotNull(message = "Role type is required")
+    @NotBlank(message = "Role type is required")
     @Schema(description = "ACCOUNT_MGR", example = "ACCOUNT_MGR")
-    private RoleType roleType;
+    private String roleType;
 
     @NotBlank(message = "Employee roll number is required")
     @Size(max = 50, message = "Employee roll number must not exceed 50 characters")

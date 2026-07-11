@@ -1,7 +1,6 @@
 package com.nector.userservice.interceptors.userLogin.impl;
 
 import com.nector.userservice.common.BaseLoginResponse;
-import com.nector.userservice.common.RoleType;
 import com.nector.userservice.common.UserStatus;
 import com.nector.userservice.common.features.Features;
 import com.nector.userservice.dto.UserDetailsDTO;
@@ -43,6 +42,8 @@ public class LoginServiceImpl implements LoginService {
     private final SalesPersonRepository salesPersonRepository;
     private final RoleFeaturePermissionRepository roleFeaturePermissionRepository;
 
+    private static final Set<String> ADMIN_ROLES = Set.of("ADMIN", "SUPER_ADMIN", "DISPATCH");
+
     @Override
     public BaseLoginResponse authenticate(LoginRequest request) {
         log.info("Login attempt for {}", request.getUsername());
@@ -76,28 +77,28 @@ public class LoginServiceImpl implements LoginService {
             throw new RuntimeException("Invalid password");
         }
 
-        RoleType roleType = convertSalesRoleToRoleType(salesPerson.getRole());
-        List<Object> featureDetails = getSalesPersonFeatures(roleType);
-        Set<String> featureNames = getSalesPersonFeatureNames(roleType);
+        String roleType = convertSalesRoleToString(salesPerson.getRole());
+        List<Object> featureDetails = getSalesPersonFeatures();
+        Set<String> featureNames = getSalesPersonFeatureNames();
 
         log.info("Salesperson logged in: {}", request.getUsername());
         LoginResponse response = new LoginResponse(
                 null, "Bearer", request.getUsername(),
                 "Login successful for Salesperson " + request.getUsername(),
-                roleType.name(), salesPerson.getId(), featureDetails, featureNames, "LOGGED_IN");
+                roleType, salesPerson.getId(), featureDetails, featureNames, "LOGGED_IN");
         response.setName(salesPerson.getFirstName() + " " + salesPerson.getLastName());
         return response;
     }
 
-    private RoleType convertSalesRoleToRoleType(SalesRole salesRole) {
+    private String convertSalesRoleToString(SalesRole salesRole) {
         return switch (salesRole) {
-            case NATIONAL_SALES_MGR  -> RoleType.NATIONAL_SALES_MGR;
-            case STATE_SALES_MGR     -> RoleType.STATE_SALES_MGR;
-            case ZONAL_SALES_MGR     -> RoleType.ZONAL_SALES_MGR;
-            case REGIONAL_SALES_MGR  -> RoleType.REGIONAL_SALES_MGR;
-            case AREA_SALES_MGR      -> RoleType.AREA_SALES_MGR;
-            case SALES_OFFICER       -> RoleType.SALES_OFFICER;
-            default                  -> RoleType.SALES_EXECUTIVE;
+            case NATIONAL_SALES_MGR  -> "NATIONAL_SALES_MGR";
+            case STATE_SALES_MGR     -> "STATE_SALES_MGR";
+            case ZONAL_SALES_MGR     -> "ZONAL_SALES_MGR";
+            case REGIONAL_SALES_MGR  -> "REGIONAL_SALES_MGR";
+            case AREA_SALES_MGR      -> "AREA_SALES_MGR";
+            case SALES_OFFICER       -> "SALES_OFFICER";
+            default                  -> "SALES_EXECUTIVE";
         };
     }
 
@@ -118,12 +119,10 @@ public class LoginServiceImpl implements LoginService {
         user.getRoles().forEach(r -> log.info("[DEBUG] Role entity: id={}, roleType={}, name={}", r.getId(), r.getRoleType(), r.getName()));
 
         Set<Features> features;
-        boolean isAdmin = user.getRoleType() == RoleType.ADMIN ||
-                          user.getRoleType() == RoleType.SUPER_ADMIN ||
-                          user.getRoleType() == RoleType.DISPATCH ||
-                          user.getRoles().stream()
-                              .map(Role::getRoleType)
-                              .anyMatch(rt -> rt == RoleType.ADMIN || rt == RoleType.SUPER_ADMIN || rt == RoleType.DISPATCH);
+        boolean isAdmin = ADMIN_ROLES.contains(user.getRoleType()) ||
+                user.getRoles().stream()
+                        .map(Role::getRoleType)
+                        .anyMatch(ADMIN_ROLES::contains);
 
         log.info("[DEBUG] isAdmin: {}", isAdmin);
 
@@ -138,8 +137,7 @@ public class LoginServiceImpl implements LoginService {
             log.info("[DEBUG] Found {} permissions for userId: {}", permissions.size(), userId);
 
             permissions.stream()
-                    .filter(p -> Boolean.TRUE.equals(p.getCanCreate()) ||
-                                 Boolean.TRUE.equals(p.getCanRead()) ||
+                    .filter(p -> Boolean.TRUE.equals(p.getCanRead()) ||
                                  Boolean.TRUE.equals(p.getCanUpdate()))
                     .map(RoleFeaturePermission::getFeature)
                     .filter(Objects::nonNull)
@@ -156,7 +154,7 @@ public class LoginServiceImpl implements LoginService {
         return new LoginResponse(
                 null, "Bearer", request.getUsername(),
                 "Login successful for User " + request.getUsername(),
-                user.getRoleType().name(), user.getId(), featureDetails, featureNames, "LOGGED_IN");
+                user.getRoleType(), user.getId(), featureDetails, featureNames, "LOGGED_IN");
     }
 
     private DistributorLoginResponse authenticateDistributor(Distributor user, LoginRequest request) {
@@ -184,19 +182,18 @@ public class LoginServiceImpl implements LoginService {
                 user.getFirstName(), user.getDistributorCode(), "LOGGED_IN");
     }
 
-    private List<Object> getSalesPersonFeatures(RoleType roleType) {
+    private List<Object> getSalesPersonFeatures() {
         return List.of(
                 Map.of("displayName", "Dashboard",    "name", "DASHBOARD",    "path", "/dashboard"),
                 Map.of("displayName", "OrderDetails", "name", "ORDER_DETAILS","path", "/order-details"),
                 Map.of("displayName", "Products",     "name", "PRODUCTS",     "path", "/products"),
                 Map.of("displayName", "Reporting Manager", "name", "REPORTING_MANAGER", "path", "/sales/salesperson-onboarding"),
-                Map.of("displayName", "Analytics",    "name", "ANALYTICS",    "path", "/analytics"),
                 Map.of("displayName", "Sales",        "name", "SALES",        "path", "/sales")
         );
     }
 
-    private Set<String> getSalesPersonFeatureNames(RoleType roleType) {
-        return Set.of("DASHBOARD", "ORDER_DETAILS", "SALES", "REPORTING_MANAGER", "ANALYTICS", "COMPLAINT");
+    private Set<String> getSalesPersonFeatureNames() {
+        return Set.of("DASHBOARD", "ORDER_DETAILS", "SALES", "REPORTING_MANAGER", "COMPLAINT");
     }
 
     @Override
@@ -233,24 +230,23 @@ public class LoginServiceImpl implements LoginService {
 
     private List<FeaturePermissionDTO> getUserPermissions(User user) {
         Long userId = user.getId();
-        boolean isAdmin = user.getRoleType() == RoleType.ADMIN || user.getRoleType() == RoleType.SUPER_ADMIN;
+        boolean isAdmin = ADMIN_ROLES.contains(user.getRoleType());
 
         if (isAdmin) {
             return Arrays.stream(Features.values())
                     .map(f -> new FeaturePermissionDTO(userId, RoleFeatureMapping.getFeatureId(f), f.name(),
-                            true, true, true, true))
+                            true, true))
                     .collect(Collectors.toList());
         }
 
         log.info("[DEBUG] getUserPermissions - querying by userId: {}", userId);
         return roleFeaturePermissionRepository.findByUserId(userId)
                 .stream()
-                .filter(perm -> Boolean.TRUE.equals(perm.getCanCreate()) ||
-                               Boolean.TRUE.equals(perm.getCanRead()) ||
+                .filter(perm -> Boolean.TRUE.equals(perm.getCanRead()) ||
                                Boolean.TRUE.equals(perm.getCanUpdate()))
                 .map(perm -> new FeaturePermissionDTO(
                         perm.getUserId(), perm.getFeatureId(), perm.getFeature().name(),
-                        perm.getCanCreate(), perm.getCanRead(), perm.getCanUpdate(), perm.getCanDelete()))
+                        perm.getCanRead(), perm.getCanUpdate()))
                 .collect(Collectors.toList());
     }
 
@@ -288,5 +284,4 @@ public class LoginServiceImpl implements LoginService {
         dto.setRoleType(user.getRoleType());
         return dto;
     }
-
 }

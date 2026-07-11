@@ -1,6 +1,5 @@
 package com.nector.userservice.interceptors.userCreate.impl;
 
-import com.nector.userservice.common.RoleType;
 import com.nector.userservice.common.UserStatus;
 import com.nector.userservice.interceptors.distributor.model.Distributor;
 import com.nector.userservice.interceptors.distributor.model.DistributorRequestDTO;

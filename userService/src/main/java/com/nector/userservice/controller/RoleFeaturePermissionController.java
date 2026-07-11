@@ -58,7 +58,7 @@ public class RoleFeaturePermissionController {
         List<FeaturePermissionDTO> permissions = permissionRepository.findByUserId(userId)
                 .stream()
                 .map(p -> new FeaturePermissionDTO(p.getUserId(), p.getFeatureId(),
-                        p.getFeature().name(), p.getCanCreate(), p.getCanRead(), p.getCanUpdate(), p.getCanDelete()))
+                        p.getFeature().name(), p.getCanRead(), p.getCanUpdate()))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(permissions);
     }
@@ -95,10 +95,8 @@ public class RoleFeaturePermissionController {
                     ? new RoleFeaturePermission(userId, featureId, feature)
                     : existing.get(0);
 
-            permission.setCanCreate(req.getCanCreate() != null ? req.getCanCreate() : false);
             permission.setCanRead(req.getCanRead() != null ? req.getCanRead() : false);
             permission.setCanUpdate(req.getCanUpdate() != null ? req.getCanUpdate() : false);
-            permission.setCanDelete(req.getCanDelete() != null ? req.getCanDelete() : false);
 
             RoleFeaturePermission saved = permissionRepository.save(permission);
             log.info("Permission updated for userId: {}, featureId: {}", userId, featureId);
@@ -168,10 +166,8 @@ public class RoleFeaturePermissionController {
                         ? new RoleFeaturePermission(userId, featureId, feature)
                         : existing.get(0);
 
-                permission.setCanCreate(perms.getCanCreate() != null ? perms.getCanCreate() : false);
                 permission.setCanRead(perms.getCanRead() != null ? perms.getCanRead() : false);
                 permission.setCanUpdate(perms.getCanUpdate() != null ? perms.getCanUpdate() : false);
-                permission.setCanDelete(perms.getCanDelete() != null ? perms.getCanDelete() : false);
 
                 updated.add(permissionRepository.save(permission));
             }

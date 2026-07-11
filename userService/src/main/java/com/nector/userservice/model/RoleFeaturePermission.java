@@ -30,16 +30,10 @@ public class RoleFeaturePermission {
     private Features feature;
 
     @Column(nullable = false)
-    private Boolean canCreate = false;
-
-    @Column(nullable = false)
     private Boolean canRead = false;
 
     @Column(nullable = false)
     private Boolean canUpdate = false;
-
-    @Column(nullable = false)
-    private Boolean canDelete = false;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -68,10 +62,8 @@ public class RoleFeaturePermission {
 
     public boolean hasPermission(String operation) {
         return switch (operation.toUpperCase()) {
-            case "CREATE" -> canCreate;
             case "READ"   -> canRead;
             case "UPDATE" -> canUpdate;
-            case "DELETE" -> canDelete;
             default       -> false;
         };
     }

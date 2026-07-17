@@ -1,6 +1,7 @@
 package com.nector.userservice.service;
 
 import com.nector.userservice.common.UserStatus;
+import com.nector.userservice.enums.RoleCategory;
 import com.nector.userservice.model.Role;
 import com.nector.userservice.model.User;
 import com.nector.userservice.model.UserApproval;
@@ -67,14 +68,15 @@ public class RoleManagementService {
     }
 
     @Transactional
-    public Role createRole(String roleType, String name, String description) {
+    public Role createRole(String roleType, String name, String description, RoleCategory roleCategory) {
         log.info("Creating new role: {}", roleType);
 
         if (roleRepository.existsByRoleType(roleType)) {
             throw new RuntimeException("Role already exists: " + roleType);
         }
 
-        Role role = new Role(roleType, name != null ? name : roleType, description);
+        RoleCategory category = roleCategory != null ? roleCategory : RoleCategory.USER;
+        Role role = new Role(roleType, name != null ? name : roleType, description, category);
         Role saved = roleRepository.save(role);
 
         log.info("Created new role: {}", roleType);

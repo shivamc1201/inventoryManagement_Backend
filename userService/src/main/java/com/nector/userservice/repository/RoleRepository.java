@@ -1,9 +1,11 @@
 package com.nector.userservice.repository;
 
+import com.nector.userservice.enums.RoleCategory;
 import com.nector.userservice.model.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -11,4 +13,6 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
     Optional<Role> findByRoleType(String roleType);
 
     boolean existsByRoleType(String roleType);
+
+    List<Role> findByRoleCategory(RoleCategory roleCategory);
 }

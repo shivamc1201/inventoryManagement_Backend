@@ -2,6 +2,7 @@ package com.nector.userservice.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.nector.userservice.common.UserStatus;
+import com.nector.userservice.enums.UserOnboardingType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -87,7 +88,11 @@ public class User {
 
     @Column(length = 50)
     private String employeeRollNo;
-    
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "user_onboarding_type", length = 10)
+    private UserOnboardingType userOnboardingType;
+
     // Many-to-many relationship with roles for RBAC
     @JsonIgnore
     @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})

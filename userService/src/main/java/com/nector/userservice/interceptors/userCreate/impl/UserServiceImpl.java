@@ -1,18 +1,14 @@
 package com.nector.userservice.interceptors.userCreate.impl;
 
-import com.nector.userservice.common.UserStatus;
-import com.nector.userservice.interceptors.distributor.model.Distributor;
-import com.nector.userservice.interceptors.distributor.model.DistributorRequestDTO;
-import com.nector.userservice.interceptors.distributor.service.DistributorMapper;
-import com.nector.userservice.interceptors.distributor.service.DistributorService;
+import com.nector.userservice.enums.UserOnboardingType;
+import com.nector.userservice.exception.UsernameAlreadyExistsException;
 import com.nector.userservice.interceptors.userCreate.model.UserRequest;
 import com.nector.userservice.interceptors.userCreate.model.UserResponse;
-import com.nector.userservice.exception.UsernameAlreadyExistsException;
 import com.nector.userservice.interceptors.userCreate.service.UserService;
-import com.nector.userservice.model.User;
-import com.nector.userservice.model.UserApproval;
+import com.nector.userservice.model.PendingOnboardingRequest;
+import com.nector.userservice.repository.PendingOnboardingRequestRepository;
+import com.nector.userservice.repository.SalesPersonRepository;
 import com.nector.userservice.repository.UserRepository;
-import com.nector.userservice.repository.UserApprovalRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,89 +18,113 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 @Slf4j
 public class UserServiceImpl implements UserService {
-    
+
     private final UserRepository userRepository;
-    private final UserApprovalRepository userApprovalRepository;
-    private final DistributorService distributorService;
-    private final DistributorMapper distributorMapper;
-    
+    private final SalesPersonRepository salesPersonRepository;
+    private final PendingOnboardingRequestRepository pendingRepo;
+
     @Override
     @Transactional
-    public UserResponse registerNewUser(UserRequest request) throws UsernameAlreadyExistsException {
-        log.info("Entering registerNewUser() for username: {}, email: {}", request.getUsername(), request.getEmail());
-        
-        if (userRepository.existsByUsername(request.getUsername())) {
-            log.warn("Exiting registerNewUser() - Username already exists: {}", request.getUsername());
-            throw new UsernameAlreadyExistsException("Username already exists: " + request.getUsername());
-        }
-        
-        if (userRepository.existsByEmail(request.getEmail())) {
-            log.warn("Exiting registerNewUser() - Email already exists: {}", request.getEmail());
-            throw new UsernameAlreadyExistsException("Email already exists: " + request.getEmail());
-        }
-//  For later use if needed
-//        if (request.getRoleType() == RoleType.Distributor) {
-//            DistributorRequestDTO distributorRequest = new DistributorRequestDTO();
-//            distributorRequest.setContactEmail(request.getEmail());
-//            distributorRequest.setPhoneNumber(request.getContactNo());
-//            distributorRequest.setAlternateContact(request.getAlternateContactNo());
-//            distributorRequest.setName(request.getFirstName() + " " + request.getLastName());
-//            distributorRequest.setAddress(request.getCompleteAddress());
-//            log.info("Creating distributor for user: {}", request.getUsername());
-//            distributorService.createDistributor(distributorRequest);
-//        }
-        
-        User user = new User();
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
-        user.setPassword(request.getPassword());
-        user.setStatus(UserStatus.PENDING);
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setContactNo(request.getContactNo());
-        user.setAlternateContactNo(request.getAlternateContactNo());
-        user.setBloodGroup(request.getBloodGroup());
-        user.setCompleteAddress(request.getCompleteAddress());
-        user.setGender(request.getGender());
-        user.setCity(request.getCity());
-        user.setCountry(request.getCountry());
-        user.setZip(request.getZip());
-        user.setRoleType(request.getRoleType());
-        user.setDateOfBirth(request.getDateOfBirth());
-        user.setOtp("1234"); // Default OTP since OTP service is disabled
-        user.setEmployeeRollNo(request.getEmployeeRollNo());
+    public UserResponse registerNewUser(UserRequest request) {
+        log.info("Entering registerNewUser() - username: {}, type: {}", request.getUsername(), request.getUserOnboardingType());
 
-        User savedUser = userRepository.save(user);
-        
-        // Create approval request for maker-checker flow
-        UserApproval approval = new UserApproval();
-        approval.setUser(savedUser);
-        userApprovalRepository.save(approval);
+        validateTypeSpecificFields(request);
+        validateUniqueness(request);
 
+        PendingOnboardingRequest pending = new PendingOnboardingRequest();
+        pending.setUserOnboardingType(request.getUserOnboardingType());
+        pending.setUsername(request.getUsername());
+        pending.setEmail(request.getEmail());
+        pending.setPassword(request.getPassword());
+        pending.setStatus(request.getStatus());
+        pending.setFirstName(request.getFirstName());
+        pending.setLastName(request.getLastName());
+        pending.setContactNo(request.getContactNo());
+        pending.setAlternateContactNo(request.getAlternateContactNo());
+        pending.setBloodGroup(request.getBloodGroup());
+        pending.setCompleteAddress(request.getCompleteAddress());
+        pending.setCity(request.getCity());
+        pending.setCountry(request.getCountry());
+        pending.setZip(request.getZip());
+        pending.setDateOfBirth(request.getDateOfBirth());
+        pending.setGender(request.getGender());
+        pending.setEmployeeRollNo(request.getEmployeeRollNo());
+
+        if (request.getUserOnboardingType() == UserOnboardingType.USER) {
+            pending.setRoleType(request.getRoleType());
+        } else {
+            pending.setSalesRole(request.getSalesRole());
+            pending.setZone(request.getZone());
+            pending.setRegion(request.getRegion());
+        }
+
+        PendingOnboardingRequest saved = pendingRepo.save(pending);
+        log.info("Exiting registerNewUser() - pendingRequestId: {}, type: {}", saved.getId(), saved.getUserOnboardingType());
+
+        return buildResponse(saved);
+    }
+
+    private void validateTypeSpecificFields(UserRequest request) {
+        if (request.getUserOnboardingType() == UserOnboardingType.USER) {
+            if (request.getRoleType() == null || request.getRoleType().isBlank()) {
+                throw new IllegalArgumentException("roleType is required for USER onboarding type");
+            }
+        } else if (request.getUserOnboardingType() == UserOnboardingType.SALES) {
+            if (request.getSalesRole() == null) {
+                throw new IllegalArgumentException("salesRole is required for SALES onboarding type");
+            }
+        }
+    }
+
+    private void validateUniqueness(UserRequest request) {
+        String username = request.getUsername();
+        String email = request.getEmail();
+
+        // Check against already-approved users
+        if (userRepository.existsByUsername(username)) {
+            throw new UsernameAlreadyExistsException("Username already taken: " + username);
+        }
+        if (userRepository.existsByEmail(email)) {
+            throw new UsernameAlreadyExistsException("Email already registered: " + email);
+        }
+
+        // Check against already-approved sales persons
+        if (salesPersonRepository.findByUsername(username).isPresent()) {
+            throw new UsernameAlreadyExistsException("Username already taken: " + username);
+        }
+        if (salesPersonRepository.existsByEmail(email)) {
+            throw new UsernameAlreadyExistsException("Email already registered: " + email);
+        }
+
+        // Check against currently pending requests
+        if (pendingRepo.existsByUsername(username)) {
+            throw new UsernameAlreadyExistsException("A pending request already exists for username: " + username);
+        }
+        if (pendingRepo.existsByEmail(email)) {
+            throw new UsernameAlreadyExistsException("A pending request already exists for email: " + email);
+        }
+    }
+
+    private UserResponse buildResponse(PendingOnboardingRequest saved) {
         UserResponse response = new UserResponse();
-        response.setId(savedUser.getId());
-        response.setUsername(savedUser.getUsername());
-        response.setEmail(savedUser.getEmail());
-        response.setFirstName(savedUser.getFirstName());
-        response.setLastName(savedUser.getLastName());
-        response.setStatus(savedUser.getStatus());
-        response.setContactNo(savedUser.getContactNo());
-        response.setAlternateContactNo(savedUser.getAlternateContactNo());
-        response.setBloodGroup(savedUser.getBloodGroup());
-        response.setCompleteAddress(savedUser.getCompleteAddress());
-        response.setGender(savedUser.getGender());
-        response.setCity(savedUser.getCity());
-        response.setCountry(savedUser.getCountry());
-        response.setZip(savedUser.getZip());
-        response.setRoleType(savedUser.getRoleType());
-        response.setDateOfBirth(savedUser.getDateOfBirth());
-        response.setCreatedOn(savedUser.getCreatedOn());
-        response.setLastLoginTime(savedUser.getLastLoginTime());
-        response.setLoggedIn(savedUser.isLoggedIn());
-        response.setPasswordSetDate(savedUser.getPasswordSetDate());
-        response.setEmployeeRollNo(savedUser.getEmployeeRollNo());
-        
-        log.info("Exiting registerNewUser() - User registered successfully with ID: {}", savedUser.getId());
+        response.setId(saved.getId());
+        response.setUsername(saved.getUsername());
+        response.setEmail(saved.getEmail());
+        response.setFirstName(saved.getFirstName());
+        response.setLastName(saved.getLastName());
+        response.setStatus(saved.getStatus());
+        response.setContactNo(saved.getContactNo());
+        response.setAlternateContactNo(saved.getAlternateContactNo());
+        response.setBloodGroup(saved.getBloodGroup());
+        response.setCompleteAddress(saved.getCompleteAddress());
+        response.setGender(saved.getGender());
+        response.setCity(saved.getCity());
+        response.setCountry(saved.getCountry());
+        response.setZip(saved.getZip());
+        response.setDateOfBirth(saved.getDateOfBirth());
+        response.setEmployeeRollNo(saved.getEmployeeRollNo());
+        response.setRoleType(saved.getRoleType());
+        response.setUserOnboardingType(saved.getUserOnboardingType());
         return response;
     }
 }

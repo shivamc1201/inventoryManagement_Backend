@@ -1,6 +1,7 @@
 package com.nector.userservice.interceptors.userCreate.model;
 
 import com.nector.userservice.common.UserStatus;
+import com.nector.userservice.enums.UserOnboardingType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -34,6 +35,7 @@ public class UserResponse {
     private String password;
     private String employeeRollNo;
     private String roleType;
+    private UserOnboardingType userOnboardingType;
     // Optional: expose roles only if required
     private Set<String> roles;
 }

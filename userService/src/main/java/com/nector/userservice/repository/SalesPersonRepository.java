@@ -59,4 +59,6 @@ public interface SalesPersonRepository extends JpaRepository<SalesPerson, Long> 
 
     @Query("SELECT COUNT(sp) FROM SalesPerson sp WHERE sp.active = true")
     long countActiveSalesPersons();
+
+    Optional<SalesPerson> findFirstByRoleAndActiveTrueOrderByIdAsc(SalesRole role);
 }

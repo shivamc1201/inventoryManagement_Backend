@@ -1,5 +1,6 @@
 package com.nector.userservice.model;
 
+import com.nector.userservice.enums.RoleCategory;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -27,14 +28,19 @@ public class Role {
     @Column
     private String description;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role_category", nullable = false)
+    private RoleCategory roleCategory;
+
     @ManyToMany(mappedBy = "roles", fetch = FetchType.LAZY)
     private Set<User> users = new HashSet<>();
 
     public Role() {}
 
-    public Role(String roleType, String name, String description) {
+    public Role(String roleType, String name, String description, RoleCategory roleCategory) {
         this.roleType = roleType;
         this.name = name;
         this.description = description;
+        this.roleCategory = roleCategory;
     }
 }

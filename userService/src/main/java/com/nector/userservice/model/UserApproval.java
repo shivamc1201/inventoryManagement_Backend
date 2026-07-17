@@ -24,9 +24,8 @@ public class UserApproval {
     
     private LocalDateTime reviewedOn;
     
-    @ManyToOne
-    @JoinColumn(name = "reviewed_by")
-    private HrMaster reviewedBy;
+    @Column(name = "reviewed_by")
+    private String reviewedBy;
     
     private String reviewComments;
     

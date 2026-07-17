@@ -1,6 +1,7 @@
 package com.nector.userservice.controller;
 
 import com.nector.userservice.dto.CreateRoleRequest;
+import com.nector.userservice.dto.RoleResponse;
 import com.nector.userservice.enums.RoleCategory;
 import com.nector.userservice.model.Role;
 import com.nector.userservice.repository.RoleRepository;
@@ -74,8 +75,9 @@ public class RoleManagementController {
     @GetMapping("/all")
     @Operation(summary = "Get all roles", description = "Retrieves all available roles in the system")
     @ApiResponse(responseCode = "200", description = "Roles retrieved successfully")
-    public ResponseEntity<List<Role>> getAllRoles() {
-        return ResponseEntity.ok(roleManagementService.getAllRoles());
+    public ResponseEntity<List<RoleResponse>> getAllRoles() {
+        return ResponseEntity.ok(roleManagementService.getAllRoles()
+                .stream().map(RoleResponse::from).toList());
     }
 
     @GetMapping("/by-category")
@@ -84,7 +86,8 @@ public class RoleManagementController {
     public ResponseEntity<?> getRolesByCategory(@RequestParam String category) {
         try {
             RoleCategory roleCategory = RoleCategory.valueOf(category.toUpperCase());
-            List<Role> roles = roleRepository.findByRoleCategory(roleCategory);
+            List<RoleResponse> roles = roleRepository.findByRoleCategory(roleCategory)
+                    .stream().map(RoleResponse::from).toList();
             return ResponseEntity.ok(roles);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", "category must be USER or SALES"));

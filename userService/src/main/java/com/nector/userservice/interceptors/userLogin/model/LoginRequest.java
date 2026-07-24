@@ -18,4 +18,8 @@ public class LoginRequest {
     public String getUsername() {
         return username != null ? username.trim() : null;
     }
+
+    public String getPassword() {
+        return password != null ? password.trim() : null;
+    }
 }

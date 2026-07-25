@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class ApprovalRequest {
-    private Long userId;
-    private String action; // APPROVE or REJECT
+    private Long pendingRequestId;
+    private String action;   // APPROVE or REJECT
     private String comments;
 }

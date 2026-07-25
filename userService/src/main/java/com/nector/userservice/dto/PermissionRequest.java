@@ -7,15 +7,9 @@ import lombok.Data;
 @Schema(description = "Request DTO for role-feature permissions")
 public class PermissionRequest {
     
-    @Schema(description = "Permission to create new records", example = "true")
-    private Boolean canCreate = false;
-    
     @Schema(description = "Permission to read/view records", example = "true")
     private Boolean canRead = false;
-    
+
     @Schema(description = "Permission to update existing records", example = "false")
     private Boolean canUpdate = false;
-    
-    @Schema(description = "Permission to delete records", example = "false")
-    private Boolean canDelete = false;
 }

@@ -18,7 +18,6 @@ import com.nector.userservice.ordertracking.service.OrderTrackingService;
 import com.nector.userservice.ordertracking.repository.OrderTrackingStepRepository;
 import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
 import com.nector.userservice.repository.UserRepository;
-import com.nector.userservice.service.RbacService;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.interceptors.distributor.model.Distributor;
 import com.nector.userservice.repository.DistributorLedgerRepository;
@@ -61,7 +60,6 @@ public class GdnService {
     private final OrderTrackingService orderTrackingService;
     private final OrderTrackingStepRepository orderTrackingStepRepository;
     private final UserRepository userRepository;
-    private final RbacService rbacService;
     private final DistributorRepository distributorRepository;
     private final DistributorLedgerRepository distributorLedgerRepository;
     private final com.nector.userservice.service.DocumentNumberService documentNumberService;

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+
 import lombok.Data;
 import lombok.Setter;
 
@@ -63,7 +64,7 @@ public class UserUpdateRequest {
     private String zip;
 
     @Schema(description = "Role type", example = "ACCOUNT_MGR")
-    private RoleType roleType;
+    private String roleType;
 
     @Size(min = 6, max = 100, message = "Password must be between 6 and 100 characters")
     @Schema(description = "User password (optional, only updates if provided)", example = "newPassword123")

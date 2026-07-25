@@ -13,7 +13,6 @@ import com.nector.userservice.interceptors.distributor.repository.DistributorRep
 import com.nector.userservice.ordertracking.service.OrderTrackingService;
 import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
 import com.nector.userservice.ordertracking.dto.CreateOrderTrackingRequest;
-import com.nector.userservice.service.RbacService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
@@ -50,9 +49,6 @@ public class PaymentService {
 
     @Autowired
     private OrderTrackingService orderTrackingService;
-    
-    @Autowired
-    private RbacService rbacService;
     
     @Autowired
     private DocumentNumberService documentNumberService;

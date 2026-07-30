@@ -10,8 +10,16 @@ public class LoginRequest {
     @NotBlank(message = "Username is required")
     @Schema(description = "Username", example = "johndoe123")
     private String username;
-    
+
     @NotBlank(message = "Password is required")
     @Schema(description = "Password", example = "SecurePass123!")
     private String password;
+
+    public String getUsername() {
+        return username != null ? username.trim() : null;
+    }
+
+    public String getPassword() {
+        return password != null ? password.trim() : null;
+    }
 }

@@ -35,15 +35,11 @@ public class BomPriceChangeServiceImpl implements BomPriceChangeService {
     public void handleRawMaterialPriceChange(RawProduct rawProduct, BigDecimal oldPrice, BigDecimal newPrice) {
         BigDecimal changePercent = computeChangePercent(oldPrice, newPrice);
 
-        if (rawProduct.getName() == null) {
-            throw new IllegalStateException(
-                "Raw material ID " + rawProduct.getId() + " (code: " + rawProduct.getMaterialCode() + ") has no name. Update the product name before processing this approval."
-            );
-        }
+        String effectiveName = rawProduct.getName() != null ? rawProduct.getName() : rawProduct.getMaterialCode();
 
         RawMaterialPriceHistory history = RawMaterialPriceHistory.builder()
                 .rawMaterialId(rawProduct.getId())
-                .rawMaterialName(rawProduct.getName())
+                .rawMaterialName(effectiveName)
                 .materialCode(rawProduct.getMaterialCode())
                 .oldPrice(oldPrice)
                 .newPrice(newPrice)

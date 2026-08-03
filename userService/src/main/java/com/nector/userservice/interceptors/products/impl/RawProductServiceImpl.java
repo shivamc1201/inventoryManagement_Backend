@@ -101,9 +101,9 @@ public class RawProductServiceImpl implements RawProductService {
 
         BigDecimal oldPrice = product.getPrice();
 
-        product.setName(request.getName());
-        product.setUnit(request.getUnit());
-        product.setPrice(request.getPrice());
+        if (request.getName() != null) product.setName(request.getName());
+        if (request.getUnit() != null) product.setUnit(request.getUnit());
+        if (request.getPrice() != null) product.setPrice(request.getPrice());
 
         BigDecimal qtyAdded = null;
         if (request.getQuantity() != null && request.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
@@ -112,17 +112,17 @@ public class RawProductServiceImpl implements RawProductService {
             qtyAdded = request.getQuantity();
         }
 
-        product.setMinimumThreshold(request.getMinimumThreshold());
-        product.setHsn(request.getHsn());
-        product.setTaxRate(request.getTaxRate());
-        product.setVendorId(request.getVendorId());
-        product.setVendorName(request.getVendorName());
-        product.setTransportName(request.getTransportName());
-        product.setDriverName(request.getDriverName());
-        product.setDriverMobile(request.getDriverMobile());
-        product.setRate(request.getRate());
-        product.setGst(request.getGst());
-        product.setGrossAmount(request.getGrossAmount());
+        if (request.getMinimumThreshold() != null) product.setMinimumThreshold(request.getMinimumThreshold());
+        if (request.getHsn() != null) product.setHsn(request.getHsn());
+        if (request.getTaxRate() != null) product.setTaxRate(request.getTaxRate());
+        if (request.getVendorId() != null && !request.getVendorId().isBlank()) product.setVendorId(request.getVendorId());
+        if (request.getVendorName() != null && !request.getVendorName().isBlank()) product.setVendorName(request.getVendorName());
+        if (request.getTransportName() != null && !request.getTransportName().isBlank()) product.setTransportName(request.getTransportName());
+        if (request.getDriverName() != null && !request.getDriverName().isBlank()) product.setDriverName(request.getDriverName());
+        if (request.getDriverMobile() != null && !request.getDriverMobile().isBlank()) product.setDriverMobile(request.getDriverMobile());
+        if (request.getRate() != null) product.setRate(request.getRate());
+        if (request.getGst() != null) product.setGst(request.getGst());
+        if (request.getGrossAmount() != null) product.setGrossAmount(request.getGrossAmount());
         if (request.getStatus() != null) product.setStatus(request.getStatus());
 
         if (image != null && !image.isEmpty()) {

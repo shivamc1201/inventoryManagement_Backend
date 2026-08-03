@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/permissions")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "User Permissions", description = "APIs for managing user permissions and features")
 public class UserPermissionController {
 
@@ -36,6 +38,7 @@ public class UserPermissionController {
     @Operation(summary = "Get all features", description = "Retrieves all available features in the system")
     @ApiResponse(responseCode = "200", description = "Features retrieved successfully")
     public ResponseEntity<Map<String, Object>> getAllFeatures() {
+        log.info("Entering getAllFeatures()");
         Map<String, Object> response = Map.of(
             "features", Arrays.stream(Features.values())
                 .map(feature -> Map.of(
@@ -45,6 +48,7 @@ public class UserPermissionController {
                 ))
                 .collect(Collectors.toList())
         );
+        log.info("Exiting getAllFeatures() - returned {} features", Features.values().length);
         return ResponseEntity.ok(response);
     }
 
@@ -52,10 +56,12 @@ public class UserPermissionController {
     @Operation(summary = "Get all users", description = "Retrieves all users in the system")
     @ApiResponse(responseCode = "200", description = "Users retrieved successfully")
     public ResponseEntity<List<UserResponse>> getAllUsers() {
+        log.info("Entering getAllUsers()");
         List<UserResponse> users = userRepository.findAll().stream()
             .filter(user -> !"SUPER_ADMIN".equals(user.getRoleType()))
             .map(this::mapToUserResponse)
             .collect(Collectors.toList());
+        log.info("Exiting getAllUsers() - returned {} users", users.size());
         return ResponseEntity.ok(users);
     }
 
@@ -66,7 +72,9 @@ public class UserPermissionController {
     public ResponseEntity<?> updateUser(
             @PathVariable Long userId,
             @Valid @RequestBody UserUpdateRequest request) {
+        log.info("Entering updateUser() for userId: {}", userId);
         User updatedUser = userService.updateUser(userId, request);
+        log.info("Exiting updateUser() - updated user: {}", updatedUser.getUsername());
         return ResponseEntity.ok(
                 Map.of("message", "User updated successfully", "username", updatedUser.getUsername(),
                         "status", updatedUser.getStatus(), "password", updatedUser.getPassword())
@@ -77,12 +85,15 @@ public class UserPermissionController {
     @Operation(summary = "Suspend user", description = "Suspends a specific user")
     @ApiResponse(responseCode = "200", description = "User suspended successfully")
     public ResponseEntity<?> removalOfUser(@PathVariable Long userId) {
+        log.info("Entering removalOfUser() - suspending userId: {}", userId);
         try {
             User updatedUser = userService.suspendUser(userId);
+            log.info("Exiting removalOfUser() - suspended user: {}", updatedUser.getUsername());
             return ResponseEntity.ok(
                     Map.of("message", "User suspended successfully", "username", updatedUser.getUsername())
             );
         } catch (EntityNotFoundException e) {
+            log.warn("Exiting removalOfUser() - userId: {} not found", userId);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "User not found"));
         }
@@ -93,13 +104,17 @@ public class UserPermissionController {
     @ApiResponse(responseCode = "200", description = "User deleted successfully")
     @ApiResponse(responseCode = "404", description = "User not found")
     public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
+        log.info("Entering deleteUser() - permanently deleting userId: {}", userId);
         try {
             userService.deleteUser(userId);
+            log.info("Exiting deleteUser() - deleted userId: {}", userId);
             return ResponseEntity.ok(Map.of("message", "User deleted successfully"));
         } catch (EntityNotFoundException e) {
+            log.warn("Exiting deleteUser() - userId: {} not found", userId);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "User not found"));
         } catch (DataIntegrityViolationException e) {
+            log.warn("Exiting deleteUser() - cannot delete userId: {} due to related data", userId);
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("error", "Cannot delete user - user has related data"));
         }

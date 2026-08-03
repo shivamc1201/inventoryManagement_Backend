@@ -59,7 +59,21 @@ public enum Features {
     HR_KRA_KPI("HR KRA / KPI", "/hr/kra-kpi"),
 
     // --- Support Sub-Items ---
-    COMPLAINTS_MANAGEMENT("Complaints Management", "/complaint/complaints_management");
+    COMPLAINTS_MANAGEMENT("Complaints Management", "/complaint/complaints_management"),
+
+    // --- Reports Section ---
+    REPORTS("Reports", "/reports"),
+    REPORT_MIS_DASHBOARD("MIS Dashboard", "/reports/mis-dashboard"),
+    REPORT_INVENTORY("Inventory Reports", "/reports/inventory"),
+    REPORT_STOCK_MOVEMENT("Stock Movement", "/reports/stock-movement"),
+    REPORT_BATCH_MANAGEMENT("Batch Management", "/reports/batch-management"),
+    REPORT_PRODUCTION("Production Reports", "/reports/production"),
+    REPORT_SALES("Sales Reports", "/reports/sales"),
+    REPORT_RECEIVABLES("Receivables & Collections", "/reports/receivables"),
+    REPORT_SALES_ORDERS("Sales Orders", "/reports/sales-orders"),
+    REPORT_DISPATCH("Dispatch & Delivery", "/reports/dispatch"),
+    REPORT_INVENTORY_ISSUES("Inventory Issues", "/reports/inventory-issues"),
+    REPORT_SCRAP("Scrap Management", "/reports/scrap");
 
     // Getters
     // --- Enum Attributes ---

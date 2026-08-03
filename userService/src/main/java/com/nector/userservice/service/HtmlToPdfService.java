@@ -1,5 +1,6 @@
 package com.nector.userservice.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -15,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 @Service
+@Slf4j
 public class HtmlToPdfService {
 
     @Autowired
@@ -26,14 +28,18 @@ public class HtmlToPdfService {
     private volatile String webIconUri;
 
     public byte[] convertHtmlToPdf(String html) {
+        log.info("Entering convertHtmlToPdf() - htmlLength: {} characters", html != null ? html.length() : 0);
         try {
             ITextRenderer renderer = new ITextRenderer();
             renderer.setDocumentFromString(html);
             renderer.layout();
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             renderer.createPDF(out);
-            return out.toByteArray();
+            byte[] pdfBytes = out.toByteArray();
+            log.info("Exiting convertHtmlToPdf() - generated PDF of {} bytes", pdfBytes.length);
+            return pdfBytes;
         } catch (Exception e) {
+            log.error("convertHtmlToPdf() failed - {}", e.getMessage(), e);
             throw new RuntimeException("Failed to convert HTML to PDF", e);
         }
     }

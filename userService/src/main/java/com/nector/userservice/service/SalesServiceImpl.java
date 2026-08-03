@@ -5,12 +5,14 @@ import com.nector.userservice.dto.sales.SalesResponse;
 import com.nector.userservice.model.SalesEntity;
 import com.nector.userservice.repository.SalesRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class SalesServiceImpl implements SalesService {
 
     private final SalesRepository salesRepository;
@@ -18,15 +20,17 @@ public class SalesServiceImpl implements SalesService {
 
     @Override
     public SalesResponse createSalesEntry(SalesRequest request) {
-            SalesEntity sales = new SalesEntity();
-            sales.setProductName(request.getProductName());
-            sales.setQuantity(request.getQuantity());
-            sales.setPrice(request.getPrice());
-            sales.setCustomerName(request.getCustomerName());
-            sales.setSaleDate(request.getSaleDate());
+        log.info("Entering createSalesEntry() - product: {}, customer: {}, quantity: {}", request.getProductName(), request.getCustomerName(), request.getQuantity());
+        SalesEntity sales = new SalesEntity();
+        sales.setProductName(request.getProductName());
+        sales.setQuantity(request.getQuantity());
+        sales.setPrice(request.getPrice());
+        sales.setCustomerName(request.getCustomerName());
+        sales.setSaleDate(request.getSaleDate());
 
-            SalesEntity savedSales = salesRepository.save(sales);
-            return mapToResponse(savedSales);
+        SalesEntity savedSales = salesRepository.save(sales);
+        log.info("Exiting createSalesEntry() - created sales entry with ID: {}", savedSales.getId());
+        return mapToResponse(savedSales);
     }
 
     private SalesResponse mapToResponse(SalesEntity savedSales) {

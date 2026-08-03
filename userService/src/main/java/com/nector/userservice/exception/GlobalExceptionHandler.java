@@ -104,7 +104,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, String>> handleIllegalState(IllegalStateException ex) {
         Map<String, String> error = new HashMap<>();
-        error.put("error", "Invalid operation - request cannot be processed");
+        error.put("error", ex.getMessage() != null ? ex.getMessage() : "Invalid operation - request cannot be processed");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
     

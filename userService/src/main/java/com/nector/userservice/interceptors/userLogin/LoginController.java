@@ -1,6 +1,6 @@
 package com.nector.userservice.interceptors.userLogin;
 
-import com.nector.userservice.common.BaseLoginResponse;
+import com.nector.userservice.common .BaseLoginResponse;
 import com.nector.userservice.dto.UserDetailsDTO;
 import com.nector.userservice.interceptors.userLogin.model.LoginRequest;
 import com.nector.userservice.interceptors.userLogin.model.LoginResponse;
@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "Authentication", description = "APIs for user authentication")
 public class LoginController {
 
@@ -30,10 +32,13 @@ public class LoginController {
     @ApiResponse(responseCode = "200", description = "Login successful with permissions")
     @ApiResponse(responseCode = "400", description = "Invalid credentials")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+        log.info("Entering login() for username: {}", request.getUsername());
         try {
             BaseLoginResponse response = loginService.authenticateWithPermissions(request);
+            log.info("Exiting login() - login successful for username: {}", request.getUsername());
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
+            log.warn("Exiting login() - login failed for username: {} - {}", request.getUsername(), e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
@@ -41,10 +46,13 @@ public class LoginController {
     @PostMapping("/login/secondUser")
     @ApiResponse(responseCode = "200", description = "Second user login successful")
     public ResponseEntity<?> loginSecondUser(@Valid @RequestBody LoginRequest request) {
+        log.info("Entering loginSecondUser() for username: {}", request.getUsername());
         try {
             LoginResponse response = loginService.authenticateSecondUser(request);
+            log.info("Exiting loginSecondUser() - login successful for username: {}", request.getUsername());
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
+            log.warn("Exiting loginSecondUser() - login failed for username: {} - {}", request.getUsername(), e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
@@ -54,10 +62,13 @@ public class LoginController {
     @ApiResponse(responseCode = "200", description = "User details retrieved successfully")
     @ApiResponse(responseCode = "404", description = "User not found")
     public ResponseEntity<?> getUserDetailsByUsername(@PathVariable String username) {
+        log.info("Entering getUserDetailsByUsername() for username: {}", username);
         try {
             UserDetailsDTO userDetails = loginService.getUserDetailsByUsername(username);
+            log.info("Exiting getUserDetailsByUsername() - found user: {}", username);
             return ResponseEntity.ok(userDetails);
         } catch (RuntimeException e) {
+            log.warn("Exiting getUserDetailsByUsername() - user not found: {} - {}", username, e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", e.getMessage()));
         }

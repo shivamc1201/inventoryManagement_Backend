@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +31,7 @@ import com.lowagie.text.pdf.*;
 @RestController
 @RequestMapping("/api/accounts")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "Accounts", description = "APIs for Accounts Team management")
 public class AccountsController {
 
@@ -40,19 +42,21 @@ public class AccountsController {
     @Operation(summary = "Process payment", description = "Processes payment and updates distributor ledger")
     @ApiResponse(responseCode = "200", description = "Payment processed successfully")
     public ResponseEntity<PaymentResponse> processPayment(@RequestBody PaymentRequest paymentRequest) {
+        log.info("Entering processPayment() - distributorId: {}, amount: {}", paymentRequest.getDistributorId(), paymentRequest.getAmount());
         PaymentResponse processedPayment = paymentService.processPayment(paymentRequest);
+        log.info("Exiting processPayment() - processed payment for distributorId: {}", paymentRequest.getDistributorId());
         return ResponseEntity.ok(processedPayment);
     }
-    
+
     @PostMapping("/approve-PI/{orderId}")
     @Operation(summary = "Check and approve PI", description = "Checks distributor balance and approves PI if sufficient funds")
     @ApiResponse(responseCode = "200", description = "Order approval status returned")
     public ResponseEntity<OrderApprovalResponse> approveOrder(
             @PathVariable Long orderId,
             @RequestParam Long distributorId) {
-        
-        // Check if cart is active
+        log.info("Entering approveOrder() - orderId: {}, distributorId: {}", orderId, distributorId);
         if (!paymentService.isCartApproved(orderId)) {
+            log.warn("Exiting approveOrder() - cart not approved for orderId: {}", orderId);
             OrderApprovalResponse response = new OrderApprovalResponse();
             response.setOrderId(orderId);
             response.setDistributorId(distributorId);
@@ -60,8 +64,9 @@ public class AccountsController {
             response.setMessage("Cart is not approved or does not exist");
             return ResponseEntity.status(400).body(response);
         }
-        
+
         OrderApprovalResponse approval = paymentService.checkAndApproveOrder(orderId, distributorId);
+        log.info("Exiting approveOrder() - orderId: {}, status: {}", orderId, approval.getStatus());
         return ResponseEntity.ok(approval);
     }
     
@@ -79,10 +84,12 @@ public class AccountsController {
     public ResponseEntity<OrderApprovalResponse> approvePayment(
             @PathVariable Long orderId,
             @RequestParam Long distributorId) {
+        log.info("Entering approvePayment() - orderId: {}, distributorId: {}", orderId, distributorId);
         OrderApprovalResponse approval = paymentService.approvePaymentForOrder(orderId, distributorId);
+        log.info("Exiting approvePayment() - orderId: {}, status: {}", orderId, approval.getStatus());
         return ResponseEntity.ok(approval);
     }
-    
+
     @PostMapping("/add-credit/{distributorId}")
     @Operation(summary = "Add credit to distributor", description = "Increases the credit limit (creditAmount) for a distributor")
     @ApiResponse(responseCode = "200", description = "Credit added successfully")
@@ -90,13 +97,14 @@ public class AccountsController {
             @PathVariable Long distributorId,
             @RequestParam BigDecimal amount,
             @RequestParam(required = false, defaultValue = "Credit added by accounts team") String description) {
+        log.info("Entering addCreditToDistributor() - distributorId: {}, amount: {}", distributorId, amount);
         paymentService.addCreditToDistributor(distributorId, amount, description);
 
         PaymentApprovalResponse response = new PaymentApprovalResponse();
         response.setPaymentId(null);
         response.setMessage("Credit of " + amount + " added successfully to distributor " + distributorId);
         response.setStatus("CREDIT_ADDED");
-
+        log.info("Exiting addCreditToDistributor() - added credit {} to distributorId: {}", amount, distributorId);
         return ResponseEntity.ok(response);
     }
 
@@ -179,7 +187,9 @@ public class AccountsController {
     public ResponseEntity<String> paymentApproval(
             @PathVariable Long paymentId,
             @RequestParam Long approvedBy) {
+        log.info("Entering paymentApproval() - paymentId: {}, approvedBy: {}", paymentId, approvedBy);
         paymentService.approvePayment(paymentId, approvedBy);
+        log.info("Exiting paymentApproval() - approved paymentId: {}", paymentId);
         return ResponseEntity.ok("Payment approved and ledger updated");
     }
 
@@ -190,7 +200,9 @@ public class AccountsController {
             @PathVariable Long paymentId,
             @RequestParam Long rejectedBy,
             @RequestBody PaymentRejectionRequest request) {
+        log.info("Entering paymentRejection() - paymentId: {}, rejectedBy: {}", paymentId, rejectedBy);
         paymentService.rejectPayment(paymentId, rejectedBy, request.getReason());
+        log.info("Exiting paymentRejection() - rejected paymentId: {}", paymentId);
         return ResponseEntity.ok("Payment rejected successfully");
     }
 

@@ -839,7 +839,8 @@ public class PaymentService {
             
             BigDecimal totalAmount = cartRepository.findTotalCartAmountById(cartId);
             if (totalAmount == null) {
-                throw new RuntimeException("Cart total_cart_amount is null for cart: " + cartId);
+                totalAmount = BigDecimal.ZERO;
+                log.warn("Cart {} has no total amount (no items?), defaulting to ZERO for order tracking", cartId);
             }
             log.info("Total amount from cart: {}", totalAmount);
             

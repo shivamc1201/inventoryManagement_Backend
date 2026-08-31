@@ -47,4 +47,22 @@ public class SalesKpiUpdateController {
         Map<String, Object> result = salesKpiUpdateService.recalculateForMonth(m, y);
         return ResponseEntity.ok(result);
     }
+
+    @PostMapping("/deduplicate")
+    @Operation(
+        summary = "Remove duplicate sales KPI rows for a month",
+        description = "Deletes extra rows in sales_KPI_update that share the same empCode+date, " +
+                      "keeping the oldest (lowest id) record. Run this before /recalculate to get correct KPI values. " +
+                      "Defaults to current month if month/year not supplied."
+    )
+    public ResponseEntity<Map<String, Object>> deduplicate(
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year) {
+        LocalDate ref = (month == null || year == null) ? LocalDate.now() : LocalDate.of(year, month, 1);
+        int m = ref.getMonthValue();
+        int y = ref.getYear();
+        log.info("KPI deduplicate triggered for {}/{}", m, y);
+        Map<String, Object> result = salesKpiUpdateService.deduplicateMonth(m, y);
+        return ResponseEntity.ok(result);
+    }
 }

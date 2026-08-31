@@ -523,25 +523,36 @@ public class CartService {
             com.nector.userservice.ordertracking.entity.OrderTracking order = 
                 orderTrackingService.getOrderRepository().findByCartId(cartId);
             
+            // If no tracking record exists yet (cart dismissed before being placed), create one now
+            if (order == null) {
+                try {
+                    paymentService.createOrderTrackingFromCart(cartId);
+                    order = orderTrackingService.getOrderRepository().findByCartId(cartId);
+                    log.info("Created order tracking record for pre-placement dismissed cart {}", cartId);
+                } catch (Exception createEx) {
+                    log.error("Could not create order tracking for dismissed cart {}: {}", cartId, createEx.getMessage());
+                }
+            }
+
             if (order != null) {
                 UpdateStepRequest request = new UpdateStepRequest();
                 request.setStatus("cancelled");
                 request.setRemarks("Order rejected by sales: " + reason);
                 request.setDate(java.time.LocalDate.now().toString());
-                
+
                 // Add assigned person (salesperson) information
                 if (cart.getSalespersonId() != null) {
                     request.setAssignedPersonId(cart.getSalespersonId());
                     request.setAssignedPersonName(cart.getSalespersonName());
                     request.setAssignedPersonRole("SALES_EXECUTIVE");
-                    
+
                     // Get salesperson details
                     salesPersonRepository.findById(cart.getSalespersonId()).ifPresent(salesperson -> {
                         request.setAssignedPersonPhone(salesperson.getPhone());
                         request.setAssignedPersonEmail(salesperson.getEmail());
                     });
                 }
-                
+
                 orderTrackingService.updateStepBySequence(order.getId(), 3, request);
                 log.info("Order tracking Step 3 cancelled for cart {} with reason: {}", cartId, reason);
             }

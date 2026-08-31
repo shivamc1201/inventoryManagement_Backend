@@ -13,6 +13,7 @@ import com.nector.userservice.repository.SalesKpiUpdateRepository;
 import com.nector.userservice.repository.SalesPersonRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -54,8 +56,10 @@ public class SalesKpiUpdateService {
 
         for (SalesKpiUpdateRequest req : requests) {
             LocalDate entryDate = LocalDate.parse(req.getDate());
+
+            // App-level fast-path check (not race-condition-safe on its own)
             if (salesKpiUpdateRepository.existsByEmpCodeAndDate(req.getEmpCode(), entryDate)) {
-                log.warn("Duplicate entry skipped for empCode={} date={}", req.getEmpCode(), req.getDate());
+                log.warn("Duplicate skipped (pre-check) empCode={} date={}", req.getEmpCode(), req.getDate());
                 continue;
             }
 
@@ -92,7 +96,13 @@ public class SalesKpiUpdateService {
                 }
             }
 
-            saved.add(salesKpiUpdateRepository.save(entity));
+            try {
+                saved.add(salesKpiUpdateRepository.saveAndFlush(entity));
+            } catch (DataIntegrityViolationException e) {
+                // DB unique constraint on (emp_code, date) caught a concurrent duplicate
+                log.warn("Duplicate rejected by DB constraint empCode={} date={}", req.getEmpCode(), req.getDate());
+                continue;
+            }
 
             // Update KPI achievements AFTER saving so meeting details are persisted
             if (spOpt.isPresent()) {
@@ -145,21 +155,53 @@ public class SalesKpiUpdateService {
     }
 
     /**
+     * Deletes duplicate rows in sales_KPI_update for a given month, keeping the
+     * lowest-id row per (empCode, date). Cascade-deletes their meeting details.
+     * Returns counts of duplicates removed per empCode for auditability.
+     */
+    @Transactional
+    public Map<String, Object> deduplicateMonth(int month, int year) {
+        LocalDate startDate = LocalDate.of(year, month, 1);
+        LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+
+        List<Long> duplicateIds = salesKpiUpdateRepository.findDuplicateIds(startDate, endDate);
+        if (duplicateIds.isEmpty()) {
+            log.info("No duplicates found for {}/{}", month, year);
+            return Map.of("month", month, "year", year, "duplicatesRemoved", 0);
+        }
+
+        log.info("Removing {} duplicate sales_KPI_update rows for {}/{}", duplicateIds.size(), month, year);
+        // Delete children first (FK constraint), then parents
+        salesKpiUpdateRepository.deleteMeetingDetailsByUpdateIds(duplicateIds);
+        salesKpiUpdateRepository.deleteByIds(duplicateIds);
+
+        return Map.of("month", month, "year", year, "duplicatesRemoved", duplicateIds.size());
+    }
+
+    /**
      * Recalculates achieved values for all KPI assignments in a given month by:
      * 1. Resetting all assignments' achievedValue to 0
-     * 2. Replaying all stored meeting details for that date range
+     * 2. Replaying stored meeting details — using only the canonical (lowest-id) row
+     *    per (empCode, date) to guard against any remaining duplicates.
      *
-     * Safe to call multiple times (idempotent). Handles past-month assignments
-     * that may be EXPIRED (bypasses the date-range constraint used by live updates).
+     * Safe to call multiple times (idempotent). Call deduplicateMonth first to
+     * permanently clean up duplicates, then recalculate to get correct KPI values.
      */
     @Transactional
     public Map<String, Object> recalculateForMonth(int month, int year) {
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
 
-        // Step 1: Aggregate meeting type counts per employee across all updates in the month
-        List<SalesKpiUpdate> updates =
+        // Step 1: Fetch all rows ordered by id ASC, then deduplicate in-memory
+        // keeping only the first (lowest id) row per empCode+date.
+        List<SalesKpiUpdate> rawUpdates =
                 salesKpiUpdateRepository.findByDateBetweenWithDetails(startDate, endDate);
+
+        Map<String, SalesKpiUpdate> canonical = new LinkedHashMap<>();
+        for (SalesKpiUpdate u : rawUpdates) {
+            canonical.putIfAbsent(u.getEmpCode() + "|" + u.getDate(), u);
+        }
+        List<SalesKpiUpdate> updates = new ArrayList<>(canonical.values());
 
         // employeeId -> (kpiName -> total count)
         Map<Long, Map<String, Long>> employeeKpiCounts = new HashMap<>();
@@ -168,7 +210,6 @@ public class SalesKpiUpdateService {
         for (SalesKpiUpdate update : updates) {
             SalesPerson sp = update.getSalesPerson();
             if (sp == null) {
-                // Backfill: row was saved before the FK was populated — resolve by empCode
                 Optional<SalesPerson> spOpt = salesPersonRepository.findByEmployeeRollNo(update.getEmpCode());
                 if (spOpt.isEmpty()) {
                     log.warn("Recalculate: no SalesPerson for empCode={}, skipping", update.getEmpCode());
@@ -176,7 +217,6 @@ public class SalesKpiUpdateService {
                     continue;
                 }
                 sp = spOpt.get();
-                // Persist the FK so future recalculations don't need the fallback
                 update.setSalesPerson(sp);
                 salesKpiUpdateRepository.save(update);
             }

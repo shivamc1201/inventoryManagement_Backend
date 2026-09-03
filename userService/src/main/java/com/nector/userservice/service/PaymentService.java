@@ -839,8 +839,11 @@ public class PaymentService {
             
             BigDecimal totalAmount = cartRepository.findTotalCartAmountById(cartId);
             if (totalAmount == null) {
-                totalAmount = BigDecimal.ZERO;
-                log.warn("Cart {} has no total amount (no items?), defaulting to ZERO for order tracking", cartId);
+                totalAmount = cart.getCartItems().stream()
+                    .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+                log.warn("Cart {} had no persisted totalCartAmount, computed {} from {} items",
+                    cartId, totalAmount, cart.getCartItems().size());
             }
             log.info("Total amount from cart: {}", totalAmount);
             

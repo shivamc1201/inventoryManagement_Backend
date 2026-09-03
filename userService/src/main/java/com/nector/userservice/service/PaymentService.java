@@ -839,7 +839,11 @@ public class PaymentService {
             
             BigDecimal totalAmount = cartRepository.findTotalCartAmountById(cartId);
             if (totalAmount == null) {
-                throw new RuntimeException("Cart total_cart_amount is null for cart: " + cartId);
+                totalAmount = cart.getCartItems().stream()
+                    .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+                log.warn("Cart {} had no persisted totalCartAmount, computed {} from {} items",
+                    cartId, totalAmount, cart.getCartItems().size());
             }
             log.info("Total amount from cart: {}", totalAmount);
             

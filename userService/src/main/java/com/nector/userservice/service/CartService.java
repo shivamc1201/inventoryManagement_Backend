@@ -392,6 +392,14 @@ public class CartService {
             }
 
             if (order != null) {
+                // Sync total amount — self-heals if order was created with 0 at placement time
+                if (updatedCart.getTotalCartAmount() != null &&
+                        updatedCart.getTotalCartAmount().compareTo(order.getTotalAmount()) != 0) {
+                    order.setTotalAmount(updatedCart.getTotalCartAmount());
+                    orderTrackingService.getOrderRepository().save(order);
+                    log.info("Synced totalAmount {} to order tracking for cart {}", updatedCart.getTotalCartAmount(), updatedCart.getId());
+                }
+
                 UpdateStepRequest request = new UpdateStepRequest();
                 request.setStatus("completed");
                 request.setRemarks("Order approved by sales team");
@@ -523,25 +531,36 @@ public class CartService {
             com.nector.userservice.ordertracking.entity.OrderTracking order = 
                 orderTrackingService.getOrderRepository().findByCartId(cartId);
             
+            // If no tracking record exists yet (cart dismissed before being placed), create one now
+            if (order == null) {
+                try {
+                    paymentService.createOrderTrackingFromCart(cartId);
+                    order = orderTrackingService.getOrderRepository().findByCartId(cartId);
+                    log.info("Created order tracking record for pre-placement dismissed cart {}", cartId);
+                } catch (Exception createEx) {
+                    log.error("Could not create order tracking for dismissed cart {}: {}", cartId, createEx.getMessage());
+                }
+            }
+
             if (order != null) {
                 UpdateStepRequest request = new UpdateStepRequest();
                 request.setStatus("cancelled");
                 request.setRemarks("Order rejected by sales: " + reason);
                 request.setDate(java.time.LocalDate.now().toString());
-                
+
                 // Add assigned person (salesperson) information
                 if (cart.getSalespersonId() != null) {
                     request.setAssignedPersonId(cart.getSalespersonId());
                     request.setAssignedPersonName(cart.getSalespersonName());
                     request.setAssignedPersonRole("SALES_EXECUTIVE");
-                    
+
                     // Get salesperson details
                     salesPersonRepository.findById(cart.getSalespersonId()).ifPresent(salesperson -> {
                         request.setAssignedPersonPhone(salesperson.getPhone());
                         request.setAssignedPersonEmail(salesperson.getEmail());
                     });
                 }
-                
+
                 orderTrackingService.updateStepBySequence(order.getId(), 3, request);
                 log.info("Order tracking Step 3 cancelled for cart {} with reason: {}", cartId, reason);
             }
@@ -580,11 +599,27 @@ public class CartService {
         if (cart.getStatus() != Cart.CartStatus.ACTIVE) {
             throw new InvalidCartStatusException("Cannot place order for cart with status: " + cart.getStatus());
         }
-        // Save the address and update status
+        // Validate cart contents before any state mutation
+        if (cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
+            throw new InvalidCartStatusException("Cannot place order: cart has no items");
+        }
+        boolean hasInvalidPrice = cart.getCartItems().stream()
+                .anyMatch(item -> item.getPriceAtTime() == null || item.getQuantity() == null || item.getQuantity() <= 0);
+        if (hasInvalidPrice) {
+            throw new InvalidCartStatusException("Cannot place order: one or more cart items have invalid price or quantity");
+        }
+        BigDecimal placedTotal = cart.getCartItems().stream()
+                .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (placedTotal.compareTo(BigDecimal.ZERO) == 0) {
+            throw new InvalidCartStatusException("Cannot place order: cart total amount is zero");
+        }
+        // All validations passed — now mutate state and save
         long cartSaveStart = System.currentTimeMillis();
         cart.setAddress(request.getAddress());
         cart.setDeliveryBy(request.getDeliveryBy());
         cart.setStatus(Cart.CartStatus.PLACED);
+        cart.setTotalCartAmount(placedTotal);
         Cart updatedCart = cartRepository.save(cart);
         
         // Create order tracking synchronously after cart is saved
@@ -627,7 +662,16 @@ public class CartService {
                 paymentService.createOrderTrackingFromCart(cart.getId());
                 log.info("OrderTracking record created for cart {}", cart.getId());
             } else {
-                // Order tracking exists - update deliveryBy on first step if cart has deliveryBy
+                // Order tracking exists — sync amount if cart now has a value the order tracking doesn't
+                if (cart.getTotalCartAmount() != null &&
+                        existingOrder.getTotalAmount() != null &&
+                        existingOrder.getTotalAmount().compareTo(BigDecimal.ZERO) == 0 &&
+                        cart.getTotalCartAmount().compareTo(BigDecimal.ZERO) > 0) {
+                    existingOrder.setTotalAmount(cart.getTotalCartAmount());
+                    orderTrackingService.getOrderRepository().save(existingOrder);
+                    log.info("Synced totalAmount {} to existing order tracking for cart {}", cart.getTotalCartAmount(), cart.getId());
+                }
+                // Update deliveryBy on first step if cart has deliveryBy
                 if (cart.getDeliveryBy() != null) {
                     try {
                         com.nector.userservice.ordertracking.dto.UpdateStepRequest request = 

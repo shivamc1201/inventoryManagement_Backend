@@ -10,7 +10,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "sales_KPI_update")
+@Table(name = "sales_KPI_update", uniqueConstraints = {
+        @UniqueConstraint(name = "uq_sales_kpi_emp_date", columnNames = {"emp_code", "date"})
+})
 @Data
 public class SalesKpiUpdate {
 

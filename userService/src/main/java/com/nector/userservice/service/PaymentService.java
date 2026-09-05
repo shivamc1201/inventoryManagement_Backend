@@ -100,7 +100,18 @@ public class PaymentService {
         // Get cart and calculate total amount
         Cart cart = cartRepository.findById(orderId)
             .orElseThrow(() -> new RuntimeException("Cart not found: " + orderId));
-        
+
+        // Idempotency guard: prevent double-deduction if already approved
+        if (cart.getStatus() == Cart.CartStatus.PAYMENT_APPROVED) {
+            OrderApprovalResponse response = new OrderApprovalResponse();
+            response.setOrderId(orderId);
+            response.setDistributorId(distributorId);
+            response.setStatus("ALREADY_APPROVED");
+            response.setMessage("Order is already payment approved — no deduction made");
+            log.warn("checkAndApproveOrder called on already-approved cart {}, skipping deduction", orderId);
+            return response;
+        }
+
         BigDecimal orderAmount = cart.getCartItems().stream()
             .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -316,6 +327,11 @@ public class PaymentService {
         ProformaInvoice pi = proformaInvoiceRepository.findByCartId(orderId)
             .orElseThrow(() -> new RuntimeException("Proforma Invoice not found for order: " + orderId));
 
+        // Idempotency guard: prevent double-deduction if PI already paid
+        if (pi.getPaymentStatus() == ProformaInvoice.PaymentStatus.PAID) {
+            throw new RuntimeException("Order #" + orderId + " is already paid. Cannot approve PI again.");
+        }
+
         // Get distributor and validate credit BEFORE updating any statuses
         var distributor = distributorRepository.findById(distributorId)
             .orElseThrow(() -> new RuntimeException("Distributor not found: " + distributorId));
@@ -459,53 +475,23 @@ public class PaymentService {
             throw new RuntimeException("Payment already processed");
         }
 
-        // Special handling for CREDIT transactions - restore creditBalance first
+        // For CREDIT transactions: restore creditBalance (capped at creditLimit), then add full amount to ledger
         if ("CREDIT".equalsIgnoreCase(payment.getTransactionType())) {
             var distributor = distributorRepository.findById(payment.getDistributorId())
                     .orElseThrow(() -> new RuntimeException("Distributor not found: " + payment.getDistributorId()));
-            
+
             BigDecimal creditLimit = distributor.getCreditLimit() != null ? distributor.getCreditLimit() : BigDecimal.ZERO;
             BigDecimal creditBalance = distributor.getCreditBalance() != null ? distributor.getCreditBalance() : BigDecimal.ZERO;
             BigDecimal paymentAmount = payment.getAmount();
-            
-            // Check if creditBalance is less than creditLimit (distributor has used some credit)
-            if (creditBalance.compareTo(creditLimit) < 0) {
-                BigDecimal creditShortfall = creditLimit.subtract(creditBalance);
-                
-                if (paymentAmount.compareTo(creditShortfall) >= 0) {
-                    // Payment is enough to restore full credit and have余额
-                    // 1. Restore creditBalance to creditLimit
-                    distributor.setCreditBalance(creditLimit);
-                    distributorRepository.save(distributor);
-                    
-                    // 2. Calculate remaining amount to add to ledger
-                    BigDecimal remainingAmount = paymentAmount.subtract(creditShortfall);
-                    
-                    // Log both transactions
-                    if (creditShortfall.compareTo(BigDecimal.ZERO) > 0) {
-                        updateDistributorBalance(payment.getDistributorId(), creditShortfall,
-                                "CREDIT", payment.getDescription() + " (Credit Restored)", payment.getCreatedAt());
-                    }
 
-                    if (remainingAmount.compareTo(BigDecimal.ZERO) > 0) {
-                        updateDistributorBalance(payment.getDistributorId(), remainingAmount,
-                                "CREDIT", payment.getDescription() + " (Ledger Balance)", payment.getCreatedAt());
-                    }
-                } else {
-                    // Payment is less than shortfall - add entire amount to creditBalance only
-                    BigDecimal newCreditBalance = creditBalance.add(paymentAmount);
-                    distributor.setCreditBalance(newCreditBalance);
-                    distributorRepository.save(distributor);
+            // Restore creditBalance up to creditLimit (cannot exceed limit)
+            BigDecimal newCreditBalance = creditBalance.add(paymentAmount).min(creditLimit);
+            distributor.setCreditBalance(newCreditBalance);
+            distributorRepository.save(distributor);
 
-                    // Log the transaction
-                    updateDistributorBalance(payment.getDistributorId(), paymentAmount,
-                            "CREDIT", payment.getDescription() + " (Credit Restored)", payment.getCreatedAt());
-                }
-            } else {
-                // creditBalance is already at limit or above - add entire amount to ledger
-                updateDistributorBalance(payment.getDistributorId(), payment.getAmount(),
-                        payment.getTransactionType(), payment.getDescription(), payment.getCreatedAt());
-            }
+            // Add full payment as a single CREDIT entry to the ledger
+            updateDistributorBalance(payment.getDistributorId(), paymentAmount,
+                    "CREDIT", payment.getDescription(), payment.getCreatedAt());
         } else {
             // For DEBIT or other transaction types, process normally
             updateDistributorBalance(payment.getDistributorId(), payment.getAmount(),

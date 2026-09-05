@@ -73,12 +73,20 @@ public class UserPermissionController {
             @PathVariable Long userId,
             @Valid @RequestBody UserUpdateRequest request) {
         log.info("Entering updateUser() for userId: {}", userId);
-        User updatedUser = userService.updateUser(userId, request);
-        log.info("Exiting updateUser() - updated user: {}", updatedUser.getUsername());
-        return ResponseEntity.ok(
-                Map.of("message", "User updated successfully", "username", updatedUser.getUsername(),
-                        "status", updatedUser.getStatus(), "password", updatedUser.getPassword())
-        );
+        try {
+            User updatedUser = userService.updateUser(userId, request);
+            log.info("Exiting updateUser() - updated user: {}", updatedUser.getUsername());
+            return ResponseEntity.ok(
+                    Map.of("message", "User updated successfully", "username", updatedUser.getUsername(),
+                            "status", updatedUser.getStatus(), "password", updatedUser.getPassword())
+            );
+        } catch (EntityNotFoundException e) {
+            log.warn("Exiting updateUser() - userId: {} not found", userId);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            log.warn("Exiting updateUser() - invalid input for userId: {}: {}", userId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
     }
 
     @DeleteMapping("/user_suspend/{userId}")

@@ -392,9 +392,10 @@ public class CartService {
             }
 
             if (order != null) {
-                // Sync total amount — self-heals if order was created with 0 at placement time
+                // Sync total amount — self-heals if order was created with 0 or null at placement time
                 if (updatedCart.getTotalCartAmount() != null &&
-                        updatedCart.getTotalCartAmount().compareTo(order.getTotalAmount()) != 0) {
+                        (order.getTotalAmount() == null ||
+                         updatedCart.getTotalCartAmount().compareTo(order.getTotalAmount()) != 0)) {
                     order.setTotalAmount(updatedCart.getTotalCartAmount());
                     orderTrackingService.getOrderRepository().save(order);
                     log.info("Synced totalAmount {} to order tracking for cart {}", updatedCart.getTotalCartAmount(), updatedCart.getId());
@@ -563,6 +564,27 @@ public class CartService {
 
                 orderTrackingService.updateStepBySequence(order.getId(), 3, request);
                 log.info("Order tracking Step 3 cancelled for cart {} with reason: {}", cartId, reason);
+
+                // Also resolve Step 2 (Pending Approval from Sales) so it doesn't stay IN_PROGRESS
+                try {
+                    UpdateStepRequest step2Request = new UpdateStepRequest();
+                    step2Request.setStatus("cancelled");
+                    step2Request.setRemarks("Rejected by sales: " + reason);
+                    step2Request.setDate(java.time.LocalDate.now().toString());
+                    if (cart.getSalespersonId() != null) {
+                        step2Request.setAssignedPersonId(cart.getSalespersonId());
+                        step2Request.setAssignedPersonName(cart.getSalespersonName());
+                        step2Request.setAssignedPersonRole("SALES_EXECUTIVE");
+                        salesPersonRepository.findById(cart.getSalespersonId()).ifPresent(sp -> {
+                            step2Request.setAssignedPersonPhone(sp.getPhone());
+                            step2Request.setAssignedPersonEmail(sp.getEmail());
+                        });
+                    }
+                    orderTrackingService.updateStepBySequence(order.getId(), 2, step2Request);
+                    log.info("Order tracking Step 2 cancelled for dismissed cart {}", cartId);
+                } catch (Exception e) {
+                    log.warn("Could not cancel Step 2 for dismissed cart {}: {}", cartId, e.getMessage());
+                }
             }
         } catch (Exception e) {
             log.error("Failed to cancel Order Tracking Step 3 for cart {}: {}", 
@@ -664,9 +686,9 @@ public class CartService {
             } else {
                 // Order tracking exists — sync amount if cart now has a value the order tracking doesn't
                 if (cart.getTotalCartAmount() != null &&
-                        existingOrder.getTotalAmount() != null &&
-                        existingOrder.getTotalAmount().compareTo(BigDecimal.ZERO) == 0 &&
-                        cart.getTotalCartAmount().compareTo(BigDecimal.ZERO) > 0) {
+                        cart.getTotalCartAmount().compareTo(BigDecimal.ZERO) > 0 &&
+                        (existingOrder.getTotalAmount() == null ||
+                         existingOrder.getTotalAmount().compareTo(cart.getTotalCartAmount()) != 0)) {
                     existingOrder.setTotalAmount(cart.getTotalCartAmount());
                     orderTrackingService.getOrderRepository().save(existingOrder);
                     log.info("Synced totalAmount {} to existing order tracking for cart {}", cart.getTotalCartAmount(), cart.getId());

@@ -14,6 +14,7 @@ import com.nector.userservice.model.CartItem;
 import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.service.InventoryService;
 import com.nector.userservice.service.HtmlToPdfService;
+import com.nector.userservice.ordertracking.service.OrderDocumentService;
 import com.nector.userservice.ordertracking.service.OrderTrackingService;
 import com.nector.userservice.ordertracking.repository.OrderTrackingStepRepository;
 import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
@@ -57,6 +58,7 @@ public class GdnService {
     private final HtmlToPdfService htmlToPdfService;
     private final TemplateEngine templateEngine;
     private final CloudinaryStorageService cloudinaryStorageService;
+    private final OrderDocumentService orderDocumentService;
     private final OrderTrackingService orderTrackingService;
     private final OrderTrackingStepRepository orderTrackingStepRepository;
     private final UserRepository userRepository;
@@ -380,7 +382,6 @@ public class GdnService {
                 step9Request.setDate(java.time.LocalDate.now().toString());
                 step9Request.setHasDownload(true);
                 step9Request.setDownloadLabel("Download GDN");
-                step9Request.setDocumentPath("/documents/gdn/" + savedGdn.getGdnNumber() + ".pdf");
                 
                 // Add assigned person (logistics team) information
                 setCurrentUserDetails(step9Request);
@@ -411,6 +412,21 @@ public class GdnService {
         }
 
         PdfGenerationResult pdfResult = generateGdnPdf(savedGdn, cart);
+        if (pdfResult.isSuccess() && pdfResult.getPdfUrl() != null) {
+            try {
+                com.nector.userservice.ordertracking.entity.OrderTracking trackingOrder =
+                    orderTrackingService.getOrderRepository().findByCartId(orderId);
+                if (trackingOrder != null) {
+                    orderDocumentService.saveDocument(
+                        trackingOrder.getId(), "GDN",
+                        savedGdn.getGdnNumber().replace("/", "-") + ".pdf",
+                        pdfResult.getPdfUrl());
+                    log.info("OrderDocument (GDN) saved for order tracking {} cart {}", trackingOrder.getId(), orderId);
+                }
+            } catch (Exception e) {
+                log.warn("Could not save GDN OrderDocument for order {}: {}", orderId, e.getMessage());
+            }
+        }
         GdnResponse response = mapToResponse(savedGdn);
         if (pdfResult.isSuccess()) {
             response.setPdfGenerationStatus("SUCCESS");

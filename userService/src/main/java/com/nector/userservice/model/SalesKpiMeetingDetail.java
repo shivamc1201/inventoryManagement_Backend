@@ -3,6 +3,7 @@ package com.nector.userservice.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.ToString;
 
 @Entity
 @Table(name = "sales_kpi_meeting_details")
@@ -13,6 +14,7 @@ public class SalesKpiMeetingDetail {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ToString.Exclude
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sales_kpi_update_id", nullable = false)

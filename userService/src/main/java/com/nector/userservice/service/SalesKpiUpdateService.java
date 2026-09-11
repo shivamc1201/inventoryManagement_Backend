@@ -52,31 +52,36 @@ public class SalesKpiUpdateService {
 
     @Transactional
     public CustomResponse saveAll(List<SalesKpiUpdateRequest> requests) {
-        List<SalesKpiUpdate> saved = new ArrayList<>();
+        int savedCount = 0, duplicateCount = 0, unknownEmpCount = 0;
 
         for (SalesKpiUpdateRequest req : requests) {
             LocalDate entryDate = LocalDate.parse(req.getDate());
 
-            // App-level fast-path check (not race-condition-safe on its own)
-            if (salesKpiUpdateRepository.existsByEmpCodeAndDate(req.getEmpCode(), entryDate)) {
-                log.warn("Duplicate skipped (pre-check) empCode={} date={}", req.getEmpCode(), req.getDate());
+            // Resolve SalesPerson first so we can normalize empCode before duplicate check
+            Optional<SalesPerson> spOpt = salesPersonRepository.findByEmployeeRollNoIgnoreCase(req.getEmpCode());
+            String canonicalEmpCode = spOpt.map(SalesPerson::getEmployeeRollNo).orElse(req.getEmpCode());
+
+            // App-level fast-path duplicate check
+            if (salesKpiUpdateRepository.existsByEmpCodeAndDate(canonicalEmpCode, entryDate)) {
+                log.info("Duplicate skipped empCode={} date={}", canonicalEmpCode, req.getDate());
+                duplicateCount++;
                 continue;
             }
 
             SalesKpiUpdate entity = new SalesKpiUpdate();
             entity.setUserName(req.getUserName());
-            entity.setEmpCode(req.getEmpCode());
+            entity.setEmpCode(canonicalEmpCode);
             entity.setDate(entryDate);
             entity.setTotalDistanceInKm(req.getTotalDistanceInKm());
             entity.setNoOfMeetings(req.getNoOfMeetings());
 
-            Optional<SalesPerson> spOpt = salesPersonRepository.findByEmployeeRollNo(req.getEmpCode());
             Long salesPersonId = null;
             if (spOpt.isPresent()) {
                 entity.setSalesPerson(spOpt.get());
                 salesPersonId = spOpt.get().getId();
             } else {
                 log.warn("No SalesPerson found for empCode: {}", req.getEmpCode());
+                unknownEmpCount++;
             }
 
             if (req.getMeetingDetails() != null) {
@@ -97,10 +102,12 @@ public class SalesKpiUpdateService {
             }
 
             try {
-                saved.add(salesKpiUpdateRepository.saveAndFlush(entity));
+                salesKpiUpdateRepository.saveAndFlush(entity);
+                savedCount++;
             } catch (DataIntegrityViolationException e) {
-                // DB unique constraint on (emp_code, date) caught a concurrent duplicate
-                log.warn("Duplicate rejected by DB constraint empCode={} date={}", req.getEmpCode(), req.getDate());
+                // DB unique constraint caught a concurrent duplicate (race condition)
+                log.info("Duplicate rejected by DB constraint empCode={} date={}", canonicalEmpCode, req.getDate());
+                duplicateCount++;
                 continue;
             }
 
@@ -110,7 +117,13 @@ public class SalesKpiUpdateService {
             }
         }
 
-        return CustomResponse.success(saved, "Sales KPI data saved successfully");
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("saved", savedCount);
+        summary.put("duplicatesSkipped", duplicateCount);
+        if (unknownEmpCount > 0) {
+            summary.put("unknownEmpCodes", unknownEmpCount);
+        }
+        return CustomResponse.success(summary, "Sales KPI data processed");
     }
 
     /**
@@ -210,13 +223,14 @@ public class SalesKpiUpdateService {
         for (SalesKpiUpdate update : updates) {
             SalesPerson sp = update.getSalesPerson();
             if (sp == null) {
-                Optional<SalesPerson> spOpt = salesPersonRepository.findByEmployeeRollNo(update.getEmpCode());
+                Optional<SalesPerson> spOpt = salesPersonRepository.findByEmployeeRollNoIgnoreCase(update.getEmpCode());
                 if (spOpt.isEmpty()) {
                     log.warn("Recalculate: no SalesPerson for empCode={}, skipping", update.getEmpCode());
                     skipped++;
                     continue;
                 }
                 sp = spOpt.get();
+                update.setEmpCode(sp.getEmployeeRollNo()); // normalize case
                 update.setSalesPerson(sp);
                 salesKpiUpdateRepository.save(update);
             }

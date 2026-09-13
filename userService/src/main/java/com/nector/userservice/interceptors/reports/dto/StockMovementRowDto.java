@@ -21,4 +21,6 @@ public class StockMovementRowDto {
     private BigDecimal pricePerUnit;
     private String reference;
     private LocalDateTime date;
+    private String supplierId;
+    private String supplierName;
 }

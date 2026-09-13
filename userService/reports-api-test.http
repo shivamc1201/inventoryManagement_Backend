@@ -1,0 +1,882 @@
+### Reports API — Full Parameter Coverage
+### IntelliJ HTTP Client / VS Code REST Client
+### Real distributor IDs from your DB:
+###   29 = Tanvi Patel Kirana Store  (most data)
+###   44 = S K Traders
+###   45 = Sailendra Saha
+###   39 = Koshi Bihar Enterprises
+###   30 = Puja Treders
+###   60 = Subodh Kumar
+###   64 = Maa Janki Traders
+
+@host         = http://localhost:8080
+@fullStart    = 2026-01-01
+@fullEnd      = 2026-12-31
+@q1Start      = 2026-04-01
+@q1End        = 2026-06-30
+@q2Start      = 2026-07-01
+@q2End        = 2026-07-31
+@last30Start  = 2026-06-26
+@last30End    = 2026-07-26
+@distA        = 29
+@distB        = 44
+@distC        = 45
+
+
+# ============================================================
+# 1. MIS DASHBOARD  →  /api/reports/mis
+#
+# Params:
+#   distributorId  — optional Long
+#   startDate      — optional YYYY-MM-DD
+#   endDate        — optional YYYY-MM-DD
+#   financialYear  — optional String  (e.g. "2026-27")
+# ============================================================
+
+### 1.1  KPI — no filters (full picture)
+GET {{host}}/api/reports/mis/kpi-summary
+Accept: application/json
+
+###
+
+### 1.2  KPI — full date range, no distributor
+GET {{host}}/api/reports/mis/kpi-summary?startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 1.3  KPI — Q1 only
+GET {{host}}/api/reports/mis/kpi-summary?startDate={{q1Start}}&endDate={{q1End}}
+Accept: application/json
+
+###
+
+### 1.4  KPI — scoped to Tanvi Patel (distA=29)
+GET {{host}}/api/reports/mis/kpi-summary?distributorId={{distA}}&startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 1.5  KPI — scoped to S K Traders (distB=44)
+GET {{host}}/api/reports/mis/kpi-summary?distributorId={{distB}}&startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 1.6  KPI — by financial year string
+GET {{host}}/api/reports/mis/kpi-summary?financialYear=2026-27
+Accept: application/json
+
+###
+
+### 1.7  Recent Invoices — no filters (last 10 globally)
+GET {{host}}/api/reports/mis/recent-invoices
+Accept: application/json
+
+###
+
+### 1.8  Recent Invoices — full year
+GET {{host}}/api/reports/mis/recent-invoices?startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 1.9  Recent Invoices — scoped to Tanvi Patel
+GET {{host}}/api/reports/mis/recent-invoices?distributorId={{distA}}&startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 1.10 Recent Invoices — Q2 only
+GET {{host}}/api/reports/mis/recent-invoices?startDate={{q2Start}}&endDate={{q2End}}
+Accept: application/json
+
+###
+
+
+# ============================================================
+# 2. INVENTORY REPORTS  →  /api/reports/inventory
+#
+# Params:
+#   category — optional String:  RAW | FINISHED | SCRAP | (omit = all)
+# ============================================================
+
+### 2.1  Snapshot — all categories
+GET {{host}}/api/reports/inventory/snapshot
+Accept: application/json
+
+###
+
+### 2.2  Snapshot — FINISHED only
+GET {{host}}/api/reports/inventory/snapshot?category=FINISHED
+Accept: application/json
+
+###
+
+### 2.3  Snapshot — RAW only
+GET {{host}}/api/reports/inventory/snapshot?category=RAW
+Accept: application/json
+
+###
+
+### 2.4  Snapshot — SCRAP only
+GET {{host}}/api/reports/inventory/snapshot?category=SCRAP
+Accept: application/json
+
+###
+
+### 2.5  Low Stock — all categories
+GET {{host}}/api/reports/inventory/low-stock
+Accept: application/json
+
+###
+
+### 2.6  Low Stock — FINISHED only
+GET {{host}}/api/reports/inventory/low-stock?category=FINISHED
+Accept: application/json
+
+###
+
+### 2.7  Low Stock — RAW only
+GET {{host}}/api/reports/inventory/low-stock?category=RAW
+Accept: application/json
+
+###
+
+### 2.8  Low Stock — SCRAP only
+GET {{host}}/api/reports/inventory/low-stock?category=SCRAP
+Accept: application/json
+
+###
+
+
+# ============================================================
+# 3. STOCK MOVEMENT  →  /api/reports/stock-movement
+#
+# Params:
+#   startDate — optional YYYY-MM-DD
+#   endDate   — optional YYYY-MM-DD
+# ============================================================
+
+### 3.1  Ledger — no date filter (all time)
+GET {{host}}/api/reports/stock-movement/ledger
+Accept: application/json
+
+###
+
+### 3.2  Ledger — full year
+GET {{host}}/api/reports/stock-movement/ledger?startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 3.3  Ledger — Q1 only
+GET {{host}}/api/reports/stock-movement/ledger?startDate={{q1Start}}&endDate={{q1End}}
+Accept: application/json
+
+###
+
+### 3.4  Ledger — Q2 only
+GET {{host}}/api/reports/stock-movement/ledger?startDate={{q2Start}}&endDate={{q2End}}
+Accept: application/json
+
+###
+
+### 3.5  Inward only — full year
+GET {{host}}/api/reports/stock-movement/inward?startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 3.6  Inward only — last 30 days
+GET {{host}}/api/reports/stock-movement/inward?startDate={{last30Start}}&endDate={{last30End}}
+Accept: application/json
+
+###
+
+### 3.7  Inward — filtered by supplierId (Supplier Wise Inward Report)
+# Replace SUP001 with actual vendorId stored on the raw material
+GET {{host}}/api/reports/stock-movement/inward?startDate={{fullStart}}&endDate={{fullEnd}}&supplierId=SUP001
+Accept: application/json
+
+###
+
+### 3.8  Outward only — full year
+GET {{host}}/api/reports/stock-movement/outward?startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 3.8  Outward only — Q2 only
+GET {{host}}/api/reports/stock-movement/outward?startDate={{q2Start}}&endDate={{q2End}}
+Accept: application/json
+
+###
+
+
+# ============================================================
+# 4. BATCH MANAGEMENT  →  /api/reports/batch
+#
+# Params:
+#   daysAhead — optional int (default 30) — expiry-alert only
+# ============================================================
+
+### 4.1  Lifecycle — all active batches
+GET {{host}}/api/reports/batch/lifecycle
+Accept: application/json
+
+###
+
+### 4.2  Expiry Alert — default (next 30 days)
+GET {{host}}/api/reports/batch/expiry-alert
+Accept: application/json
+
+###
+
+### 4.3  Expiry Alert — next 60 days
+GET {{host}}/api/reports/batch/expiry-alert?daysAhead=60
+Accept: application/json
+
+###
+
+### 4.4  Expiry Alert — next 90 days
+GET {{host}}/api/reports/batch/expiry-alert?daysAhead=90
+Accept: application/json
+
+###
+
+### 4.5  Expiry Alert — next 180 days
+GET {{host}}/api/reports/batch/expiry-alert?daysAhead=180
+Accept: application/json
+
+###
+
+
+# ============================================================
+# 5. PRODUCTION LOG CRUD  →  /api/production-log
+#
+# POST/PUT body fields:
+#   finishedProductId (required), finishedProductName, batchNumber
+#   quantityProduced (required), outputUnit
+#   productionDate (required, YYYY-MM-DD)
+#   shift: MORNING | AFTERNOON | NIGHT
+#   operatorName, supervisorName
+#   totalRawMaterialCost, totalAdditionalCost, totalProductionCost, costPerUnit
+#   status: IN_PROGRESS | COMPLETED | SCRAPPED
+#   remarks
+#   components: [{ rawMaterialId, rawMaterialName, quantityPlanned,
+#                  quantityActual, unit, rate, amount }]
+# ============================================================
+
+### 5.1  Create production run
+POST {{host}}/api/production-log
+Content-Type: application/json
+
+{
+  "finishedProductId": 41,
+  "finishedProductName": "Manka Poshak 50 Kg",
+  "batchNumber": "BATCH-2026-001",
+  "quantityProduced": 500,
+  "outputUnit": "BAG",
+  "productionDate": "2026-07-26",
+  "shift": "MORNING",
+  "operatorName": "Raju Kumar",
+  "supervisorName": "Suresh Singh",
+  "totalRawMaterialCost": 250000.00,
+  "totalAdditionalCost": 5000.00,
+  "totalProductionCost": 255000.00,
+  "costPerUnit": 510.00,
+  "status": "COMPLETED",
+  "remarks": "Normal run, no issues",
+  "components": [
+    {
+      "rawMaterialId": 65,
+      "rawMaterialName": "Soya DOC",
+      "quantityPlanned": 10000,
+      "quantityActual": 9800,
+      "unit": "KG",
+      "rate": 39.52,
+      "amount": 387296.00
+    },
+    {
+      "rawMaterialId": 85,
+      "rawMaterialName": "DORB",
+      "quantityPlanned": 5000,
+      "quantityActual": 5100,
+      "unit": "KG",
+      "rate": 20.00,
+      "amount": 102000.00
+    }
+  ]
+}
+
+###
+
+### 5.2  Get production log by ID=1
+GET {{host}}/api/production-log/1
+Accept: application/json
+
+###
+
+### 5.3  Update production log ID=1 — mark completed
+PUT {{host}}/api/production-log/1
+Content-Type: application/json
+
+{
+  "finishedProductId": 41,
+  "finishedProductName": "Manka Poshak 50 Kg",
+  "batchNumber": "BATCH-2026-001",
+  "quantityProduced": 500,
+  "outputUnit": "BAG",
+  "productionDate": "2026-07-26",
+  "shift": "MORNING",
+  "operatorName": "Raju Kumar",
+  "supervisorName": "Suresh Singh",
+  "totalRawMaterialCost": 250000.00,
+  "totalAdditionalCost": 5000.00,
+  "totalProductionCost": 255000.00,
+  "costPerUnit": 510.00,
+  "status": "COMPLETED",
+  "remarks": "Updated: run completed successfully"
+}
+
+###
+
+### 5.4  Delete production log ID=1
+DELETE {{host}}/api/production-log/1
+
+###
+
+
+# ============================================================
+# 6. PRODUCTION REPORTS  →  /api/reports/production
+#
+# Params:
+#   startDate — optional YYYY-MM-DD
+#   endDate   — optional YYYY-MM-DD
+#   page      — int (default 0)
+#   size      — int (default 50)
+# ============================================================
+
+### 6.1  Production Log — full year, page 0
+GET {{host}}/api/reports/production/log?startDate={{fullStart}}&endDate={{fullEnd}}&page=0&size=50
+Accept: application/json
+
+###
+
+### 6.2  Production Log — no date filter (all time)
+GET {{host}}/api/reports/production/log
+Accept: application/json
+
+###
+
+### 6.3  Production Log — small page size
+GET {{host}}/api/reports/production/log?startDate={{fullStart}}&endDate={{fullEnd}}&page=0&size=10
+Accept: application/json
+
+###
+
+### 6.4  Production Summary by Product — full year
+GET {{host}}/api/reports/production/summary?startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 6.5  Production Summary — Q1 only
+GET {{host}}/api/reports/production/summary?startDate={{q1Start}}&endDate={{q1End}}
+Accept: application/json
+
+###
+
+### 6.6  BOM Consumption — full year
+GET {{host}}/api/reports/production/bom-consumption?startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 6.7  BOM Consumption — Q2 only
+GET {{host}}/api/reports/production/bom-consumption?startDate={{q2Start}}&endDate={{q2End}}
+Accept: application/json
+
+###
+
+
+# ============================================================
+# 7. SALES REPORTS  →  /api/reports/sales
+#
+# Params:
+#   distributorId — optional Long
+#   startDate     — optional YYYY-MM-DD
+#   endDate       — optional YYYY-MM-DD
+#   page          — int (default 0)
+#   size          — int (default 50)
+# ============================================================
+
+### 7.1  Invoice Grid — all distributors, full year
+GET {{host}}/api/reports/sales/invoice-grid?startDate={{fullStart}}&endDate={{fullEnd}}&page=0&size=50
+Accept: application/json
+
+###
+
+### 7.2  Invoice Grid — Tanvi Patel (distA=29)
+GET {{host}}/api/reports/sales/invoice-grid?distributorId={{distA}}&startDate={{fullStart}}&endDate={{fullEnd}}&page=0&size=50
+Accept: application/json
+
+###
+
+### 7.3  Invoice Grid — S K Traders (distB=44)
+GET {{host}}/api/reports/sales/invoice-grid?distributorId={{distB}}&startDate={{fullStart}}&endDate={{fullEnd}}&page=0&size=50
+Accept: application/json
+
+###
+
+### 7.4  Invoice Grid — Sailendra Saha (distC=45)
+GET {{host}}/api/reports/sales/invoice-grid?distributorId={{distC}}&startDate={{fullStart}}&endDate={{fullEnd}}&page=0&size=50
+Accept: application/json
+
+###
+
+### 7.5  Invoice Grid — Q1 only, all distributors
+GET {{host}}/api/reports/sales/invoice-grid?startDate={{q1Start}}&endDate={{q1End}}&page=0&size=50
+Accept: application/json
+
+###
+
+### 7.6  Invoice Grid — Q2 only, small page
+GET {{host}}/api/reports/sales/invoice-grid?startDate={{q2Start}}&endDate={{q2End}}&page=0&size=10
+Accept: application/json
+
+###
+
+### 7.7  Sales by Distributor — full year
+GET {{host}}/api/reports/sales/by-distributor?startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 7.8  Sales by Distributor — Q1 only
+GET {{host}}/api/reports/sales/by-distributor?startDate={{q1Start}}&endDate={{q1End}}
+Accept: application/json
+
+###
+
+### 7.9  Sales by Distributor — Q2 only
+GET {{host}}/api/reports/sales/by-distributor?startDate={{q2Start}}&endDate={{q2End}}
+Accept: application/json
+
+###
+
+### 7.10 Monthly Trend — all distributors, full year
+GET {{host}}/api/reports/sales/monthly-trend?startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 7.11 Monthly Trend — Tanvi Patel (distA=29)
+GET {{host}}/api/reports/sales/monthly-trend?distributorId={{distA}}&startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 7.12 Monthly Trend — S K Traders (distB=44)
+GET {{host}}/api/reports/sales/monthly-trend?distributorId={{distB}}&startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 7.13 Sales by Product — full year  [NEW — uses invoice_line_items]
+# Covers: Product Wise Sales Report (Report 21)
+# Response: [ { productId, productName, totalQuantity, totalAmount, invoiceCount } ]
+GET {{host}}/api/reports/sales/by-product?startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 7.14 Sales by Product — Q2 only
+GET {{host}}/api/reports/sales/by-product?startDate={{q2Start}}&endDate={{q2End}}
+Accept: application/json
+
+###
+
+### 7.15 Top Products — top 10 by quantity, full year  [NEW — covers Report 27]
+# Response: [ { productId, productName, totalQuantity, totalAmount } ]
+GET {{host}}/api/reports/sales/top-products?startDate={{fullStart}}&endDate={{fullEnd}}&limit=10
+Accept: application/json
+
+###
+
+### 7.16 Top Products — top 5 by quantity, Q2 only
+GET {{host}}/api/reports/sales/top-products?startDate={{q2Start}}&endDate={{q2End}}&limit=5
+Accept: application/json
+
+###
+
+
+# ============================================================
+# 8. RECEIVABLES & COLLECTIONS  →  /api/reports/receivables
+#
+# Params:
+#   distributorId — REQUIRED for /outstanding and /ageing
+#                   optional for /collection-history
+#   startDate / endDate — optional, for /collection-history only
+# ============================================================
+
+### 8.1  Outstanding — Tanvi Patel (distA=29)
+GET {{host}}/api/reports/receivables/outstanding?distributorId={{distA}}
+Accept: application/json
+
+###
+
+### 8.2  Outstanding — S K Traders (distB=44)
+GET {{host}}/api/reports/receivables/outstanding?distributorId={{distB}}
+Accept: application/json
+
+###
+
+### 8.3  Outstanding — Sailendra Saha (distC=45)
+GET {{host}}/api/reports/receivables/outstanding?distributorId={{distC}}
+Accept: application/json
+
+###
+
+### 8.4  Ageing — Tanvi Patel (distA=29)
+GET {{host}}/api/reports/receivables/ageing?distributorId={{distA}}
+Accept: application/json
+
+###
+
+### 8.5  Ageing — S K Traders (distB=44)
+GET {{host}}/api/reports/receivables/ageing?distributorId={{distB}}
+Accept: application/json
+
+###
+
+### 8.6  Ageing — Sailendra Saha (distC=45)
+GET {{host}}/api/reports/receivables/ageing?distributorId={{distC}}
+Accept: application/json
+
+###
+
+### 8.7  Collection History — Tanvi Patel, full year
+GET {{host}}/api/reports/receivables/collection-history?distributorId={{distA}}&startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 8.8  Collection History — S K Traders, full year
+GET {{host}}/api/reports/receivables/collection-history?distributorId={{distB}}&startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 8.9  Collection History — all distributors, full year
+GET {{host}}/api/reports/receivables/collection-history?startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 8.10 Collection History — all distributors, Q2 only
+GET {{host}}/api/reports/receivables/collection-history?startDate={{q2Start}}&endDate={{q2End}}
+Accept: application/json
+
+###
+
+### 8.11 Collection History — no filters (all time, all distributors)
+GET {{host}}/api/reports/receivables/collection-history
+Accept: application/json
+
+###
+
+
+# ============================================================
+# 9. SALES ORDERS  →  /api/reports/sales-orders
+#
+# Params:
+#   distributorId — optional Long
+#   startDate     — optional YYYY-MM-DD
+#   endDate       — optional YYYY-MM-DD
+#   page          — int (default 0)
+#   size          — int (default 50)
+# ============================================================
+
+### 9.1  Order Grid — all distributors, full year
+GET {{host}}/api/reports/sales-orders/grid?startDate={{fullStart}}&endDate={{fullEnd}}&page=0&size=50
+Accept: application/json
+
+###
+
+### 9.2  Order Grid — Tanvi Patel (distA=29)
+GET {{host}}/api/reports/sales-orders/grid?distributorId={{distA}}&startDate={{fullStart}}&endDate={{fullEnd}}&page=0&size=50
+Accept: application/json
+
+###
+
+### 9.3  Order Grid — S K Traders (distB=44)
+GET {{host}}/api/reports/sales-orders/grid?distributorId={{distB}}&startDate={{fullStart}}&endDate={{fullEnd}}&page=0&size=50
+Accept: application/json
+
+###
+
+### 9.4  Order Grid — Q2 only, all distributors
+GET {{host}}/api/reports/sales-orders/grid?startDate={{q2Start}}&endDate={{q2End}}&page=0&size=50
+Accept: application/json
+
+###
+
+### 9.5  Order Grid — no filters (all time)
+GET {{host}}/api/reports/sales-orders/grid
+Accept: application/json
+
+###
+
+### 9.6  Status Count — all distributors
+GET {{host}}/api/reports/sales-orders/status-count
+Accept: application/json
+
+###
+
+### 9.7  Status Count — Tanvi Patel (distA=29)
+GET {{host}}/api/reports/sales-orders/status-count?distributorId={{distA}}
+Accept: application/json
+
+###
+
+### 9.8  Status Count — S K Traders (distB=44)
+GET {{host}}/api/reports/sales-orders/status-count?distributorId={{distB}}
+Accept: application/json
+
+###
+
+### 9.9  Salesman Performance — full year  [NEW — covers Report 28]
+# Response: [ { salespersonId, orderCount, totalValue } ]
+# Frontend can join salespersonId with HR master to show name
+GET {{host}}/api/reports/sales-orders/salesman-performance?startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 9.10 Salesman Performance — Q2 only
+GET {{host}}/api/reports/sales-orders/salesman-performance?startDate={{q2Start}}&endDate={{q2End}}
+Accept: application/json
+
+###
+
+### 9.11 Salesman Performance — no date filter (all time)
+GET {{host}}/api/reports/sales-orders/salesman-performance
+Accept: application/json
+
+###
+
+
+# ============================================================
+# 10. DISPATCH & DELIVERY  →  /api/reports/dispatch
+#
+# Params:
+#   startDate — optional YYYY-MM-DD
+#   endDate   — optional YYYY-MM-DD
+#   status    — optional String: PENDING | IN_TRANSIT | DELIVERED  [NEW]
+#   page      — int (default 0)
+#   size      — int (default 50)
+# ============================================================
+
+### 10.1 GDN Register — full year, page 0
+GET {{host}}/api/reports/dispatch/register?startDate={{fullStart}}&endDate={{fullEnd}}&page=0&size=50
+Accept: application/json
+
+###
+
+### 10.2 GDN Register — Q2 only
+GET {{host}}/api/reports/dispatch/register?startDate={{q2Start}}&endDate={{q2End}}&page=0&size=50
+Accept: application/json
+
+###
+
+### 10.3 GDN Register — small page (10 records)
+GET {{host}}/api/reports/dispatch/register?startDate={{fullStart}}&endDate={{fullEnd}}&page=0&size=10
+Accept: application/json
+
+###
+
+### 10.4 GDN Register — page 2 of 10
+GET {{host}}/api/reports/dispatch/register?startDate={{fullStart}}&endDate={{fullEnd}}&page=1&size=10
+Accept: application/json
+
+###
+
+### 10.5 GDN Register — no date filter (all time)
+GET {{host}}/api/reports/dispatch/register
+Accept: application/json
+
+###
+
+### 10.6 Dispatch Summary — full year
+GET {{host}}/api/reports/dispatch/summary?startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 10.7 Dispatch Summary — Q1 only
+GET {{host}}/api/reports/dispatch/summary?startDate={{q1Start}}&endDate={{q1End}}
+Accept: application/json
+
+###
+
+### 10.8 Dispatch Summary — Q2 only
+GET {{host}}/api/reports/dispatch/summary?startDate={{q2Start}}&endDate={{q2End}}
+Accept: application/json
+
+###
+
+### 10.9 Dispatch Summary — no date filter
+GET {{host}}/api/reports/dispatch/summary
+Accept: application/json
+
+###
+
+### 10.10 GDN Register — PENDING only  [NEW — covers Report 31: Pending Dispatch]
+GET {{host}}/api/reports/dispatch/register?status=PENDING&startDate={{fullStart}}&endDate={{fullEnd}}&page=0&size=50
+Accept: application/json
+
+###
+
+### 10.11 GDN Register — IN_TRANSIT only  [NEW — covers Report 30: Delivery Status]
+GET {{host}}/api/reports/dispatch/register?status=IN_TRANSIT&startDate={{fullStart}}&endDate={{fullEnd}}&page=0&size=50
+Accept: application/json
+
+###
+
+### 10.12 GDN Register — DELIVERED only
+GET {{host}}/api/reports/dispatch/register?status=DELIVERED&startDate={{fullStart}}&endDate={{fullEnd}}&page=0&size=50
+Accept: application/json
+
+###
+
+
+# ============================================================
+# 11. INVENTORY ISSUES  →  /api/reports/inventory-issues
+#
+# Params:
+#   itemType  — String (default SPARE_PARTS)
+#               Values: SPARE_PARTS | PROMOTIONAL_ITEMS | SCRAP_MATERIAL
+#   startDate — optional YYYY-MM-DD
+#   endDate   — optional YYYY-MM-DD
+#   page      — int (default 0)
+#   size      — int (default 50)
+# ============================================================
+
+### 11.1 By Type — SPARE_PARTS, full year
+GET {{host}}/api/reports/inventory-issues/by-type?itemType=SPARE_PARTS&startDate={{fullStart}}&endDate={{fullEnd}}&page=0&size=50
+Accept: application/json
+
+###
+
+### 11.2 By Type — PROMOTIONAL_ITEMS, full year
+GET {{host}}/api/reports/inventory-issues/by-type?itemType=PROMOTIONAL_ITEMS&startDate={{fullStart}}&endDate={{fullEnd}}&page=0&size=50
+Accept: application/json
+
+###
+
+### 11.3 By Type — SCRAP_MATERIAL, full year
+GET {{host}}/api/reports/inventory-issues/by-type?itemType=SCRAP_MATERIAL&startDate={{fullStart}}&endDate={{fullEnd}}&page=0&size=50
+Accept: application/json
+
+###
+
+### 11.4 By Type — SPARE_PARTS, Q2 only
+GET {{host}}/api/reports/inventory-issues/by-type?itemType=SPARE_PARTS&startDate={{q2Start}}&endDate={{q2End}}&page=0&size=50
+Accept: application/json
+
+###
+
+### 11.5 By Type — PROMOTIONAL_ITEMS, no date filter (all time)
+GET {{host}}/api/reports/inventory-issues/by-type?itemType=PROMOTIONAL_ITEMS
+Accept: application/json
+
+###
+
+### 11.6 Issue Summary — full year
+GET {{host}}/api/reports/inventory-issues/summary?startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 11.7 Issue Summary — Q1 only
+GET {{host}}/api/reports/inventory-issues/summary?startDate={{q1Start}}&endDate={{q1End}}
+Accept: application/json
+
+###
+
+### 11.8 Issue Summary — Q2 only
+GET {{host}}/api/reports/inventory-issues/summary?startDate={{q2Start}}&endDate={{q2End}}
+Accept: application/json
+
+###
+
+### 11.9 Issue Summary — no date filter (all time)
+GET {{host}}/api/reports/inventory-issues/summary
+Accept: application/json
+
+###
+
+
+# ============================================================
+# 12. SCRAP MANAGEMENT  →  /api/reports/scrap
+#
+# Params:
+#   startDate — optional YYYY-MM-DD
+#   endDate   — optional YYYY-MM-DD
+# ============================================================
+
+### 12.1 Scrap Lifecycle — full year
+GET {{host}}/api/reports/scrap/lifecycle?startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 12.2 Scrap Lifecycle — Q2 only
+GET {{host}}/api/reports/scrap/lifecycle?startDate={{q2Start}}&endDate={{q2End}}
+Accept: application/json
+
+###
+
+### 12.3 Scrap Lifecycle — no date filter (all time)
+GET {{host}}/api/reports/scrap/lifecycle
+Accept: application/json
+
+###
+
+### 12.4 Disposal Status — full year
+GET {{host}}/api/reports/scrap/disposal-status?startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 12.5 Disposal Status — Q1 only
+GET {{host}}/api/reports/scrap/disposal-status?startDate={{q1Start}}&endDate={{q1End}}
+Accept: application/json
+
+###
+
+### 12.6 Disposal Status — no date filter (all time)
+GET {{host}}/api/reports/scrap/disposal-status
+Accept: application/json
+
+###
+
+### 12.7 Total Approved Revenue — full year
+GET {{host}}/api/reports/scrap/revenue?startDate={{fullStart}}&endDate={{fullEnd}}
+Accept: application/json
+
+###
+
+### 12.8 Total Approved Revenue — Q1 only
+GET {{host}}/api/reports/scrap/revenue?startDate={{q1Start}}&endDate={{q1End}}
+Accept: application/json
+
+###
+
+### 12.9 Total Approved Revenue — no date filter (all time)
+GET {{host}}/api/reports/scrap/revenue
+Accept: application/json
+
+###

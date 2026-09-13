@@ -1,9 +1,11 @@
 package com.nector.userservice.interceptors.reports.service.impl;
 
+import com.nector.userservice.interceptors.reports.dto.ProductSalesRowDto;
 import com.nector.userservice.interceptors.reports.dto.ReportFilterRequest;
 import com.nector.userservice.interceptors.reports.dto.SalesInvoiceRowDto;
 import com.nector.userservice.interceptors.reports.service.SalesReportService;
 import com.nector.userservice.model.Invoice;
+import com.nector.userservice.repository.InvoiceLineItemRepository;
 import com.nector.userservice.repository.InvoiceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -25,6 +27,7 @@ import java.util.stream.Collectors;
 public class SalesReportServiceImpl implements SalesReportService {
 
     private final InvoiceRepository invoiceRepository;
+    private final InvoiceLineItemRepository invoiceLineItemRepository;
 
     @Override
     public Page<SalesInvoiceRowDto> getInvoiceGrid(ReportFilterRequest filter) {
@@ -61,6 +64,36 @@ public class SalesReportServiceImpl implements SalesReportService {
             m.put("invoiceCount", r[3]);
             return m;
         }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ProductSalesRowDto> getByProduct(ReportFilterRequest filter) {
+        LocalDateTime from = resolveFrom(filter).atStartOfDay();
+        LocalDateTime to = resolveTo(filter).atTime(23, 59, 59);
+        return invoiceLineItemRepository.getProductSalesSummary(from, to).stream().map(r ->
+            ProductSalesRowDto.builder()
+                .productId(r[0] != null ? ((Number) r[0]).longValue() : null)
+                .productName(r[1] != null ? r[1].toString() : null)
+                .totalQuantity(r[2] != null ? ((Number) r[2]).longValue() : 0L)
+                .totalAmount(r[3] != null ? new java.math.BigDecimal(r[3].toString()) : java.math.BigDecimal.ZERO)
+                .invoiceCount(r[4] != null ? ((Number) r[4]).longValue() : 0L)
+                .build()
+        ).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ProductSalesRowDto> getTopProducts(ReportFilterRequest filter, int limit) {
+        LocalDateTime from = resolveFrom(filter).atStartOfDay();
+        LocalDateTime to = resolveTo(filter).atTime(23, 59, 59);
+        return invoiceLineItemRepository.getTopProductsByQuantity(from, to).stream()
+            .limit(limit)
+            .map(r -> ProductSalesRowDto.builder()
+                .productId(r[0] != null ? ((Number) r[0]).longValue() : null)
+                .productName(r[1] != null ? r[1].toString() : null)
+                .totalQuantity(r[2] != null ? ((Number) r[2]).longValue() : 0L)
+                .totalAmount(r[3] != null ? new java.math.BigDecimal(r[3].toString()) : java.math.BigDecimal.ZERO)
+                .build()
+            ).collect(Collectors.toList());
     }
 
     private SalesInvoiceRowDto toDto(Invoice i) {

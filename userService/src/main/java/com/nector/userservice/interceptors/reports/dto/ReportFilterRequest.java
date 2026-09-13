@@ -16,6 +16,8 @@ public class ReportFilterRequest {
 
     private String financialYear;
     private Long distributorId;
+    private String supplierId;
+    private String deliveryStatus;
     private String reportType;
     private String groupBy;
     private int page = 0;

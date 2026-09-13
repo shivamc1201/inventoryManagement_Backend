@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -44,5 +45,13 @@ public class SalesOrdersReportController {
     public ResponseEntity<Map<String, Object>> getStatusCounts(
             @RequestParam(required = false) Long distributorId) {
         return ResponseEntity.ok(salesOrdersReportService.getStatusCounts(distributorId));
+    }
+
+    @GetMapping("/salesman-performance")
+    @Operation(summary = "Order count and total value grouped by salesperson")
+    public ResponseEntity<List<Map<String, Object>>> getSalesmanPerformance(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(salesOrdersReportService.getSalesmanPerformance(startDate, endDate));
     }
 }

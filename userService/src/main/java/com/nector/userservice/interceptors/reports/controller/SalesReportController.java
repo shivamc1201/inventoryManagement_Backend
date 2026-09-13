@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.reports.controller;
 
+import com.nector.userservice.interceptors.reports.dto.ProductSalesRowDto;
 import com.nector.userservice.interceptors.reports.dto.ReportFilterRequest;
 import com.nector.userservice.interceptors.reports.dto.SalesInvoiceRowDto;
 import com.nector.userservice.interceptors.reports.service.SalesReportService;
@@ -49,6 +50,23 @@ public class SalesReportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return ResponseEntity.ok(salesReportService.getMonthlyTrend(buildFilter(distributorId, startDate, endDate, 0, 50)));
+    }
+
+    @GetMapping("/by-product")
+    @Operation(summary = "Sales totals grouped by product (uses invoice line items)")
+    public ResponseEntity<List<ProductSalesRowDto>> getByProduct(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(salesReportService.getByProduct(buildFilter(null, startDate, endDate, 0, 50)));
+    }
+
+    @GetMapping("/top-products")
+    @Operation(summary = "Top N products by quantity sold (default top 10)")
+    public ResponseEntity<List<ProductSalesRowDto>> getTopProducts(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(salesReportService.getTopProducts(buildFilter(null, startDate, endDate, 0, 50), limit));
     }
 
     private ReportFilterRequest buildFilter(Long distributorId, LocalDate startDate, LocalDate endDate, int page, int size) {

@@ -25,4 +25,5 @@ public class DispatchRegisterRowDto {
     private BigDecimal totalWeight;
     private String shippingAddress;
     private int itemCount;
+    private String deliveryStatus;
 }

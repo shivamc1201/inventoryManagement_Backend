@@ -11,12 +11,18 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+
+
 @Entity
 @Table(name = "gdn")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class Gdn {
+
+    public enum DeliveryStatus {
+        PENDING, IN_TRANSIT, DELIVERED
+    }
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -47,6 +53,10 @@ public class Gdn {
     
     private Integer totalPackages;
     
+    @Enumerated(EnumType.STRING)
+    @Column(name = "delivery_status")
+    private DeliveryStatus deliveryStatus = DeliveryStatus.PENDING;
+
     @OneToMany(mappedBy = "gdn", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<GdnItem> gdnItems = new ArrayList<>();
 }

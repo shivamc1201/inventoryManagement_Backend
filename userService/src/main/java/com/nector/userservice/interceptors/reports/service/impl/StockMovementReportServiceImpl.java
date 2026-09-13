@@ -41,7 +41,7 @@ public class StockMovementReportServiceImpl implements StockMovementReportServic
     public List<StockMovementRowDto> getInwardSummary(ReportFilterRequest filter) {
         Instant from = resolveFrom(filter).atStartOfDay().toInstant(ZoneOffset.UTC);
         Instant to = resolveTo(filter).atTime(23, 59, 59).toInstant(ZoneOffset.UTC);
-        return lotRepository.findByReceivedAtBetween(from, to).stream().map(lot ->
+        return lotRepository.findByReceivedAtBetween(from, to, filter.getSupplierId()).stream().map(lot ->
             StockMovementRowDto.builder()
                 .movementType("INWARD")
                 .materialCode(String.valueOf(lot.getRawMaterialId()))
@@ -49,6 +49,8 @@ public class StockMovementReportServiceImpl implements StockMovementReportServic
                 .quantity(lot.getQuantityOriginal())
                 .pricePerUnit(lot.getPricePerUnit())
                 .date(LocalDateTime.ofInstant(lot.getReceivedAt(), ZoneOffset.UTC))
+                .supplierId(lot.getSupplierId())
+                .supplierName(lot.getSupplierName())
                 .build()
         ).collect(Collectors.toList());
     }

@@ -18,8 +18,11 @@ public interface RawMaterialInventoryLotRepository extends JpaRepository<RawMate
 
     // --- Report queries ---
 
-    @Query("SELECT l FROM RawMaterialInventoryLot l WHERE l.receivedAt BETWEEN :from AND :to ORDER BY l.receivedAt DESC")
-    List<RawMaterialInventoryLot> findByReceivedAtBetween(@Param("from") Instant from, @Param("to") Instant to);
+    @Query("SELECT l FROM RawMaterialInventoryLot l WHERE l.receivedAt BETWEEN :from AND :to " +
+           "AND (:supplierId IS NULL OR l.supplierId = :supplierId) ORDER BY l.receivedAt DESC")
+    List<RawMaterialInventoryLot> findByReceivedAtBetween(@Param("from") Instant from,
+                                                           @Param("to") Instant to,
+                                                           @Param("supplierId") String supplierId);
 
     @Query("SELECT l FROM RawMaterialInventoryLot l WHERE l.rawMaterialId = :rawMaterialId " +
            "AND l.receivedAt BETWEEN :from AND :to ORDER BY l.receivedAt ASC")

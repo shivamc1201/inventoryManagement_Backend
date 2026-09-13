@@ -14,7 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -46,6 +48,7 @@ public class SalesOrdersReportServiceImpl implements SalesOrdersReportService {
                     .orderDate(o.getOrderDate())
                     .totalAmount(o.getTotalAmount())
                     .currentStatus(status)
+                    .salespersonId(o.getSalespersonId())
                     .build();
         });
     }
@@ -61,6 +64,21 @@ public class SalesOrdersReportServiceImpl implements SalesOrdersReportService {
         result.put("total", total);
         result.put("completed", completed);
         result.put("pending", pending);
+        return result;
+    }
+
+    @Override
+    public List<Map<String, Object>> getSalesmanPerformance(LocalDate startDate, LocalDate endDate) {
+        LocalDate from = startDate != null ? startDate : LocalDate.now().withDayOfYear(1);
+        LocalDate to = endDate != null ? endDate : LocalDate.now();
+        List<Map<String, Object>> result = new ArrayList<>();
+        orderTrackingRepository.getSalesmanPerformance(from, to).forEach(r -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("salespersonId", r[0]);
+            m.put("orderCount", r[1]);
+            m.put("totalValue", r[2]);
+            result.add(m);
+        });
         return result;
     }
 

@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.reports.service;
 
+import com.nector.userservice.interceptors.reports.dto.ProductSalesRowDto;
 import com.nector.userservice.interceptors.reports.dto.ReportFilterRequest;
 import com.nector.userservice.interceptors.reports.dto.SalesInvoiceRowDto;
 import org.springframework.data.domain.Page;
@@ -11,4 +12,6 @@ public interface SalesReportService {
     Page<SalesInvoiceRowDto> getInvoiceGrid(ReportFilterRequest filter);
     List<Map<String, Object>> getByDistributor(ReportFilterRequest filter);
     List<Map<String, Object>> getMonthlyTrend(ReportFilterRequest filter);
+    List<ProductSalesRowDto> getByProduct(ReportFilterRequest filter);
+    List<ProductSalesRowDto> getTopProducts(ReportFilterRequest filter, int limit);
 }

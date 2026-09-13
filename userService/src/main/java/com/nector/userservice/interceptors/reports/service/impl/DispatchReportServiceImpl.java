@@ -1,6 +1,7 @@
 package com.nector.userservice.interceptors.reports.service.impl;
 
 import com.nector.userservice.dispatch.entity.Gdn;
+import com.nector.userservice.dispatch.entity.Gdn.DeliveryStatus;
 import com.nector.userservice.dispatch.repository.GdnRepository;
 import com.nector.userservice.interceptors.reports.dto.DispatchRegisterRowDto;
 import com.nector.userservice.interceptors.reports.dto.ReportFilterRequest;
@@ -30,7 +31,9 @@ public class DispatchReportServiceImpl implements DispatchReportService {
         LocalDateTime from = resolveFrom(filter).atStartOfDay();
         LocalDateTime to = resolveTo(filter).atTime(23, 59, 59);
         PageRequest page = PageRequest.of(filter.getPage(), filter.getSize(), Sort.by("gdnDate").descending());
-        return gdnRepository.findByGdnDateBetween(from, to, page).map(this::toDto);
+        DeliveryStatus status = filter.getDeliveryStatus() != null
+                ? DeliveryStatus.valueOf(filter.getDeliveryStatus().toUpperCase()) : null;
+        return gdnRepository.findByGdnDateBetween(from, to, status, page).map(this::toDto);
     }
 
     @Override
@@ -62,6 +65,7 @@ public class DispatchReportServiceImpl implements DispatchReportService {
                 .totalWeight(g.getTotalWeight())
                 .shippingAddress(g.getShippingAddress())
                 .itemCount(g.getGdnItems() != null ? g.getGdnItems().size() : 0)
+                .deliveryStatus(g.getDeliveryStatus() != null ? g.getDeliveryStatus().name() : DeliveryStatus.PENDING.name())
                 .build();
     }
 

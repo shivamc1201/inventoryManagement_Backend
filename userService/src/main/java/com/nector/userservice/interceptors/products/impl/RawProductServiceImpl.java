@@ -79,7 +79,8 @@ public class RawProductServiceImpl implements RawProductService {
 
         if (request.getQuantity() != null && request.getQuantity().compareTo(BigDecimal.ZERO) > 0
                 && request.getPrice() != null && request.getPrice().compareTo(BigDecimal.ZERO) > 0) {
-            createInventoryLot(savedProduct.getId(), request.getQuantity(), request.getPrice());
+            createInventoryLot(savedProduct.getId(), request.getQuantity(), request.getPrice(),
+                    request.getVendorId(), request.getVendorName());
         }
 
         return mapToResponse(savedProduct);
@@ -137,7 +138,8 @@ public class RawProductServiceImpl implements RawProductService {
         if (qtyAdded != null) {
             BigDecimal lotPrice = updatedProduct.getPrice() != null ? updatedProduct.getPrice() : BigDecimal.ZERO;
             if (lotPrice.compareTo(BigDecimal.ZERO) > 0) {
-                createInventoryLot(updatedProduct.getId(), qtyAdded, lotPrice);
+                createInventoryLot(updatedProduct.getId(), qtyAdded, lotPrice,
+                        updatedProduct.getVendorId(), updatedProduct.getVendorName());
             }
         }
 
@@ -198,7 +200,8 @@ public class RawProductServiceImpl implements RawProductService {
 
         BigDecimal price = updatedProduct.getPrice() != null ? updatedProduct.getPrice() : BigDecimal.ZERO;
         if (price.compareTo(BigDecimal.ZERO) > 0) {
-            createInventoryLot(updatedProduct.getId(), quantity, price);
+            createInventoryLot(updatedProduct.getId(), quantity, price,
+                    updatedProduct.getVendorId(), updatedProduct.getVendorName());
         }
 
         log.info("Stock increased successfully for raw product ID: {}", id);
@@ -330,7 +333,8 @@ public class RawProductServiceImpl implements RawProductService {
             if (diff.compareTo(BigDecimal.ZERO) > 0) {
                 BigDecimal lotPrice = updatedProduct.getPrice() != null ? updatedProduct.getPrice() : BigDecimal.ZERO;
                 if (lotPrice.compareTo(BigDecimal.ZERO) > 0) {
-                    createInventoryLot(updatedProduct.getId(), diff, lotPrice);
+                    createInventoryLot(updatedProduct.getId(), diff, lotPrice,
+                            updatedProduct.getVendorId(), updatedProduct.getVendorName());
                 }
             }
         }
@@ -344,12 +348,15 @@ public class RawProductServiceImpl implements RawProductService {
         return mapToResponse(updatedProduct);
     }
 
-    private void createInventoryLot(Long rawMaterialId, BigDecimal quantity, BigDecimal price) {
+    private void createInventoryLot(Long rawMaterialId, BigDecimal quantity, BigDecimal price,
+                                     String supplierId, String supplierName) {
         RawMaterialInventoryLot lot = RawMaterialInventoryLot.builder()
                 .rawMaterialId(rawMaterialId)
                 .quantityOriginal(quantity)
                 .quantityRemaining(quantity)
                 .pricePerUnit(price)
+                .supplierId(supplierId)
+                .supplierName(supplierName)
                 .build();
         inventoryLotRepository.save(lot);
         log.info("Created FIFO inventory lot for raw material ID {}: {} units @ {}", rawMaterialId, quantity, price);

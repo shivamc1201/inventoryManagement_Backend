@@ -8,7 +8,9 @@ import com.nector.userservice.interceptors.distributor.repository.DistributorRep
 import com.nector.userservice.interceptors.distributor.repository.OrderConfirmationRepository;
 import com.nector.userservice.model.Cart;
 import com.nector.userservice.model.CartItem;
+import com.nector.userservice.model.InvoiceLineItem;
 import com.nector.userservice.repository.CartRepository;
+import com.nector.userservice.repository.InvoiceLineItemRepository;
 import com.nector.userservice.repository.InvoiceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +38,7 @@ public class InvoiceService {
 
     private final CartRepository cartRepository;
     private final InvoiceRepository invoiceRepository;
+    private final InvoiceLineItemRepository invoiceLineItemRepository;
     private final OrderConfirmationRepository orderConfirmationRepository;
     private final TemplateEngine templateEngine;
     private final HtmlToPdfService htmlToPdfService;
@@ -75,6 +78,8 @@ public class InvoiceService {
             invoiceRepository.save(invoiceEntity);
             log.info("Invoice entity created - ID: {}, Invoice Number: {}, Amount: {}",
                     invoiceEntity.getId(), invoiceEntity.getInvoiceNumber(), invoiceEntity.getGrandTotal());
+
+            saveLineItems(invoiceEntity.getId(), orderConfirmation, cart);
 
             // Step 4: Generate invoice data
             log.info("Step 4/6: Generating invoice data from cart and order confirmation");
@@ -409,6 +414,61 @@ public class InvoiceService {
         invoice.setAuthorizedSignatory("Authorized Signatory");
 
         return invoice;
+    }
+
+    private void saveLineItems(Long invoiceId, OrderConfirmation orderConfirmation, Cart cart) {
+        try {
+            List<InvoiceLineItem> lineItems = new java.util.ArrayList<>();
+            boolean hasConfirmations = orderConfirmation.getItemConfirmations() != null
+                    && !orderConfirmation.getItemConfirmations().isEmpty();
+
+            if (hasConfirmations) {
+                for (var itemConfirmation : orderConfirmation.getItemConfirmations()) {
+                    if (itemConfirmation.getItemId() == null || itemConfirmation.getItemId() <= 0) continue;
+                    int qty = (itemConfirmation.getReceivedQuantity() != null && itemConfirmation.getReceivedQuantity() > 0)
+                            ? itemConfirmation.getReceivedQuantity()
+                            : (itemConfirmation.getDispatchedQuantity() != null && itemConfirmation.getDispatchedQuantity() > 0
+                                    ? itemConfirmation.getDispatchedQuantity() : 0);
+                    if (qty <= 0) continue;
+                    CartItem cartItem = cart.getCartItems().stream()
+                            .filter(ci -> ci.getItem() != null && ci.getItem().getId().equals(itemConfirmation.getItemId()))
+                            .findFirst().orElse(null);
+                    if (cartItem == null) continue;
+                    lineItems.add(InvoiceLineItem.builder()
+                            .invoiceId(invoiceId)
+                            .productId(cartItem.getItem().getId())
+                            .productName(cartItem.getItem().getName())
+                            .hsnCode(cartItem.getItem().getHsn())
+                            .quantity(qty)
+                            .ratePerUnit(cartItem.getPriceAtTime())
+                            .amount(cartItem.getPriceAtTime().multiply(java.math.BigDecimal.valueOf(qty)))
+                            .unit("Bag")
+                            .build());
+                }
+            }
+
+            if (lineItems.isEmpty()) {
+                cart.getCartItems().stream()
+                        .filter(ci -> ci.getItem() != null && ci.getQuantity() > 0)
+                        .forEach(ci -> lineItems.add(InvoiceLineItem.builder()
+                                .invoiceId(invoiceId)
+                                .productId(ci.getItem().getId())
+                                .productName(ci.getItem().getName())
+                                .hsnCode(ci.getItem().getHsn())
+                                .quantity(ci.getQuantity())
+                                .ratePerUnit(ci.getPriceAtTime())
+                                .amount(ci.getPriceAtTime().multiply(java.math.BigDecimal.valueOf(ci.getQuantity())))
+                                .unit("Bag")
+                                .build()));
+            }
+
+            if (!lineItems.isEmpty()) {
+                invoiceLineItemRepository.saveAll(lineItems);
+                log.info("Saved {} line items for invoice ID {}", lineItems.size(), invoiceId);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to save invoice line items for invoice ID {}: {}", invoiceId, e.getMessage());
+        }
     }
 
     private String generateHtmlFromTemplate(Invoice invoice) {

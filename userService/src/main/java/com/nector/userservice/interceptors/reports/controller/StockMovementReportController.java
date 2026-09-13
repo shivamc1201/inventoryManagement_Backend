@@ -31,11 +31,14 @@ public class StockMovementReportController {
     }
 
     @GetMapping("/inward")
-    @Operation(summary = "Inward stock transactions (raw material lots received)")
+    @Operation(summary = "Inward stock transactions. Pass supplierId to filter by supplier.")
     public ResponseEntity<List<StockMovementRowDto>> getInward(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return ResponseEntity.ok(stockMovementReportService.getInwardSummary(buildFilter(null, startDate, endDate)));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) String supplierId) {
+        ReportFilterRequest filter = buildFilter(null, startDate, endDate);
+        filter.setSupplierId(supplierId);
+        return ResponseEntity.ok(stockMovementReportService.getInwardSummary(filter));
     }
 
     @GetMapping("/outward")

@@ -23,15 +23,17 @@ public class DispatchReportController {
     private final DispatchReportService dispatchReportService;
 
     @GetMapping("/register")
-    @Operation(summary = "Paginated GDN dispatch register")
+    @Operation(summary = "Paginated GDN dispatch register. status: PENDING, IN_TRANSIT, DELIVERED")
     public ResponseEntity<Page<DispatchRegisterRowDto>> getRegister(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
         ReportFilterRequest filter = new ReportFilterRequest();
         filter.setStartDate(startDate);
         filter.setEndDate(endDate);
+        filter.setDeliveryStatus(status);
         filter.setPage(page);
         filter.setSize(size);
         return ResponseEntity.ok(dispatchReportService.getRegister(filter));

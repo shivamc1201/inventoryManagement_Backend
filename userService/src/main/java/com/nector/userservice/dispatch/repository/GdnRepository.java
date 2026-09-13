@@ -22,9 +22,11 @@ public interface GdnRepository extends JpaRepository<Gdn, Long> {
 
     // --- Report queries ---
 
-    @Query("SELECT g FROM Gdn g WHERE g.gdnDate BETWEEN :from AND :to ORDER BY g.gdnDate DESC")
+    @Query("SELECT g FROM Gdn g WHERE g.gdnDate BETWEEN :from AND :to " +
+           "AND (:status IS NULL OR g.deliveryStatus = :status) ORDER BY g.gdnDate DESC")
     Page<Gdn> findByGdnDateBetween(@Param("from") LocalDateTime from,
                                     @Param("to") LocalDateTime to,
+                                    @Param("status") com.nector.userservice.dispatch.entity.Gdn.DeliveryStatus status,
                                     Pageable pageable);
 
     @Query("SELECT g FROM Gdn g WHERE g.gdnDate BETWEEN :from AND :to ORDER BY g.gdnDate DESC")

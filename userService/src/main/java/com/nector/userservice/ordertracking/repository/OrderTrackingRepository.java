@@ -95,6 +95,16 @@ public interface OrderTrackingRepository extends JpaRepository<OrderTracking, Lo
            nativeQuery = true)
     int backfillSalespersonIds();
 
+    // --- Salesman performance ---
+
+    @Query("SELECT o.salespersonId, COUNT(o), SUM(o.totalAmount) " +
+           "FROM OrderTracking o " +
+           "WHERE o.salespersonId IS NOT NULL " +
+           "AND o.orderDate BETWEEN :from AND :to " +
+           "GROUP BY o.salespersonId ORDER BY SUM(o.totalAmount) DESC")
+    List<Object[]> getSalesmanPerformance(@Param("from") java.time.LocalDate from,
+                                           @Param("to") java.time.LocalDate to);
+
     // Methods for distributor-based filtering
     Page<OrderTracking> findByDistributorId(Long distributorId, Pageable pageable);
     

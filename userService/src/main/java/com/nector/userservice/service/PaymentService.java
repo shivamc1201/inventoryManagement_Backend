@@ -15,6 +15,7 @@ import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
 import com.nector.userservice.ordertracking.dto.CreateOrderTrackingRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -234,8 +235,12 @@ public class PaymentService {
         List<DistributorLedger> reversedHistory = new ArrayList<>(paymentHistory);
         Collections.reverse(reversedHistory); // Now oldest to newest
         
-        // Calculate opening balance by subtracting all transactions from closing balance
+        // Calculate opening balance by subtracting all transactions from closing balance.
+        // Skip credit-line rows: they don't affect the ledger balance.
         for (DistributorLedger transaction : reversedHistory) {
+            if (isCreditLineOnly(transaction)) {
+                continue;
+            }
             if (isDebitType(transaction.getTransactionType())) {
                 openingBalance = openingBalance.add(transaction.getAmount());
             } else if (isCreditType(transaction.getTransactionType())) {
@@ -250,11 +255,13 @@ public class PaymentService {
             PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance item =
                 new PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance();
 
-            // Apply transaction to get new balance
-            if (isDebitType(transaction.getTransactionType())) {
-                runningBalance = runningBalance.subtract(transaction.getAmount());
-            } else if (isCreditType(transaction.getTransactionType())) {
-                runningBalance = runningBalance.add(transaction.getAmount());
+            // Credit-line rows are shown in history but leave running balance unchanged.
+            if (!isCreditLineOnly(transaction)) {
+                if (isDebitType(transaction.getTransactionType())) {
+                    runningBalance = runningBalance.subtract(transaction.getAmount());
+                } else if (isCreditType(transaction.getTransactionType())) {
+                    runningBalance = runningBalance.add(transaction.getAmount());
+                }
             }
             
             item.setId(transaction.getId());
@@ -322,6 +329,7 @@ public class PaymentService {
         return response;
     }
     
+    @Transactional
     public com.nector.userservice.dto.payment.OrderApprovalResponse approvePIUsingCredit(Long orderId, Long distributorId) {
         // Get PI for the order
         ProformaInvoice pi = proformaInvoiceRepository.findByCartId(orderId)
@@ -332,8 +340,8 @@ public class PaymentService {
             throw new RuntimeException("Order #" + orderId + " is already paid. Cannot approve PI again.");
         }
 
-        // Get distributor and validate credit BEFORE updating any statuses
-        var distributor = distributorRepository.findById(distributorId)
+        // Row-level lock on the distributor to serialize concurrent credit approvals.
+        var distributor = distributorRepository.findByIdForUpdate(distributorId)
             .orElseThrow(() -> new RuntimeException("Distributor not found: " + distributorId));
 
         BigDecimal currentCreditBalance = distributor.getCreditBalance();
@@ -393,12 +401,13 @@ public class PaymentService {
      * @param amount         how much credit to add (must be > 0)
      * @param description    reason / remarks for the credit addition
      */
+    @Transactional
     public void addCreditToDistributor(Long distributorId, BigDecimal amount, String description) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Credit amount must be greater than zero");
         }
 
-        var distributor = distributorRepository.findById(distributorId)
+        var distributor = distributorRepository.findByIdForUpdate(distributorId)
             .orElseThrow(() -> new RuntimeException("Distributor not found: " + distributorId));
 
         BigDecimal currentCreditBalance = distributor.getCreditBalance() != null
@@ -422,8 +431,11 @@ public class PaymentService {
         distributor.setCreditBalance(newCreditBalance);
         distributorRepository.save(distributor);
 
-        // Create a ledger entry so the transaction appears in the ledger
-        updateDistributorBalance(distributorId, amount, "CREDIT", description, LocalDateTime.now());
+        // Create a ledger entry so the transaction appears in history. Tagged '(Credit Restored)'
+        // so getDistributorBalance excludes it — this call only refills the credit line, it is not
+        // cash going into the ledger balance.
+        updateDistributorBalance(distributorId, amount, "CREDIT",
+                description + " (Credit Restored)", LocalDateTime.now());
     }
 
     public List<ProformaInvoice> getPendingPaymentApprovals() {
@@ -467,6 +479,7 @@ public class PaymentService {
         return savedPayment.getId();
     }
 
+    @Transactional
     public void approvePayment(Long paymentId, Long approvedBy) {
         PaymentApproval payment = paymentApprovalRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Payment not found: " + paymentId));
@@ -475,23 +488,33 @@ public class PaymentService {
             throw new RuntimeException("Payment already processed");
         }
 
-        // For CREDIT transactions: restore creditBalance (capped at creditLimit), then add full amount to ledger
+        // For CREDIT transactions: incoming payment first restores credit line (up to limit),
+        // any excess becomes ledger balance. Both are logged in distributor_ledger for history,
+        // but only the '(Ledger Balance)' portion contributes to getDistributorBalance.
         if ("CREDIT".equalsIgnoreCase(payment.getTransactionType())) {
-            var distributor = distributorRepository.findById(payment.getDistributorId())
+            var distributor = distributorRepository.findByIdForUpdate(payment.getDistributorId())
                     .orElseThrow(() -> new RuntimeException("Distributor not found: " + payment.getDistributorId()));
 
             BigDecimal creditLimit = distributor.getCreditLimit() != null ? distributor.getCreditLimit() : BigDecimal.ZERO;
             BigDecimal creditBalance = distributor.getCreditBalance() != null ? distributor.getCreditBalance() : BigDecimal.ZERO;
             BigDecimal paymentAmount = payment.getAmount();
 
-            // Restore creditBalance up to creditLimit (cannot exceed limit)
-            BigDecimal newCreditBalance = creditBalance.add(paymentAmount).min(creditLimit);
-            distributor.setCreditBalance(newCreditBalance);
-            distributorRepository.save(distributor);
+            BigDecimal shortfall = creditLimit.subtract(creditBalance).max(BigDecimal.ZERO);
+            BigDecimal creditRestore = paymentAmount.min(shortfall);
+            BigDecimal ledgerCredit = paymentAmount.subtract(creditRestore);
 
-            // Add full payment as a single CREDIT entry to the ledger
-            updateDistributorBalance(payment.getDistributorId(), paymentAmount,
-                    "CREDIT", payment.getDescription(), payment.getCreatedAt());
+            if (creditRestore.compareTo(BigDecimal.ZERO) > 0) {
+                distributor.setCreditBalance(creditBalance.add(creditRestore));
+                distributorRepository.save(distributor);
+
+                updateDistributorBalance(payment.getDistributorId(), creditRestore,
+                        "CREDIT", payment.getDescription() + " (Credit Restored)", payment.getCreatedAt());
+            }
+
+            if (ledgerCredit.compareTo(BigDecimal.ZERO) > 0) {
+                updateDistributorBalance(payment.getDistributorId(), ledgerCredit,
+                        "CREDIT", payment.getDescription() + " (Ledger Balance)", payment.getCreatedAt());
+            }
         } else {
             // For DEBIT or other transaction types, process normally
             updateDistributorBalance(payment.getDistributorId(), payment.getAmount(),
@@ -657,6 +680,16 @@ public class PaymentService {
 
     private boolean isDebitType(String transactionType) {
         return "DEBIT".equalsIgnoreCase(transactionType) || "JV_DEBIT".equalsIgnoreCase(transactionType);
+    }
+
+    // Rows that only move the credit line, never the ledger balance.
+    // Kept in the distributor_ledger table for frontend history but excluded from balance math.
+    private boolean isCreditLineOnly(DistributorLedger transaction) {
+        String description = transaction.getDescription();
+        if (description == null) {
+            return false;
+        }
+        return description.contains("(using credit)") || description.contains("(Credit Restored)");
     }
 
     public DistributorRepository getDistributorRepository() {

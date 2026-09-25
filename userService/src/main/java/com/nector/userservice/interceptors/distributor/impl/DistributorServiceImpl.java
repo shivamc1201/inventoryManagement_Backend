@@ -232,6 +232,7 @@ public class DistributorServiceImpl implements DistributorService {
         confirmation.setGdnNumber(request.getGdnNumber());
         confirmation.setStatus(request.getStatus());
         confirmation.setOverallRating(request.getOverallRating());
+        confirmation.setReceivedBy(request.getReceivedBy());
         confirmation.setFeedback(request.getFeedback());
         confirmation.setRemarks(request.getRemarks());
         confirmation.setApprovalStatus(requiresApproval ?

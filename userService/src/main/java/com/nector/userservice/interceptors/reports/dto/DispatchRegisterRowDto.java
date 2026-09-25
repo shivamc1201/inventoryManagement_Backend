@@ -26,4 +26,5 @@ public class DispatchRegisterRowDto {
     private String shippingAddress;
     private int itemCount;
     private String deliveryStatus;
+    private String customerName;
 }

@@ -60,8 +60,7 @@ public class DealerInvoiceService {
             invoiceEntity.setDealerId(order.getDealerId());
             invoiceEntity.setDealerName(dealer.getFullName());
             invoiceEntity.setDistributorId(order.getDistributorId());
-            invoiceEntity.setDistributorName(distributor != null
-                    ? distributor.getFirstName() + " " + distributor.getLastName() : "");
+            invoiceEntity.setDistributorName(distributor != null && distributor.getFirstName() != null ? distributor.getFirstName() : "");
             invoiceEntity.setTotalAmount(order.getAmount());
             invoiceEntity.setGrandTotal(order.getAmount());
             invoiceEntity.setInvoiceStatus(DealerInvoice.InvoiceStatus.GENERATED);
@@ -172,11 +171,25 @@ public class DealerInvoiceService {
         dto.setPaymentTerms("Due on Receipt");
 
         // Seller = Distributor (may be null if distributor_id was not set on the order)
-        dto.setSellerName(distributor != null ? distributor.getFirstName() + " " + distributor.getLastName() : "");
+        dto.setSellerName(distributor != null && distributor.getFirstName() != null ? distributor.getFirstName() : "");
         dto.setSellerAddress(distributor != null && distributor.getAddress() != null ? distributor.getAddress() : "");
-        dto.setSellerPhone(distributor != null && distributor.getPhoneNumber() != null ? distributor.getPhoneNumber() : "");
+        String sellerPhone = "";
+        if (distributor != null) {
+            if (distributor.getPhoneNumber() != null && !distributor.getPhoneNumber().isBlank()) {
+                sellerPhone = distributor.getPhoneNumber();
+            } else if (distributor.getAlternateContact() != null && !distributor.getAlternateContact().isBlank()) {
+                sellerPhone = distributor.getAlternateContact();
+            }
+        }
+        dto.setSellerPhone(sellerPhone);
+        dto.setSellerEmail(distributor != null && distributor.getContactEmail() != null ? distributor.getContactEmail() : "");
         dto.setSellerGstin(distributor != null && distributor.getGstNumber() != null ? distributor.getGstNumber() : "");
         dto.setSellerState(distributor != null && distributor.getState() != null ? distributor.getState() : "");
+        dto.setSellerPan(distributor != null && distributor.getPanNumber() != null ? distributor.getPanNumber() : "");
+        dto.setSellerBankAccountHolder(distributor != null && distributor.getAccountName() != null ? distributor.getAccountName() : "");
+        dto.setSellerBankAccountNo(distributor != null && distributor.getAccountNumber() != null ? distributor.getAccountNumber() : "");
+        dto.setSellerBankIfsc(distributor != null && distributor.getIfsc() != null ? distributor.getIfsc() : "");
+        dto.setTaxInWords("NIL");
 
         // Buyer = Dealer
         dto.setBuyerName(dealer.getFullName() != null ? dealer.getFullName() : "");

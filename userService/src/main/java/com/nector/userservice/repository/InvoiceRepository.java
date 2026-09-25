@@ -51,12 +51,15 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
                                          @Param("to") LocalDateTime to,
                                          Pageable pageable);
 
-    @Query("SELECT MONTH(i.invoiceDate), YEAR(i.invoiceDate), " +
-           "SUM(i.grandTotal), COUNT(i) FROM Invoice i " +
-           "WHERE (:distributorId IS NULL OR i.distributorId = :distributorId) " +
-           "AND i.invoiceDate BETWEEN :from AND :to " +
-           "GROUP BY YEAR(i.invoiceDate), MONTH(i.invoiceDate) " +
-           "ORDER BY YEAR(i.invoiceDate), MONTH(i.invoiceDate)")
+    @Query(value = "SELECT EXTRACT(MONTH FROM i.invoice_date), EXTRACT(YEAR FROM i.invoice_date), " +
+                   "SUM(i.grand_total), COUNT(i.id), COALESCE(SUM(ili.quantity), 0) " +
+                   "FROM invoices i " +
+                   "LEFT JOIN invoice_line_items ili ON ili.invoice_id = i.id " +
+                   "WHERE (:distributorId IS NULL OR i.distributor_id = :distributorId) " +
+                   "AND i.invoice_date BETWEEN :from AND :to " +
+                   "GROUP BY EXTRACT(YEAR FROM i.invoice_date), EXTRACT(MONTH FROM i.invoice_date) " +
+                   "ORDER BY EXTRACT(YEAR FROM i.invoice_date), EXTRACT(MONTH FROM i.invoice_date)",
+           nativeQuery = true)
     List<Object[]> getMonthlySalesTrend(@Param("distributorId") Long distributorId,
                                          @Param("from") LocalDateTime from,
                                          @Param("to") LocalDateTime to);

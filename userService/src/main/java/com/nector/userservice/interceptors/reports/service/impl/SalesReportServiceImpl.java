@@ -62,6 +62,12 @@ public class SalesReportServiceImpl implements SalesReportService {
             m.put("year", r[1]);
             m.put("totalValue", r[2]);
             m.put("invoiceCount", r[3]);
+            m.put("totalQty", r[4]);
+            long count = r[3] != null ? ((Number) r[3]).longValue() : 0L;
+            java.math.BigDecimal total = r[2] != null ? new java.math.BigDecimal(r[2].toString()) : java.math.BigDecimal.ZERO;
+            m.put("avgInvoiceValue", count > 0
+                    ? total.divide(java.math.BigDecimal.valueOf(count), 2, java.math.RoundingMode.HALF_UP)
+                    : java.math.BigDecimal.ZERO);
             return m;
         }).collect(Collectors.toList());
     }

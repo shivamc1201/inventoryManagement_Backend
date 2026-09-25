@@ -97,11 +97,18 @@ public interface OrderTrackingRepository extends JpaRepository<OrderTracking, Lo
 
     // --- Salesman performance ---
 
-    @Query("SELECT o.salespersonId, COUNT(o), SUM(o.totalAmount) " +
-           "FROM OrderTracking o " +
-           "WHERE o.salespersonId IS NOT NULL " +
-           "AND o.orderDate BETWEEN :from AND :to " +
-           "GROUP BY o.salespersonId ORDER BY SUM(o.totalAmount) DESC")
+    @Query(value = "SELECT ot.salesperson_id, MAX(c.salesperson_name) AS salesperson_name, " +
+                   "COUNT(ot.id) AS order_count, SUM(ot.total_amount) AS total_value, " +
+                   "SUM(COALESCE(g.total_weight, c.total_weight, 0)) / 1000 AS total_quantity_tons, " +
+                   "SUM(COALESCE(g.total_weight, c.total_weight, 0)) AS total_quantity_kg " +
+                   "FROM order_tracking ot " +
+                   "LEFT JOIN carts c ON ot.cart_id = c.id " +
+                   "LEFT JOIN gdn g ON g.order_id = ot.id " +
+                   "WHERE ot.salesperson_id IS NOT NULL " +
+                   "AND ot.order_date BETWEEN :from AND :to " +
+                   "GROUP BY ot.salesperson_id " +
+                   "ORDER BY SUM(ot.total_amount) DESC",
+           nativeQuery = true)
     List<Object[]> getSalesmanPerformance(@Param("from") java.time.LocalDate from,
                                            @Param("to") java.time.LocalDate to);
 

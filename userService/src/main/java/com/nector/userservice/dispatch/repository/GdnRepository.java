@@ -35,4 +35,6 @@ public interface GdnRepository extends JpaRepository<Gdn, Long> {
     @Query("SELECT COUNT(g), COALESCE(SUM(g.totalWeight), 0), COALESCE(SUM(g.totalPackages), 0) " +
            "FROM Gdn g WHERE g.gdnDate BETWEEN :from AND :to")
     List<Object[]> getDispatchSummary(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    Page<Gdn> findByDeliveryStatusOrderByGdnDateAsc(Gdn.DeliveryStatus status, Pageable pageable);
 }

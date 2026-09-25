@@ -41,6 +41,7 @@ public class OrderConfirmation {
     @Column(nullable = false)
     private OrderConfirmationRequest.ConfirmationStatus status;
 
+    private String receivedBy;
     private Integer overallRating;
     private String feedback;
     private String remarks;

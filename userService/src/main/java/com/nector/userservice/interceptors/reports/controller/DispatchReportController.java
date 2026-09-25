@@ -1,6 +1,8 @@
 package com.nector.userservice.interceptors.reports.controller;
 
+import com.nector.userservice.interceptors.reports.dto.DeliveryConfirmationRowDto;
 import com.nector.userservice.interceptors.reports.dto.DispatchRegisterRowDto;
+import com.nector.userservice.interceptors.reports.dto.PendingDispatchRowDto;
 import com.nector.userservice.interceptors.reports.dto.ReportFilterRequest;
 import com.nector.userservice.interceptors.reports.service.DispatchReportService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -48,5 +50,31 @@ public class DispatchReportController {
         filter.setStartDate(startDate);
         filter.setEndDate(endDate);
         return ResponseEntity.ok(dispatchReportService.getSummary(filter));
+    }
+
+    @GetMapping("/pending")
+    @Operation(summary = "Pending dispatch: GDNs not yet dispatched, with customer, items, amount and ready-since days")
+    public ResponseEntity<Page<PendingDispatchRowDto>> getPendingDispatches(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        ReportFilterRequest filter = new ReportFilterRequest();
+        filter.setPage(page);
+        filter.setSize(size);
+        return ResponseEntity.ok(dispatchReportService.getPendingDispatches(filter));
+    }
+
+    @GetMapping("/delivery-confirmation")
+    @Operation(summary = "Delivery confirmation report: delivered orders with POD status and received-by")
+    public ResponseEntity<Page<DeliveryConfirmationRowDto>> getDeliveryConfirmations(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        ReportFilterRequest filter = new ReportFilterRequest();
+        filter.setStartDate(startDate);
+        filter.setEndDate(endDate);
+        filter.setPage(page);
+        filter.setSize(size);
+        return ResponseEntity.ok(dispatchReportService.getDeliveryConfirmations(filter));
     }
 }

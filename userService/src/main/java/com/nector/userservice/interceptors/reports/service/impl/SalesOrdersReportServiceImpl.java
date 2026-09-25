@@ -3,9 +3,11 @@ package com.nector.userservice.interceptors.reports.service.impl;
 import com.nector.userservice.interceptors.reports.dto.ReportFilterRequest;
 import com.nector.userservice.interceptors.reports.dto.SalesOrderRowDto;
 import com.nector.userservice.interceptors.reports.service.SalesOrdersReportService;
+import com.nector.userservice.model.Cart;
 import com.nector.userservice.ordertracking.entity.OrderTracking;
 import com.nector.userservice.ordertracking.entity.StepStatus;
 import com.nector.userservice.ordertracking.repository.OrderTrackingRepository;
+import com.nector.userservice.repository.CartRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -13,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,6 +28,7 @@ import java.util.Map;
 public class SalesOrdersReportServiceImpl implements SalesOrdersReportService {
 
     private final OrderTrackingRepository orderTrackingRepository;
+    private final CartRepository cartRepository;
 
     @Override
     public Page<SalesOrderRowDto> getOrderGrid(ReportFilterRequest filter) {
@@ -75,10 +79,32 @@ public class SalesOrdersReportServiceImpl implements SalesOrdersReportService {
         orderTrackingRepository.getSalesmanPerformance(from, to).forEach(r -> {
             Map<String, Object> m = new HashMap<>();
             m.put("salespersonId", r[0]);
-            m.put("orderCount", r[1]);
-            m.put("totalValue", r[2]);
+            m.put("salespersonName", r[1]);
+            m.put("orderCount", r[2]);
+            m.put("totalValue", r[3]);
+            m.put("totalQuantityTons", r[4]);
+            m.put("totalQuantityKg", r[5]);
             result.add(m);
         });
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> backfillCartWeights() {
+        List<Cart> carts = cartRepository.findCartsWithMissingWeight();
+        int updated = 0;
+        for (Cart cart : carts) {
+            BigDecimal weight = cart.calculateTotalWeight();
+            if (weight.compareTo(BigDecimal.ZERO) > 0) {
+                cart.setTotalWeight(weight);
+                cartRepository.save(cart);
+                updated++;
+            }
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("cartsFound", carts.size());
+        result.put("cartsUpdated", updated);
         return result;
     }
 

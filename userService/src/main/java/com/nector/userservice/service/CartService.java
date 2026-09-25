@@ -106,12 +106,7 @@ public class CartService {
         long saveCartStart = System.currentTimeMillis();
         cart.setStatus(Cart.CartStatus.ACTIVE);
         Cart updatedCart = cartRepository.save(cart);
-        
-        // Initialize order tracking synchronously AFTER cart is saved
-        // This ensures the cart exists in DB and transaction is committed
-        // We run it sync to avoid transaction isolation issues with async
-        initializeOrderTrackingForCart(updatedCart, distributorId);
-        
+
         long mapStart = System.currentTimeMillis();
         CartResponse response = mapToResponse(updatedCart);
         return response;
@@ -297,7 +292,7 @@ public class CartService {
 
     @Transactional(readOnly = true)
     public List<CartResponse> getPendingApprovalCarts() {
-        List<Cart> pendingCarts = cartRepository.findByStatus(Cart.CartStatus.ACTIVE);
+        List<Cart> pendingCarts = cartRepository.findByStatus(Cart.CartStatus.PLACED);
         return pendingCarts.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());

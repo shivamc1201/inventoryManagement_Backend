@@ -47,6 +47,12 @@ public class SalesOrdersReportController {
         return ResponseEntity.ok(salesOrdersReportService.getStatusCounts(distributorId));
     }
 
+    @PostMapping("/backfill-cart-weights")
+    @Operation(summary = "Backfill total_weight on carts that are missing it (one-time fix)")
+    public ResponseEntity<Map<String, Object>> backfillCartWeights() {
+        return ResponseEntity.ok(salesOrdersReportService.backfillCartWeights());
+    }
+
     @GetMapping("/salesman-performance")
     @Operation(summary = "Order count and total value grouped by salesperson")
     public ResponseEntity<List<Map<String, Object>>> getSalesmanPerformance(

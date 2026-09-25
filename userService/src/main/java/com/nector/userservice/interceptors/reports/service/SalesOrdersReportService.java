@@ -12,4 +12,5 @@ public interface SalesOrdersReportService {
     Page<SalesOrderRowDto> getOrderGrid(ReportFilterRequest filter);
     Map<String, Object> getStatusCounts(Long distributorId);
     List<Map<String, Object>> getSalesmanPerformance(LocalDate startDate, LocalDate endDate);
+    Map<String, Object> backfillCartWeights();
 }

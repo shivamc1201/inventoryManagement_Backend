@@ -23,6 +23,8 @@ public interface SalesPersonRepository extends JpaRepository<SalesPerson, Long> 
 
     List<SalesPerson> findByZone(String zone);
 
+    List<SalesPerson> findByRegion(String region);
+
     List<SalesPerson> findByManagerId(Long managerId);
 
     List<SalesPerson> findByActiveTrue();

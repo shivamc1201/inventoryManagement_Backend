@@ -76,15 +76,32 @@ public class SalesReportServiceImpl implements SalesReportService {
     public List<ProductSalesRowDto> getByProduct(ReportFilterRequest filter) {
         LocalDateTime from = resolveFrom(filter).atStartOfDay();
         LocalDateTime to = resolveTo(filter).atTime(23, 59, 59);
-        return invoiceLineItemRepository.getProductSalesSummary(from, to).stream().map(r ->
-            ProductSalesRowDto.builder()
-                .productId(r[0] != null ? ((Number) r[0]).longValue() : null)
-                .productName(r[1] != null ? r[1].toString() : null)
-                .totalQuantity(r[2] != null ? ((Number) r[2]).longValue() : 0L)
-                .totalAmount(r[3] != null ? new java.math.BigDecimal(r[3].toString()) : java.math.BigDecimal.ZERO)
-                .invoiceCount(r[4] != null ? ((Number) r[4]).longValue() : 0L)
-                .build()
-        ).collect(Collectors.toList());
+        List<Object[]> rows = invoiceLineItemRepository.getProductSalesSummary(from, to);
+
+        java.math.BigDecimal grandTotal = rows.stream()
+                .map(r -> r[3] != null ? new java.math.BigDecimal(r[3].toString()) : java.math.BigDecimal.ZERO)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        List<ProductSalesRowDto> result = new java.util.ArrayList<>();
+        int rank = 1;
+        for (Object[] r : rows) {
+            java.math.BigDecimal amount = r[3] != null
+                    ? new java.math.BigDecimal(r[3].toString()) : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal share = grandTotal.compareTo(java.math.BigDecimal.ZERO) > 0
+                    ? amount.multiply(java.math.BigDecimal.valueOf(100))
+                            .divide(grandTotal, 2, java.math.RoundingMode.HALF_UP)
+                    : java.math.BigDecimal.ZERO;
+            result.add(ProductSalesRowDto.builder()
+                    .rank(rank++)
+                    .productId(r[0] != null ? ((Number) r[0]).longValue() : null)
+                    .productName(r[1] != null ? r[1].toString() : null)
+                    .totalQuantity(r[2] != null ? ((Number) r[2]).longValue() : 0L)
+                    .totalAmount(amount)
+                    .invoiceCount(r[4] != null ? ((Number) r[4]).longValue() : 0L)
+                    .sharePercentage(share)
+                    .build());
+        }
+        return result;
     }
 
     @Override

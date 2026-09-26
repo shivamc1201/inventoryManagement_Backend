@@ -48,9 +48,7 @@ public class ReceivablesReportServiceImpl implements ReceivablesReportService {
 
     @Override
     public Map<String, Object> getAgeingBuckets(Long distributorId) {
-        List<DealerLedgerTransaction> txns = dealerLedgerRepo.findAll().stream()
-                .filter(t -> t.getDistributorId() != null && t.getDistributorId().equals(distributorId))
-                .collect(Collectors.toList());
+        List<DealerLedgerTransaction> txns = dealerLedgerRepo.findByOptionalDistributorId(distributorId);
         LocalDate today = LocalDate.now();
         BigDecimal b0to30 = BigDecimal.ZERO, b31to60 = BigDecimal.ZERO,
                 b61to90 = BigDecimal.ZERO, b90plus = BigDecimal.ZERO;

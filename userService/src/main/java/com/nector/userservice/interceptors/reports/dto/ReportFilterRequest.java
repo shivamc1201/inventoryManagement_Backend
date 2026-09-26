@@ -15,6 +15,7 @@ public class ReportFilterRequest {
     private LocalDate endDate;
 
     private String financialYear;
+    private String region;
     private Long distributorId;
     private String supplierId;
     private String deliveryStatus;

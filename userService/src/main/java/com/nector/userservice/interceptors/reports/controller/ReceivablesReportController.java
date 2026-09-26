@@ -23,16 +23,16 @@ public class ReceivablesReportController {
     private final ReceivablesReportService receivablesReportService;
 
     @GetMapping("/outstanding")
-    @Operation(summary = "Outstanding balance per dealer under a distributor")
+    @Operation(summary = "Outstanding balance per dealer. Pass distributorId to filter by distributor, omit for all.")
     public ResponseEntity<List<ReceivablesAgeingDto>> getOutstanding(
-            @RequestParam Long distributorId) {
+            @RequestParam(required = false) Long distributorId) {
         return ResponseEntity.ok(receivablesReportService.getOutstanding(distributorId));
     }
 
     @GetMapping("/ageing")
-    @Operation(summary = "Ageing buckets: 0-30, 31-60, 61-90, 90+ days")
+    @Operation(summary = "Ageing buckets: 0-30, 31-60, 61-90, 90+ days. Pass distributorId to filter by distributor, omit for all.")
     public ResponseEntity<Map<String, Object>> getAgeingBuckets(
-            @RequestParam Long distributorId) {
+            @RequestParam(required = false) Long distributorId) {
         return ResponseEntity.ok(receivablesReportService.getAgeingBuckets(distributorId));
     }
 

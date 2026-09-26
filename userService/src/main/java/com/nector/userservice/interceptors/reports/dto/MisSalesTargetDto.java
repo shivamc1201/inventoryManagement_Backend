@@ -11,12 +11,8 @@ import java.math.BigDecimal;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductSalesRowDto {
-    private int rank;
-    private Long productId;
-    private String productName;
-    private Long totalQuantity;
-    private BigDecimal totalAmount;
-    private Long invoiceCount;
-    private BigDecimal sharePercentage;
+public class MisSalesTargetDto {
+    private String period;
+    private BigDecimal actual;
+    private BigDecimal target;
 }

@@ -26,6 +26,9 @@ public interface DistributorRepository extends JpaRepository<Distributor, Long> 
     List<Distributor> findBySalespersonId(Long salespersonId);
     List<Distributor> findBySalespersonIdIn(List<Long> salespersonIds);
 
+    @Query("SELECT d.id FROM Distributor d WHERE d.salespersonId IN :salespersonIds")
+    List<Long> findIdsBySalespersonIdIn(@Param("salespersonIds") List<Long> salespersonIds);
+
     Long countBySalespersonIdAndStatus(Long salespersonId, DistributorStatus status);
 
     @Query("SELECT COUNT(d) FROM Distributor d WHERE d.salespersonId = :salespersonId AND d.status = 'ACTIVE'")

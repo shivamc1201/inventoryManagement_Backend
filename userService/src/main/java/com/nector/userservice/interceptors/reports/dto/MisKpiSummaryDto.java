@@ -15,6 +15,8 @@ import java.util.Map;
 @AllArgsConstructor
 public class MisKpiSummaryDto {
     private BigDecimal totalSalesValue;
+    private BigDecimal totalPurchase;
+    private BigDecimal currentStockValue;
     private BigDecimal totalCollections;
     private long openOrdersCount;
     private long dispatchVolume;

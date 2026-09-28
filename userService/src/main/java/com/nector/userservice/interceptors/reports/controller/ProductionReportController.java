@@ -27,12 +27,14 @@ public class ProductionReportController {
     @Operation(summary = "Paginated production run log")
     public ResponseEntity<Page<ProductionLogDto>> getLog(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
         ReportFilterRequest filter = new ReportFilterRequest();
-        filter.setStartDate(startDate);
-        filter.setEndDate(endDate);
+        filter.setStartDate(startDate != null ? startDate : dateFrom);
+        filter.setEndDate(endDate != null ? endDate : dateTo);
         filter.setPage(page);
         filter.setSize(size);
         return ResponseEntity.ok(productionReportService.getProductionLog(filter));
@@ -42,10 +44,12 @@ public class ProductionReportController {
     @Operation(summary = "Production summary grouped by product")
     public ResponseEntity<List<Map<String, Object>>> getSummary(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
         ReportFilterRequest filter = new ReportFilterRequest();
-        filter.setStartDate(startDate);
-        filter.setEndDate(endDate);
+        filter.setStartDate(startDate != null ? startDate : dateFrom);
+        filter.setEndDate(endDate != null ? endDate : dateTo);
         return ResponseEntity.ok(productionReportService.getProductionSummary(filter));
     }
 
@@ -53,10 +57,12 @@ public class ProductionReportController {
     @Operation(summary = "Planned vs actual raw material consumption per production run")
     public ResponseEntity<List<Map<String, Object>>> getBomConsumption(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
         ReportFilterRequest filter = new ReportFilterRequest();
-        filter.setStartDate(startDate);
-        filter.setEndDate(endDate);
+        filter.setStartDate(startDate != null ? startDate : dateFrom);
+        filter.setEndDate(endDate != null ? endDate : dateTo);
         return ResponseEntity.ok(productionReportService.getBomConsumption(filter));
     }
 }

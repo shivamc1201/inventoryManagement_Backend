@@ -50,7 +50,8 @@ public enum RoleFeatureMapping {
     FEATURE_REPORT_SALES_ORDERS(42),
     FEATURE_REPORT_DISPATCH(43),
     FEATURE_REPORT_INVENTORY_ISSUES(44),
-    FEATURE_REPORT_SCRAP(45);
+    FEATURE_REPORT_SCRAP(45),
+    FEATURE_NOTIFICATIONS_AND_OFFERS(46);
 
     private final int id;
 
@@ -105,6 +106,7 @@ public enum RoleFeatureMapping {
             case REPORT_DISPATCH -> FEATURE_REPORT_DISPATCH.getId();
             case REPORT_INVENTORY_ISSUES -> FEATURE_REPORT_INVENTORY_ISSUES.getId();
             case REPORT_SCRAP -> FEATURE_REPORT_SCRAP.getId();
+            case NOTIFICATIONS_AND_OFFERS -> FEATURE_NOTIFICATIONS_AND_OFFERS.getId();
         };
     }
 }

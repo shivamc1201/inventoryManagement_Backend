@@ -82,12 +82,21 @@ public class ContentController {
 
     // ─── Notifications ────────────────────────────────────────────────────────
 
-    @PostMapping("/notifications")
-    @Operation(summary = "Create notification", description = "Admin: create a company notification")
+    @PostMapping(value = "/notifications", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Create notification", description = "Admin: create a company notification with an optional image")
     public ResponseEntity<CompanyNotification> createNotification(
-            @RequestBody CreateNotificationRequest request) {
+            @RequestPart("data") CreateNotificationRequest request,
+            @RequestPart(value = "image", required = false) MultipartFile image) {
         log.info("Creating notification: {}", request.getTitle());
-        return ResponseEntity.ok(contentService.createNotification(request));
+        return ResponseEntity.ok(contentService.createNotification(request, image));
+    }
+
+    @PatchMapping(value = "/notifications/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Replace notification image", description = "Admin: replace the image of an existing notification")
+    public ResponseEntity<CompanyNotification> replaceNotificationImage(
+            @PathVariable Long id,
+            @RequestPart("image") MultipartFile image) {
+        return ResponseEntity.ok(contentService.replaceNotificationImage(id, image));
     }
 
     @GetMapping("/notifications/active")

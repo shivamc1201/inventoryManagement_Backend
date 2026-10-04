@@ -22,10 +22,11 @@ public interface ContentService {
     void deleteOffer(Long id);
 
     // Notifications
-    CompanyNotification createNotification(CreateNotificationRequest request);
+    CompanyNotification createNotification(CreateNotificationRequest request, MultipartFile image);
     List<CompanyNotification> getActiveNotifications();
     List<CompanyNotification> getAllNotifications();
     CompanyNotification updateNotification(Long id, UpdateNotificationRequest request);
+    CompanyNotification replaceNotificationImage(Long id, MultipartFile image);
     CompanyNotification toggleNotification(Long id);
     void deleteNotification(Long id);
 }

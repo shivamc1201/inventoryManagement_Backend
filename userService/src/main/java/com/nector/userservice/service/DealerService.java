@@ -83,14 +83,18 @@ public class DealerService {
     }
 
     @Transactional(readOnly = true)
-    public List<DealerResponse> getActiveDealers(Long distributorId, String search) {
-        log.info("Fetching active dealers for distributor: {}", distributorId);
+    public List<DealerResponse> getActiveDealers(String search) {
+        log.info("Fetching all dealers");
 
         List<Dealer> dealers;
         if (search != null && !search.trim().isEmpty()) {
-            dealers = dealerRepository.searchActiveDealers(distributorId, search.trim());
+            String term = search.trim().toLowerCase();
+            dealers = dealerRepository.findAll().stream()
+                    .filter(d -> d.getFullName().toLowerCase().contains(term)
+                            || d.getPhone().toLowerCase().contains(term))
+                    .collect(Collectors.toList());
         } else {
-            dealers = dealerRepository.findByDistributorIdAndIsActiveTrue(distributorId);
+            dealers = dealerRepository.findAll();
         }
 
         return dealers.stream()

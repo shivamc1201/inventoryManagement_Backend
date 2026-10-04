@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.reports.service.impl;
 
+import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.interceptors.reports.dto.ReceivablesAgeingDto;
 import com.nector.userservice.interceptors.reports.dto.ReportFilterRequest;
 import com.nector.userservice.interceptors.reports.service.ReceivablesReportService;
@@ -26,6 +27,7 @@ public class ReceivablesReportServiceImpl implements ReceivablesReportService {
 
     private final DealerLedgerTransactionRepository dealerLedgerRepo;
     private final PaymentApprovalRepository paymentApprovalRepository;
+    private final DistributorRepository distributorRepository;
 
     @Override
     public List<ReceivablesAgeingDto> getOutstanding(Long distributorId) {
@@ -83,6 +85,12 @@ public class ReceivablesReportServiceImpl implements ReceivablesReportService {
                     Map<String, Object> m = new HashMap<>();
                     m.put("id", p.getId());
                     m.put("distributorId", p.getDistributorId());
+                    String distName = p.getDistributorId() != null
+                            ? distributorRepository.findById(p.getDistributorId())
+                                    .map(d -> d.getFirstName() + " " + d.getLastName())
+                                    .orElse(null)
+                            : null;
+                    m.put("distributorName", distName);
                     m.put("amount", p.getAmount());
                     m.put("description", p.getDescription());
                     m.put("approvedAt", p.getApprovedAt());

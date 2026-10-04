@@ -44,6 +44,15 @@ public class PaymentApproval {
     @Column(name = "rejection_reason")
     private String rejectionReason;
 
+    @Column(name = "utr_txn_no")
+    private String utrTxnNo;
+
+    @Column(name = "ref_no")
+    private String refNo;
+
+    @Column(name = "cheque_no")
+    private String chequeNo;
+
     @Transient
     private String distributorName;
 }

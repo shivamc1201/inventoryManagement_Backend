@@ -45,14 +45,12 @@ public class DealerController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all active dealers", description = "Retrieve all active dealers for the authenticated distributor")
+    @Operation(summary = "Get all dealers", description = "Retrieve all dealers")
     public ResponseEntity<List<DealerResponse>> getDealers(
-            @Parameter(description = "Search term to filter dealers by name or phone") 
-            @RequestParam(required = false) String search,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        
-        Long distributorId = getDistributorIdFromUser(userDetails);
-        List<DealerResponse> dealers = dealerService.getActiveDealers(distributorId, search);
+            @Parameter(description = "Search term to filter dealers by name or phone")
+            @RequestParam(required = false) String search) {
+
+        List<DealerResponse> dealers = dealerService.getActiveDealers(search);
         return ResponseEntity.ok(dealers);
     }
 

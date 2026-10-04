@@ -61,6 +61,9 @@ public enum Features {
     // --- Support Sub-Items ---
     COMPLAINTS_MANAGEMENT("Complaints Management", "/complaint/complaints_management"),
 
+    // --- Notifications & Offers ---
+    NOTIFICATIONS_AND_OFFERS("Notifications & Offers", "/notifications-offers"),
+
     // --- Reports Section ---
     REPORTS("Reports", "/reports"),
     REPORT_MIS_DASHBOARD("MIS Dashboard", "/reports/mis-dashboard"),

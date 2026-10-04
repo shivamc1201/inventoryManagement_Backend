@@ -101,7 +101,7 @@ public class ContentServiceImpl implements ContentService {
     // ─── Notifications ────────────────────────────────────────────────────────
 
     @Override
-    public CompanyNotification createNotification(CreateNotificationRequest request) {
+    public CompanyNotification createNotification(CreateNotificationRequest request, MultipartFile image) {
         CompanyNotification notification = new CompanyNotification();
         notification.setTitle(request.getTitle());
         notification.setMessage(request.getMessage());
@@ -110,6 +110,21 @@ public class ContentServiceImpl implements ContentService {
         notification.setCreatedBy(request.getCreatedBy());
         notification.setIsActive(true);
 
+        if (image != null && !image.isEmpty()) {
+            String imageUrl = cloudinaryService.uploadImage(image);
+            notification.setImageUrl(imageUrl);
+        }
+
+        return notificationRepository.save(notification);
+    }
+
+    @Override
+    public CompanyNotification replaceNotificationImage(Long id, MultipartFile image) {
+        CompanyNotification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Notification not found: " + id));
+
+        String imageUrl = cloudinaryService.uploadImage(image);
+        notification.setImageUrl(imageUrl);
         return notificationRepository.save(notification);
     }
 

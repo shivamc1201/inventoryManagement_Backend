@@ -442,7 +442,8 @@ public class PaymentService {
         updateDistributorBalance(distributorId, amount.abs(), transactionType, description, LocalDateTime.now());
     }
 
-    public Long addPaymentForApproval(Long distributorId, BigDecimal amount, String transactionType, String description, LocalDateTime date) {
+    public Long addPaymentForApproval(Long distributorId, BigDecimal amount, String transactionType, String description, LocalDateTime date,
+                                       String utrTxnNo, String refNo, String chequeNo) {
         PaymentApproval payment = new PaymentApproval();
         payment.setDistributorId(distributorId);
         payment.setAmount(amount);
@@ -450,11 +451,15 @@ public class PaymentService {
         payment.setDescription(description);
         payment.setStatus("PAYMENT_ADDED");
         payment.setCreatedAt(date != null ? date : LocalDateTime.now());
+        payment.setUtrTxnNo(utrTxnNo);
+        payment.setRefNo(refNo);
+        payment.setChequeNo(chequeNo);
         PaymentApproval savedPayment = paymentApprovalRepository.save(payment);
         return savedPayment.getId();
     }
 
-    public Long addPaymentForApprovalWithSalesperson(Long distributorId, Long salespersonId, BigDecimal amount, String transactionType, String description, LocalDateTime date) {
+    public Long addPaymentForApprovalWithSalesperson(Long distributorId, Long salespersonId, BigDecimal amount, String transactionType, String description, LocalDateTime date,
+                                                      String utrTxnNo, String refNo, String chequeNo) {
         PaymentApproval payment = new PaymentApproval();
         payment.setDistributorId(distributorId);
         payment.setSalespersonId(salespersonId);
@@ -463,6 +468,9 @@ public class PaymentService {
         payment.setDescription(description);
         payment.setStatus("PAYMENT_ADDED");
         payment.setCreatedAt(date != null ? date : LocalDateTime.now());
+        payment.setUtrTxnNo(utrTxnNo);
+        payment.setRefNo(refNo);
+        payment.setChequeNo(chequeNo);
         PaymentApproval savedPayment = paymentApprovalRepository.save(payment);
         return savedPayment.getId();
     }

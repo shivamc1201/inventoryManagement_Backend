@@ -36,6 +36,9 @@ public class OutwardItemServiceImpl implements OutwardItemService {
         transaction.setUnit(request.getUnit());
         transaction.setQuantity(request.getQuantity());
         transaction.setComments(request.getComments());
+        transaction.setQuotedSellingPrice(request.getQuotedSellingPrice());
+        transaction.setReferenceNumber(request.getReferenceNumber());
+        transaction.setIssuedTo(request.getIssuedTo());
 
         OutwardItemTransaction savedTransaction = outwardItemRepository.save(transaction);
         log.info("Outward item transaction created successfully with ID: {}", savedTransaction.getId());

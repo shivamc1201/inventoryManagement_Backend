@@ -150,8 +150,11 @@ public class AccountsController {
             @RequestParam BigDecimal amount,
             @RequestParam TransactionType transactionType,
             @RequestParam String description,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime date) {
-        Long paymentId = paymentService.addPaymentForApproval(distributorId, amount, transactionType.name(), description, date);
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime date,
+            @RequestParam(required = false) String utrTxnNo,
+            @RequestParam(required = false) String refNo,
+            @RequestParam(required = false) String chequeNo) {
+        Long paymentId = paymentService.addPaymentForApproval(distributorId, amount, transactionType.name(), description, date, utrTxnNo, refNo, chequeNo);
 
         PaymentApprovalResponse response = new PaymentApprovalResponse();
         response.setPaymentId(paymentId);
@@ -170,8 +173,11 @@ public class AccountsController {
             @RequestParam BigDecimal amount,
             @RequestParam TransactionType transactionType,
             @RequestParam String description,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime date) {
-        Long paymentId = paymentService.addPaymentForApprovalWithSalesperson(distributorId, salespersonId, amount, transactionType.name(), description, date);
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime date,
+            @RequestParam(required = false) String utrTxnNo,
+            @RequestParam(required = false) String refNo,
+            @RequestParam(required = false) String chequeNo) {
+        Long paymentId = paymentService.addPaymentForApprovalWithSalesperson(distributorId, salespersonId, amount, transactionType.name(), description, date, utrTxnNo, refNo, chequeNo);
 
         PaymentApprovalResponse response = new PaymentApprovalResponse();
         response.setPaymentId(paymentId);

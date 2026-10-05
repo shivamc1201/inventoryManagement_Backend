@@ -33,4 +33,16 @@ public interface RawMaterialInventoryLotRepository extends JpaRepository<RawMate
     List<RawMaterialInventoryLot> findByRawMaterialIdAndDateRange(@Param("rawMaterialId") Long rawMaterialId,
                                                                    @Param("from") Instant from,
                                                                    @Param("to") Instant to);
+
+    // [supplierId, supplierName, count, sum(quantityOriginal), max(receivedAt)]
+    @Query("SELECT l.supplierId, l.supplierName, COUNT(l), SUM(l.quantityOriginal), MAX(l.receivedAt) " +
+           "FROM RawMaterialInventoryLot l WHERE l.receivedAt BETWEEN :from AND :to " +
+           "GROUP BY l.supplierId, l.supplierName ORDER BY COUNT(l) DESC")
+    List<Object[]> getSupplierWiseSummary(@Param("from") Instant from, @Param("to") Instant to);
+
+    // [supplierId, rawMaterialId, sum(quantityOriginal)] — use to find top item per supplier
+    @Query("SELECT l.supplierId, l.rawMaterialId, SUM(l.quantityOriginal) " +
+           "FROM RawMaterialInventoryLot l WHERE l.receivedAt BETWEEN :from AND :to " +
+           "GROUP BY l.supplierId, l.rawMaterialId ORDER BY l.supplierId ASC, SUM(l.quantityOriginal) DESC")
+    List<Object[]> getTopItemBySupplier(@Param("from") Instant from, @Param("to") Instant to);
 }

@@ -1,7 +1,9 @@
 package com.nector.userservice.interceptors.reports.controller;
 
+import com.nector.userservice.interceptors.reports.dto.MaterialInwardRowDto;
 import com.nector.userservice.interceptors.reports.dto.ReportFilterRequest;
 import com.nector.userservice.interceptors.reports.dto.StockMovementRowDto;
+import com.nector.userservice.interceptors.reports.dto.SupplierInwardSummaryDto;
 import com.nector.userservice.interceptors.reports.service.StockMovementReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,38 +24,37 @@ public class StockMovementReportController {
     private final StockMovementReportService stockMovementReportService;
 
     @GetMapping("/ledger")
-    @Operation(summary = "Combined inward + outward ledger for date range")
+    @Operation(summary = "Stock ledger: combined inward + outward with running balance")
     public ResponseEntity<List<StockMovementRowDto>> getLedger(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        ReportFilterRequest filter = buildFilter(null, startDate, endDate);
+        ReportFilterRequest filter = buildFilter(startDate, endDate, null);
         return ResponseEntity.ok(stockMovementReportService.getLedger(filter));
     }
 
-    @GetMapping("/inward")
-    @Operation(summary = "Inward stock transactions. Pass supplierId to filter by supplier.")
-    public ResponseEntity<List<StockMovementRowDto>> getInward(
+    @GetMapping("/material-inward")
+    @Operation(summary = "Material inward report: item name, batch no, supplier, voucher no, warehouse")
+    public ResponseEntity<List<MaterialInwardRowDto>> getMaterialInward(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) String supplierId) {
-        ReportFilterRequest filter = buildFilter(null, startDate, endDate);
-        filter.setSupplierId(supplierId);
-        return ResponseEntity.ok(stockMovementReportService.getInwardSummary(filter));
+        ReportFilterRequest filter = buildFilter(startDate, endDate, supplierId);
+        return ResponseEntity.ok(stockMovementReportService.getMaterialInward(filter));
     }
 
-    @GetMapping("/outward")
-    @Operation(summary = "Outward stock transactions (issues, scrap, promotions)")
-    public ResponseEntity<List<StockMovementRowDto>> getOutward(
+    @GetMapping("/supplier-wise")
+    @Operation(summary = "Supplier-wise inward summary: receipt count, total qty, last receipt date, top item")
+    public ResponseEntity<List<SupplierInwardSummaryDto>> getSupplierWise(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return ResponseEntity.ok(stockMovementReportService.getOutwardSummary(buildFilter(null, startDate, endDate)));
+        return ResponseEntity.ok(stockMovementReportService.getSupplierWiseSummary(buildFilter(startDate, endDate, null)));
     }
 
-    private ReportFilterRequest buildFilter(Long distributorId, LocalDate startDate, LocalDate endDate) {
+    private ReportFilterRequest buildFilter(LocalDate startDate, LocalDate endDate, String supplierId) {
         ReportFilterRequest f = new ReportFilterRequest();
-        f.setDistributorId(distributorId);
         f.setStartDate(startDate);
         f.setEndDate(endDate);
+        f.setSupplierId(supplierId);
         return f;
     }
 }

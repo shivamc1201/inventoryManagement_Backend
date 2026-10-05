@@ -65,4 +65,36 @@ public class ProductionReportController {
         filter.setEndDate(endDate != null ? endDate : dateTo);
         return ResponseEntity.ok(productionReportService.getBomConsumption(filter));
     }
+
+    @GetMapping("/bom-report")
+    @Operation(summary = "BOM report — full bill of materials with components and additional costs")
+    public ResponseEntity<List<Map<String, Object>>> getBomReport() {
+        return ResponseEntity.ok(productionReportService.getBomReport());
+    }
+
+    @GetMapping("/cost")
+    @Operation(summary = "Production cost report — per-run raw material, additional, and total cost breakdown")
+    public ResponseEntity<List<Map<String, Object>>> getProductionCostReport(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+        ReportFilterRequest filter = new ReportFilterRequest();
+        filter.setStartDate(startDate != null ? startDate : dateFrom);
+        filter.setEndDate(endDate != null ? endDate : dateTo);
+        return ResponseEntity.ok(productionReportService.getProductionCostReport(filter));
+    }
+
+    @GetMapping("/daily-summary")
+    @Operation(summary = "Daily production summary — runs, quantity, and cost grouped by date")
+    public ResponseEntity<List<Map<String, Object>>> getDailySummary(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+        ReportFilterRequest filter = new ReportFilterRequest();
+        filter.setStartDate(startDate != null ? startDate : dateFrom);
+        filter.setEndDate(endDate != null ? endDate : dateTo);
+        return ResponseEntity.ok(productionReportService.getDailySummary(filter));
+    }
 }

@@ -54,7 +54,7 @@ public class OrderTrackingService {
             List<Long> hierarchyIds = buildHierarchyIds(salespersonId);
             result = orderRepo.findFilteredBySalespersonIds(searchParam, statusParam, hierarchyIds, pageable);
         } else {
-            result = orderRepo.findFiltered(searchParam, statusParam, Pageable.unpaged());
+            result = orderRepo.findFiltered(searchParam, statusParam, pageable);
         }
 
         List<OrderTrackingDTO> orders = result.getContent()

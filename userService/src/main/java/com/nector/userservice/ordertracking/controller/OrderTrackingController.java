@@ -31,7 +31,7 @@ public class OrderTrackingController {
             @RequestParam(required = false) Long distributorId,
             @RequestParam(required = false) Long salespersonId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
+            @RequestParam(defaultValue = "20") int size) {
 
         return ResponseEntity.ok(service.listOrders(search, status, distributorId, salespersonId, page, size));
     }

@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.reports.service.impl;
 
+import com.nector.userservice.bom.repository.BillOfMaterialRepository;
 import com.nector.userservice.interceptors.reports.dto.ProductionLogDto;
 import com.nector.userservice.interceptors.reports.dto.ReportFilterRequest;
 import com.nector.userservice.interceptors.reports.repository.ProductionLogRepository;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 public class ProductionReportServiceImpl implements ProductionReportService {
 
     private final ProductionLogRepository productionLogRepository;
+    private final BillOfMaterialRepository billOfMaterialRepository;
 
     @Override
     public Page<ProductionLogDto> getProductionLog(ReportFilterRequest filter) {
@@ -80,5 +82,78 @@ public class ProductionReportServiceImpl implements ProductionReportService {
                     result.add(m);
                 }));
         return result;
+    }
+
+    @Override
+    public List<Map<String, Object>> getBomReport() {
+        return billOfMaterialRepository.findAll().stream().map(bom -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("bomId", bom.getId());
+            m.put("bomName", bom.getBomName());
+            m.put("finishedProductId", bom.getFinishedProductId());
+            m.put("finishedProductName", bom.getFinishedProductName());
+            m.put("outputQuantity", bom.getOutputQuantity());
+            m.put("outputUnit", bom.getOutputUnit());
+            m.put("totalComponentCost", bom.getTotalComponentCost());
+            m.put("totalAdditionalCost", bom.getTotalAdditionalCost());
+            m.put("effectiveCost", bom.getEffectiveCost());
+            m.put("effectiveRatePerUnit", bom.getEffectiveRatePerUnit());
+            m.put("components", bom.getComponents().stream().map(c -> {
+                Map<String, Object> cm = new HashMap<>();
+                cm.put("rawMaterialId", c.getRawMaterialId());
+                cm.put("rawMaterialName", c.getRawMaterialName());
+                cm.put("quantity", c.getQuantity());
+                cm.put("unit", c.getUnit());
+                cm.put("rate", c.getRate());
+                cm.put("amount", c.getAmount());
+                cm.put("contributionPercent", c.getContributionPercent());
+                return cm;
+            }).collect(Collectors.toList()));
+            m.put("additionalCosts", bom.getAdditionalCosts().stream().map(ac -> {
+                Map<String, Object> acm = new HashMap<>();
+                acm.put("type", ac.getType());
+                acm.put("percentage", ac.getPercentage());
+                acm.put("amount", ac.getAmount());
+                return acm;
+            }).collect(Collectors.toList()));
+            return m;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Map<String, Object>> getProductionCostReport(ReportFilterRequest filter) {
+        LocalDate from = filter.getStartDate() != null ? filter.getStartDate() : LocalDate.now().minusMonths(1);
+        LocalDate to = filter.getEndDate() != null ? filter.getEndDate() : LocalDate.now();
+        return productionLogRepository.findByProductionDateBetweenOrderByProductionDateDesc(from, to).stream()
+                .map(log -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("productionNumber", log.getProductionNumber());
+                    m.put("finishedProductId", log.getFinishedProductId());
+                    m.put("finishedProductName", log.getFinishedProductName());
+                    m.put("batchNumber", log.getBatchNumber());
+                    m.put("productionDate", log.getProductionDate());
+                    m.put("quantityProduced", log.getQuantityProduced());
+                    m.put("outputUnit", log.getOutputUnit());
+                    m.put("totalRawMaterialCost", log.getTotalRawMaterialCost());
+                    m.put("totalAdditionalCost", log.getTotalAdditionalCost());
+                    m.put("totalProductionCost", log.getTotalProductionCost());
+                    m.put("costPerUnit", log.getCostPerUnit());
+                    m.put("status", log.getStatus());
+                    return m;
+                }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Map<String, Object>> getDailySummary(ReportFilterRequest filter) {
+        LocalDate from = filter.getStartDate() != null ? filter.getStartDate() : LocalDate.now().minusMonths(1);
+        LocalDate to = filter.getEndDate() != null ? filter.getEndDate() : LocalDate.now();
+        return productionLogRepository.getDailySummary(from, to).stream().map(r -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("productionDate", r[0]);
+            m.put("totalRuns", r[1]);
+            m.put("totalQuantityProduced", r[2]);
+            m.put("totalProductionCost", r[3]);
+            return m;
+        }).collect(Collectors.toList());
     }
 }

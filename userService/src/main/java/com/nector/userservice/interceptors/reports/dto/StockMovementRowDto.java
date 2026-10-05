@@ -23,4 +23,10 @@ public class StockMovementRowDto {
     private LocalDateTime date;
     private String supplierId;
     private String supplierName;
+    // Ledger-specific fields
+    private String voucherNo;
+    private String partyName;
+    private BigDecimal inwardQty;
+    private BigDecimal outwardQty;
+    private BigDecimal balanceQty;
 }

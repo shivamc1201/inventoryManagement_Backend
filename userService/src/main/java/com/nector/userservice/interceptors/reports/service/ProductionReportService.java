@@ -11,4 +11,7 @@ public interface ProductionReportService {
     Page<ProductionLogDto> getProductionLog(ReportFilterRequest filter);
     List<Map<String, Object>> getProductionSummary(ReportFilterRequest filter);
     List<Map<String, Object>> getBomConsumption(ReportFilterRequest filter);
+    List<Map<String, Object>> getBomReport();
+    List<Map<String, Object>> getProductionCostReport(ReportFilterRequest filter);
+    List<Map<String, Object>> getDailySummary(ReportFilterRequest filter);
 }

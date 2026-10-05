@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.content;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nector.userservice.interceptors.content.dto.CreateNotificationRequest;
 import com.nector.userservice.interceptors.content.dto.CreateOfferRequest;
 import com.nector.userservice.interceptors.content.dto.UpdateNotificationRequest;
@@ -8,6 +9,8 @@ import com.nector.userservice.interceptors.content.model.CompanyNotification;
 import com.nector.userservice.interceptors.content.model.CompanyOffer;
 import com.nector.userservice.interceptors.content.service.ContentService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,16 +30,23 @@ import java.util.Map;
 public class ContentController {
 
     private final ContentService contentService;
+    private final ObjectMapper objectMapper;
 
     // ─── Offers ───────────────────────────────────────────────────────────────
 
     @PostMapping(value = "/offers", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Create offer", description = "Admin: create a new offer with an optional image upload")
     public ResponseEntity<CompanyOffer> createOffer(
-            @RequestPart("data") CreateOfferRequest request,
+            @Parameter(schema = @Schema(implementation = CreateOfferRequest.class))
+            @RequestPart("data") String dataJson,
             @RequestPart(value = "image", required = false) MultipartFile image) {
-        log.info("Creating offer: {}", request.getTitle());
-        return ResponseEntity.ok(contentService.createOffer(request, image));
+        try {
+            CreateOfferRequest request = objectMapper.readValue(dataJson, CreateOfferRequest.class);
+            log.info("Creating offer: {}", request.getTitle());
+            return ResponseEntity.ok(contentService.createOffer(request, image));
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid offer data: " + e.getMessage(), e);
+        }
     }
 
     @GetMapping("/offers/active")
@@ -85,10 +95,16 @@ public class ContentController {
     @PostMapping(value = "/notifications", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Create notification", description = "Admin: create a company notification with an optional image")
     public ResponseEntity<CompanyNotification> createNotification(
-            @RequestPart("data") CreateNotificationRequest request,
+            @Parameter(schema = @Schema(implementation = CreateNotificationRequest.class))
+            @RequestPart("data") String dataJson,
             @RequestPart(value = "image", required = false) MultipartFile image) {
-        log.info("Creating notification: {}", request.getTitle());
-        return ResponseEntity.ok(contentService.createNotification(request, image));
+        try {
+            CreateNotificationRequest request = objectMapper.readValue(dataJson, CreateNotificationRequest.class);
+            log.info("Creating notification: {}", request.getTitle());
+            return ResponseEntity.ok(contentService.createNotification(request, image));
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid notification data: " + e.getMessage(), e);
+        }
     }
 
     @PatchMapping(value = "/notifications/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

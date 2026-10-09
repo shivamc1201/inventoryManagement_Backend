@@ -24,17 +24,19 @@ public class SalesOrdersReportController {
     private final SalesOrdersReportService salesOrdersReportService;
 
     @GetMapping("/grid")
-    @Operation(summary = "Paginated order tracking grid with status")
+    @Operation(summary = "Paginated order tracking grid with status. Optional status filter: PENDING, IN_PROGRESS, COMPLETED")
     public ResponseEntity<Page<SalesOrderRowDto>> getOrderGrid(
             @RequestParam(required = false) Long distributorId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
         ReportFilterRequest filter = new ReportFilterRequest();
         filter.setDistributorId(distributorId);
         filter.setStartDate(startDate);
         filter.setEndDate(endDate);
+        filter.setStatus(status);
         filter.setPage(page);
         filter.setSize(size);
         return ResponseEntity.ok(salesOrdersReportService.getOrderGrid(filter));

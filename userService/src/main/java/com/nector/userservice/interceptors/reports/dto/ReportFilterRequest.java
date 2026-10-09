@@ -21,6 +21,7 @@ public class ReportFilterRequest {
     private String deliveryStatus;
     private String reportType;
     private String groupBy;
+    private String status;
     private int page = 0;
     private int size = 50;
 }

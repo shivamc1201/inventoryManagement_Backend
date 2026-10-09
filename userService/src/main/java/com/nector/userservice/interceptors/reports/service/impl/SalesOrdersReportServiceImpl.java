@@ -10,6 +10,7 @@ import com.nector.userservice.ordertracking.repository.OrderTrackingRepository;
 import com.nector.userservice.repository.CartRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -32,29 +33,37 @@ public class SalesOrdersReportServiceImpl implements SalesOrdersReportService {
 
     @Override
     public Page<SalesOrderRowDto> getOrderGrid(ReportFilterRequest filter) {
-        PageRequest page = PageRequest.of(filter.getPage(), filter.getSize(), Sort.by("orderDate").descending());
         LocalDate from = filter.getStartDate() != null ? filter.getStartDate() : LocalDate.now().minusMonths(3);
         LocalDate to = filter.getEndDate() != null ? filter.getEndDate() : LocalDate.now();
 
-        Page<OrderTracking> orders = filter.getDistributorId() != null
-                ? orderTrackingRepository.findByDistributorIdAndDateRange(filter.getDistributorId(), from, to, page)
-                : orderTrackingRepository.findAllByDateRange(from, to, page);
+        List<OrderTracking> all = filter.getDistributorId() != null
+                ? orderTrackingRepository.findByDistributorIdAndDateRangeUnpaged(filter.getDistributorId(), from, to)
+                : orderTrackingRepository.findAllByDateRangeUnpaged(from, to);
 
-        return orders.map(o -> {
-            long completedSteps = o.getSteps().stream()
-                    .filter(s -> s.getStatus() == StepStatus.COMPLETED).count();
-            String status = computeStatus(o);
-            return SalesOrderRowDto.builder()
-                    .id(o.getId())
-                    .orderNumber(o.getOrderNumber())
-                    .distributorId(o.getDistributorId())
-                    .distributorName(o.getDistributorName())
-                    .orderDate(o.getOrderDate())
-                    .totalAmount(o.getTotalAmount())
-                    .currentStatus(status)
-                    .salespersonId(o.getSalespersonId())
-                    .build();
-        });
+        List<SalesOrderRowDto> nonCompleted = all.stream()
+                .filter(o -> !"COMPLETED".equals(computeStatus(o)))
+                .map(this::toRowDto)
+                .collect(java.util.stream.Collectors.toList());
+
+        int start = filter.getPage() * filter.getSize();
+        int end = Math.min(start + filter.getSize(), nonCompleted.size());
+        List<SalesOrderRowDto> pageSlice = start >= nonCompleted.size()
+                ? List.of() : nonCompleted.subList(start, end);
+        return new PageImpl<>(pageSlice,
+                PageRequest.of(filter.getPage(), filter.getSize()), nonCompleted.size());
+    }
+
+    private SalesOrderRowDto toRowDto(OrderTracking o) {
+        return SalesOrderRowDto.builder()
+                .id(o.getId())
+                .orderNumber(o.getOrderNumber())
+                .distributorId(o.getDistributorId())
+                .distributorName(o.getDistributorName())
+                .orderDate(o.getOrderDate())
+                .totalAmount(o.getTotalAmount())
+                .currentStatus(computeStatus(o))
+                .salespersonId(o.getSalespersonId())
+                .build();
     }
 
     @Override

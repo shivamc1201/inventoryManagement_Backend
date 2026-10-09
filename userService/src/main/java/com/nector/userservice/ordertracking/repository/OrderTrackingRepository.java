@@ -134,4 +134,15 @@ public interface OrderTrackingRepository extends JpaRepository<OrderTracking, Lo
     Page<OrderTracking> findAllByDateRange(@Param("from") java.time.LocalDate from,
                                             @Param("to") java.time.LocalDate to,
                                             Pageable pageable);
+
+    @Query("SELECT DISTINCT o FROM OrderTracking o " +
+           "WHERE o.orderDate BETWEEN :from AND :to ORDER BY o.orderDate DESC")
+    List<OrderTracking> findAllByDateRangeUnpaged(@Param("from") java.time.LocalDate from,
+                                                   @Param("to") java.time.LocalDate to);
+
+    @Query("SELECT DISTINCT o FROM OrderTracking o WHERE o.distributorId = :distributorId " +
+           "AND o.orderDate BETWEEN :from AND :to ORDER BY o.orderDate DESC")
+    List<OrderTracking> findByDistributorIdAndDateRangeUnpaged(@Param("distributorId") Long distributorId,
+                                                                @Param("from") java.time.LocalDate from,
+                                                                @Param("to") java.time.LocalDate to);
 }

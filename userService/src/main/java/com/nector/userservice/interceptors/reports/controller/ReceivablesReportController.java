@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.reports.controller;
 
+import com.nector.userservice.interceptors.reports.dto.OutstandingSummaryResponse;
 import com.nector.userservice.interceptors.reports.dto.ReceivablesAgeingDto;
 import com.nector.userservice.interceptors.reports.dto.ReportFilterRequest;
 import com.nector.userservice.interceptors.reports.service.ReceivablesReportService;
@@ -21,6 +22,12 @@ import java.util.Map;
 public class ReceivablesReportController {
 
     private final ReceivablesReportService receivablesReportService;
+
+    @GetMapping("/outstanding-summary")
+    @Operation(summary = "All unpaid invoices per distributor with outstanding amount, days overdue and status. No date filter — frontend handles filtering.")
+    public ResponseEntity<OutstandingSummaryResponse> getOutstandingSummary() {
+        return ResponseEntity.ok(receivablesReportService.getOutstandingSummary());
+    }
 
     @GetMapping("/outstanding")
     @Operation(summary = "Outstanding balance per dealer. Pass distributorId to filter by distributor, omit for all.")

@@ -19,6 +19,7 @@ import com.nector.userservice.model.Invoice;
 import com.nector.userservice.repository.FinishedProductRepository;
 import com.nector.userservice.repository.InvoiceLineItemRepository;
 import com.nector.userservice.repository.InvoiceRepository;
+import com.nector.userservice.repository.EmployeeKpiAssignmentRepository;
 import com.nector.userservice.repository.PaymentApprovalRepository;
 import com.nector.userservice.repository.SalesPersonRepository;
 import com.nector.userservice.dispatch.repository.GdnRepository;
@@ -56,6 +57,7 @@ public class MisReportServiceImpl implements MisReportService {
     private final ReceivablesReportService receivablesReportService;
     private final SalesPersonRepository salesPersonRepository;
     private final DistributorRepository distributorRepository;
+    private final EmployeeKpiAssignmentRepository employeeKpiAssignmentRepository;
 
     // ─── Standalone KPI summary endpoint ─────────────────────────────────────
 
@@ -126,6 +128,12 @@ public class MisReportServiceImpl implements MisReportService {
                 ? invoiceRepository.getWeeklySalesForDistributors(distIds, from, to)
                 : invoiceRepository.getWeeklySalesSummary(from, to, filter.getDistributorId());
 
+        BigDecimal monthlyTarget = employeeKpiAssignmentRepository
+                .sumSaleTargetByMonthAndYear(to.getMonthValue(), to.getYear());
+        BigDecimal weeklyTarget = monthlyTarget != null && monthlyTarget.compareTo(BigDecimal.ZERO) > 0
+                ? monthlyTarget.divide(BigDecimal.valueOf(5), 2, RoundingMode.HALF_UP)
+                : null;
+
         Map<Integer, BigDecimal> weeklyActuals = new HashMap<>();
         for (Object[] r : rows) {
             int weekNum = r[0] != null ? ((Number) r[0]).intValue() : 1;
@@ -137,7 +145,7 @@ public class MisReportServiceImpl implements MisReportService {
             result.add(MisSalesTargetDto.builder()
                     .period("Week " + w)
                     .actual(weeklyActuals.getOrDefault(w, BigDecimal.ZERO))
-                    .target(null)
+                    .target(weeklyTarget)
                     .build());
         }
         return result;
@@ -207,7 +215,9 @@ public class MisReportServiceImpl implements MisReportService {
         List<Object[]> weekRows = distIds != null
                 ? invoiceRepository.getWeeklySalesForDistributors(distIds, from, to)
                 : invoiceRepository.getWeeklySalesSummary(from, to, singleDistId);
-        List<MisSalesTargetDto> salesTarget = buildWeeklyTarget(weekRows);
+        BigDecimal monthlyTarget = employeeKpiAssignmentRepository
+                .sumSaleTargetByMonthAndYear(to.toLocalDate().getMonthValue(), to.toLocalDate().getYear());
+        List<MisSalesTargetDto> salesTarget = buildWeeklyTarget(weekRows, monthlyTarget);
 
         // ── Top 5 products ──
         List<ProductSalesRowDto> topProducts = buildProductRows(distIds, from, to, true).stream()
@@ -333,16 +343,19 @@ public class MisReportServiceImpl implements MisReportService {
                 .collect(Collectors.toList());
     }
 
-    private List<MisSalesTargetDto> buildWeeklyTarget(List<Object[]> rows) {
+    private List<MisSalesTargetDto> buildWeeklyTarget(List<Object[]> rows, BigDecimal monthlyTarget) {
         Map<Integer, BigDecimal> actuals = new HashMap<>();
         for (Object[] r : rows) {
             int w = r[0] != null ? ((Number) r[0]).intValue() : 1;
             actuals.put(w, r[1] != null ? new BigDecimal(r[1].toString()) : BigDecimal.ZERO);
         }
+        BigDecimal weeklyTarget = monthlyTarget != null && monthlyTarget.compareTo(BigDecimal.ZERO) > 0
+                ? monthlyTarget.divide(BigDecimal.valueOf(5), 2, RoundingMode.HALF_UP)
+                : null;
         List<MisSalesTargetDto> result = new ArrayList<>();
         for (int w = 1; w <= 5; w++) {
             result.add(MisSalesTargetDto.builder().period("Week " + w)
-                    .actual(actuals.getOrDefault(w, BigDecimal.ZERO)).target(null).build());
+                    .actual(actuals.getOrDefault(w, BigDecimal.ZERO)).target(weeklyTarget).build());
         }
         return result;
     }

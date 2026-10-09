@@ -80,6 +80,10 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
                                           @Param("to") LocalDateTime to,
                                           @Param("distributorId") Long distributorId);
 
+    @Query("SELECT i.distributorId, i.distributorName, COUNT(i), SUM(i.grandTotal), MIN(i.invoiceDate) " +
+           "FROM Invoice i GROUP BY i.distributorId, i.distributorName ORDER BY SUM(i.grandTotal) DESC")
+    List<Object[]> getAllInvoiceSummaryByDistributor();
+
     @Query(value = "SELECT sp.region, SUM(i.grand_total), COUNT(i.id), COUNT(DISTINCT i.distributor_id) " +
                    "FROM invoices i " +
                    "JOIN distributors d ON d.id = i.distributor_id " +

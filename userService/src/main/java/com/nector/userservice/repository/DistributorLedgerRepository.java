@@ -20,6 +20,12 @@ public interface DistributorLedgerRepository extends JpaRepository<DistributorLe
 
     List<DistributorLedger> findByDistributorIdAndTransactionTypeInOrderByCreatedAtDesc(Long distributorId, List<String> transactionTypes);
 
-    @Query("SELECT COALESCE(SUM(CASE WHEN dl.transactionType IN ('CREDIT', 'JV_CREDIT') THEN dl.amount ELSE -dl.amount END), 0) FROM DistributorLedger dl WHERE dl.distributorId = ?1")
+    // Ledger balance is a distinct account from the credit line.
+    // Rows whose description contains '(using credit)' or '(Credit Restored)' belong to the
+    // credit-line account and must NOT contribute to the ledger balance sum.
+    @Query("SELECT COALESCE(SUM(CASE WHEN dl.transactionType IN ('CREDIT', 'JV_CREDIT') THEN dl.amount ELSE -dl.amount END), 0) " +
+           "FROM DistributorLedger dl " +
+           "WHERE dl.distributorId = ?1 " +
+           "AND (dl.description IS NULL OR (dl.description NOT LIKE '%(using credit)%' AND dl.description NOT LIKE '%(Credit Restored)%'))")
     BigDecimal getDistributorBalance(Long distributorId);
 }

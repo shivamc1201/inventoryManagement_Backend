@@ -26,28 +26,28 @@ public class StockMovementReportController {
     @GetMapping("/ledger")
     @Operation(summary = "Stock ledger: combined inward + outward with running balance")
     public ResponseEntity<List<StockMovementRowDto>> getLedger(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        ReportFilterRequest filter = buildFilter(startDate, endDate, null);
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+        ReportFilterRequest filter = buildFilter(dateFrom, dateTo, null);
         return ResponseEntity.ok(stockMovementReportService.getLedger(filter));
     }
 
     @GetMapping("/material-inward")
     @Operation(summary = "Material inward report: item name, batch no, supplier, voucher no, warehouse")
     public ResponseEntity<List<MaterialInwardRowDto>> getMaterialInward(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
             @RequestParam(required = false) String supplierId) {
-        ReportFilterRequest filter = buildFilter(startDate, endDate, supplierId);
+        ReportFilterRequest filter = buildFilter(dateFrom, dateTo, supplierId);
         return ResponseEntity.ok(stockMovementReportService.getMaterialInward(filter));
     }
 
     @GetMapping("/supplier-wise")
     @Operation(summary = "Supplier-wise inward summary: receipt count, total qty, last receipt date, top item")
     public ResponseEntity<List<SupplierInwardSummaryDto>> getSupplierWise(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return ResponseEntity.ok(stockMovementReportService.getSupplierWiseSummary(buildFilter(startDate, endDate, null)));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+        return ResponseEntity.ok(stockMovementReportService.getSupplierWiseSummary(buildFilter(dateFrom, dateTo, null)));
     }
 
     private ReportFilterRequest buildFilter(LocalDate startDate, LocalDate endDate, String supplierId) {

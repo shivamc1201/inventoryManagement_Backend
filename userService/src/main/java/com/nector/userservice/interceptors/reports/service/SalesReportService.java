@@ -11,6 +11,7 @@ import java.util.Map;
 public interface SalesReportService {
     Page<SalesInvoiceRowDto> getInvoiceGrid(ReportFilterRequest filter);
     List<Map<String, Object>> getByDistributor(ReportFilterRequest filter);
+    List<Map<String, Object>> getByDealer(ReportFilterRequest filter);
     List<Map<String, Object>> getMonthlyTrend(ReportFilterRequest filter);
     List<ProductSalesRowDto> getByProduct(ReportFilterRequest filter);
     List<ProductSalesRowDto> getTopProducts(ReportFilterRequest filter, int limit);

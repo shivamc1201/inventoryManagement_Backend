@@ -5,6 +5,7 @@ import com.nector.userservice.interceptors.reports.dto.ReportFilterRequest;
 import com.nector.userservice.interceptors.reports.dto.SalesInvoiceRowDto;
 import com.nector.userservice.interceptors.reports.service.SalesReportService;
 import com.nector.userservice.model.Invoice;
+import com.nector.userservice.repository.DealerInvoiceRepository;
 import com.nector.userservice.repository.InvoiceLineItemRepository;
 import com.nector.userservice.repository.InvoiceRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class SalesReportServiceImpl implements SalesReportService {
 
     private final InvoiceRepository invoiceRepository;
     private final InvoiceLineItemRepository invoiceLineItemRepository;
+    private final DealerInvoiceRepository dealerInvoiceRepository;
 
     @Override
     public Page<SalesInvoiceRowDto> getInvoiceGrid(ReportFilterRequest filter) {
@@ -48,6 +50,23 @@ public class SalesReportServiceImpl implements SalesReportService {
             m.put("distributorName", r[1]);
             m.put("invoiceCount", r[2]);
             m.put("totalValue", r[3]);
+            return m;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Map<String, Object>> getByDealer(ReportFilterRequest filter) {
+        LocalDateTime from = resolveFrom(filter).atStartOfDay();
+        LocalDateTime to = resolveTo(filter).atTime(23, 59, 59);
+        return dealerInvoiceRepository.getDealerWiseSummary(from, to, filter.getDistributorId()).stream().map(r -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("dealerId", r[0]);
+            m.put("dealerName", r[1]);
+            m.put("distributorId", r[2]);
+            m.put("distributorName", r[3]);
+            m.put("orderCount", r[4] != null ? ((Number) r[4]).longValue() : 0L);
+            m.put("totalQty", r[5] != null ? ((Number) r[5]).longValue() : 0L);
+            m.put("totalRevenue", r[6] != null ? new java.math.BigDecimal(r[6].toString()) : java.math.BigDecimal.ZERO);
             return m;
         }).collect(Collectors.toList());
     }

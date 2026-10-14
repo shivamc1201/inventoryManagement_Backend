@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,25 +36,79 @@ public class StockMovementReportServiceImpl implements StockMovementReportServic
 
     @Override
     public List<StockMovementRowDto> getLedger(ReportFilterRequest filter) {
-        List<StockMovementRowDto> rows = new ArrayList<>();
-        rows.addAll(getInwardSummary(filter));
-        rows.addAll(getOutwardSummary(filter));
-        rows.sort(Comparator.comparing(StockMovementRowDto::getDate,
-                Comparator.nullsLast(Comparator.naturalOrder())));
+        Instant now = Instant.now();
+        LocalDateTime nowLocal = LocalDateTime.now();
 
-        BigDecimal running = BigDecimal.ZERO;
-        for (StockMovementRowDto row : rows) {
-            if (row.getInwardQty() != null) {
-                running = running.add(row.getInwardQty());
-            } else if (row.getOutwardQty() != null) {
-                running = running.subtract(row.getOutwardQty());
+        Map<String, BigDecimal> totalInward = new HashMap<>();
+        Map<String, BigDecimal> totalOutward = new HashMap<>();
+
+        lotRepository.sumInwardByMaterialBefore(now).forEach(row -> {
+            String code = String.valueOf(((Number) row[0]).longValue());
+            BigDecimal qty = row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO;
+            totalInward.merge(code, qty, BigDecimal::add);
+        });
+
+        outwardRepository.sumOutwardByMaterialBefore(nowLocal).forEach(row -> {
+            String code = (String) row[0];
+            if (code == null) return;
+            BigDecimal qty = row[1] != null ? new BigDecimal(row[1].toString()) : BigDecimal.ZERO;
+            if (totalInward.containsKey(code)) {
+                totalOutward.merge(code, qty, BigDecimal::add);
             }
-            row.setBalanceQty(running);
-        }
+        });
 
-        rows.sort(Comparator.comparing(StockMovementRowDto::getDate,
-                Comparator.nullsLast(Comparator.reverseOrder())));
-        return rows;
+        Set<Long> ids = totalInward.keySet().stream()
+                .map(code -> { try { return Long.parseLong(code); } catch (NumberFormatException e) { return null; } })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, String> nameById = buildRawProductNameMap(ids);
+
+        return totalInward.entrySet().stream()
+                .map(e -> {
+                    Long id = Long.parseLong(e.getKey());
+                    String name = nameById.get(id);
+                    if (name == null) name = "Raw Material #" + e.getKey();
+                    BigDecimal inward = e.getValue();
+                    BigDecimal outward = totalOutward.getOrDefault(e.getKey(), BigDecimal.ZERO);
+                    BigDecimal balance = inward.subtract(outward);
+                    return StockMovementRowDto.builder()
+                            .movementType("BALANCE")
+                            .materialCode(e.getKey())
+                            .materialName(name)
+                            .inwardQty(inward)
+                            .outwardQty(outward)
+                            .balanceQty(balance)
+                            .build();
+                })
+                .sorted(Comparator.comparing(StockMovementRowDto::getMaterialName,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .collect(Collectors.toList());
+    }
+
+    private Map<String, BigDecimal> buildOpeningBalance(LocalDate startDate) {
+        Instant beforeInstant = startDate.atStartOfDay().toInstant(ZoneOffset.UTC);
+        LocalDateTime beforeLocal = startDate.atStartOfDay();
+
+        Map<String, BigDecimal> balance = new HashMap<>();
+
+        // Inward opening: raw material lots received before start date
+        lotRepository.sumInwardByMaterialBefore(beforeInstant).forEach(row -> {
+            String code = String.valueOf(((Number) row[0]).longValue());
+            BigDecimal qty = row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO;
+            balance.merge(code, qty, BigDecimal::add);
+        });
+
+        // Outward opening: only subtract for materials that have inward history.
+        // Outward-only items (promotional) have no stock baseline, so their period balance starts from 0.
+        outwardRepository.sumOutwardByMaterialBefore(beforeLocal).forEach(row -> {
+            String code = (String) row[0];
+            BigDecimal qty = row[1] != null ? new BigDecimal(row[1].toString()) : BigDecimal.ZERO;
+            if (balance.containsKey(code)) {
+                balance.merge(code, qty.negate(), BigDecimal::add);
+            }
+        });
+
+        return balance;
     }
 
     private List<StockMovementRowDto> getInwardSummary(ReportFilterRequest filter) {
@@ -132,11 +187,12 @@ public class StockMovementReportServiceImpl implements StockMovementReportServic
         List<Object[]> summaryRows = lotRepository.getSupplierWiseSummary(from, to);
         List<Object[]> topItemRows = lotRepository.getTopItemBySupplier(from, to);
 
-        // First rawMaterialId per supplierId (highest qty is first due to ORDER BY)
+        // First rawMaterialId per supplierName (supplierId may be empty/null in data)
         Map<String, Long> topRawMaterialIdBySupplier = new LinkedHashMap<>();
         for (Object[] r : topItemRows) {
-            String sid = (String) r[0];
-            topRawMaterialIdBySupplier.putIfAbsent(sid, ((Number) r[1]).longValue());
+            String sName = (String) r[0];
+            if (sName == null) continue;
+            topRawMaterialIdBySupplier.putIfAbsent(sName, ((Number) r[1]).longValue());
         }
 
         Set<Long> rawMatIds = new HashSet<>(topRawMaterialIdBySupplier.values());
@@ -147,11 +203,11 @@ public class StockMovementReportServiceImpl implements StockMovementReportServic
             String sName = (String) r[1];
             long count = ((Number) r[2]).longValue();
             BigDecimal totalQty = r[3] != null ? (BigDecimal) r[3] : BigDecimal.ZERO;
-            Instant lastInstant = (Instant) r[4];
+            Instant lastInstant = toInstant(r[4]);
             LocalDateTime lastReceipt = lastInstant != null
                     ? LocalDateTime.ofInstant(lastInstant, ZoneOffset.UTC) : null;
 
-            Long topMatId = topRawMaterialIdBySupplier.get(sid);
+            Long topMatId = topRawMaterialIdBySupplier.get(sName);
             String topItem = topMatId != null
                     ? nameById.getOrDefault(topMatId, "Raw Material #" + topMatId) : null;
 
@@ -169,7 +225,15 @@ public class StockMovementReportServiceImpl implements StockMovementReportServic
     private Map<Long, String> buildRawProductNameMap(Set<Long> ids) {
         if (ids == null || ids.isEmpty()) return Collections.emptyMap();
         return rawProductRepository.findAllById(ids).stream()
-                .collect(Collectors.toMap(RawProduct::getId, RawProduct::getName));
+                .collect(Collectors.toMap(RawProduct::getId,
+                        p -> p.getName() != null ? p.getName() : "Raw Material #" + p.getId()));
+    }
+
+    private Instant toInstant(Object raw) {
+        if (raw == null) return null;
+        if (raw instanceof Instant) return (Instant) raw;
+        if (raw instanceof java.sql.Timestamp) return ((java.sql.Timestamp) raw).toInstant();
+        return null;
     }
 
     private LocalDate resolveFrom(ReportFilterRequest f) {

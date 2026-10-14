@@ -48,4 +48,9 @@ public interface OutwardItemTransactionRepository extends JpaRepository<OutwardI
     List<Object[]> getIssuesByRecipient(@Param("itemType") OutwardItemTransaction.ItemType itemType,
                                          @Param("from") LocalDateTime from,
                                          @Param("to") LocalDateTime to);
+
+    // [materialCode, sum(quantity)] — total outward before a given date, for opening balance
+    @Query("SELECT o.materialCode, SUM(o.quantity) FROM OutwardItemTransaction o " +
+           "WHERE o.createdAt < :before GROUP BY o.materialCode")
+    List<Object[]> sumOutwardByMaterialBefore(@Param("before") LocalDateTime before);
 }

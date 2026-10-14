@@ -28,52 +28,61 @@ public class SalesReportController {
     @Operation(summary = "Paginated invoice list with filters")
     public ResponseEntity<Page<SalesInvoiceRowDto>> getInvoiceGrid(
             @RequestParam(required = false) Long distributorId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
-        return ResponseEntity.ok(salesReportService.getInvoiceGrid(buildFilter(distributorId, startDate, endDate, page, size)));
+        return ResponseEntity.ok(salesReportService.getInvoiceGrid(buildFilter(distributorId, dateFrom, dateTo, page, size)));
     }
 
     @GetMapping("/by-distributor")
     @Operation(summary = "Sales totals grouped by distributor")
     public ResponseEntity<List<Map<String, Object>>> getByDistributor(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return ResponseEntity.ok(salesReportService.getByDistributor(buildFilter(null, startDate, endDate, 0, 50)));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+        return ResponseEntity.ok(salesReportService.getByDistributor(buildFilter(null, dateFrom, dateTo, 0, 50)));
+    }
+
+    @GetMapping("/by-dealer")
+    @Operation(summary = "Sales totals grouped by dealer (from dealer invoices), includes distributor name")
+    public ResponseEntity<List<Map<String, Object>>> getByDealer(
+            @RequestParam(required = false) Long distributorId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+        return ResponseEntity.ok(salesReportService.getByDealer(buildFilter(distributorId, dateFrom, dateTo, 0, 50)));
     }
 
     @GetMapping("/monthly-trend")
     @Operation(summary = "Monthly sales revenue chart data")
     public ResponseEntity<List<Map<String, Object>>> getMonthlyTrend(
             @RequestParam(required = false) Long distributorId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return ResponseEntity.ok(salesReportService.getMonthlyTrend(buildFilter(distributorId, startDate, endDate, 0, 50)));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+        return ResponseEntity.ok(salesReportService.getMonthlyTrend(buildFilter(distributorId, dateFrom, dateTo, 0, 50)));
     }
 
     @GetMapping("/by-product")
     @Operation(summary = "Sales totals grouped by product (uses invoice line items)")
     public ResponseEntity<List<ProductSalesRowDto>> getByProduct(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return ResponseEntity.ok(salesReportService.getByProduct(buildFilter(null, startDate, endDate, 0, 50)));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+        return ResponseEntity.ok(salesReportService.getByProduct(buildFilter(null, dateFrom, dateTo, 0, 50)));
     }
 
     @GetMapping("/top-products")
     @Operation(summary = "Top N products by quantity sold (default top 10)")
     public ResponseEntity<List<ProductSalesRowDto>> getTopProducts(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
             @RequestParam(defaultValue = "10") int limit) {
-        return ResponseEntity.ok(salesReportService.getTopProducts(buildFilter(null, startDate, endDate, 0, 50), limit));
+        return ResponseEntity.ok(salesReportService.getTopProducts(buildFilter(null, dateFrom, dateTo, 0, 50), limit));
     }
 
-    private ReportFilterRequest buildFilter(Long distributorId, LocalDate startDate, LocalDate endDate, int page, int size) {
+    private ReportFilterRequest buildFilter(Long distributorId, LocalDate dateFrom, LocalDate dateTo, int page, int size) {
         ReportFilterRequest f = new ReportFilterRequest();
         f.setDistributorId(distributorId);
-        f.setStartDate(startDate);
-        f.setEndDate(endDate);
+        f.setStartDate(dateFrom);
+        f.setEndDate(dateTo);
         f.setPage(page);
         f.setSize(size);
         return f;

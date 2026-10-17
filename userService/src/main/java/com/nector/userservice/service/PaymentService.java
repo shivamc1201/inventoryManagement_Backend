@@ -422,7 +422,6 @@ public class PaymentService {
         distributor.setCreditBalance(newCreditBalance);
         distributorRepository.save(distributor);
 
-        // Create a ledger entry so the transaction appears in the ledger
         updateDistributorBalance(distributorId, amount, "CREDIT", description, LocalDateTime.now());
     }
 
@@ -483,7 +482,7 @@ public class PaymentService {
             throw new RuntimeException("Payment already processed");
         }
 
-        // For CREDIT transactions: restore creditBalance (capped at creditLimit), then add full amount to ledger
+        // For CREDIT transactions: credit is a loan — repay it first, then credit the ledger with the remainder.
         if ("CREDIT".equalsIgnoreCase(payment.getTransactionType())) {
             var distributor = distributorRepository.findById(payment.getDistributorId())
                     .orElseThrow(() -> new RuntimeException("Distributor not found: " + payment.getDistributorId()));
@@ -492,14 +491,23 @@ public class PaymentService {
             BigDecimal creditBalance = distributor.getCreditBalance() != null ? distributor.getCreditBalance() : BigDecimal.ZERO;
             BigDecimal paymentAmount = payment.getAmount();
 
-            // Restore creditBalance up to creditLimit (cannot exceed limit)
-            BigDecimal newCreditBalance = creditBalance.add(paymentAmount).min(creditLimit);
-            distributor.setCreditBalance(newCreditBalance);
+            // How much credit has been used (needs restoration)
+            BigDecimal creditUsed = creditLimit.subtract(creditBalance);
+            BigDecimal creditRestored = paymentAmount.min(creditUsed);
+            BigDecimal ledgerPortion = paymentAmount.subtract(creditRestored);
+
+            distributor.setCreditBalance(creditBalance.add(creditRestored));
             distributorRepository.save(distributor);
 
-            // Add full payment as a single CREDIT entry to the ledger
-            updateDistributorBalance(payment.getDistributorId(), paymentAmount,
-                    "CREDIT", payment.getDescription(), payment.getCreatedAt());
+            // Write split ledger entries — credit restoration first, then actual ledger balance
+            if (creditRestored.compareTo(BigDecimal.ZERO) > 0) {
+                updateDistributorBalance(payment.getDistributorId(), creditRestored,
+                        "CREDIT", payment.getDescription() + " (Credit Restored)", payment.getCreatedAt());
+            }
+            if (ledgerPortion.compareTo(BigDecimal.ZERO) > 0) {
+                updateDistributorBalance(payment.getDistributorId(), ledgerPortion,
+                        "CREDIT", payment.getDescription() + " (Ledger Balance)", payment.getCreatedAt());
+            }
         } else {
             // For DEBIT or other transaction types, process normally
             updateDistributorBalance(payment.getDistributorId(), payment.getAmount(),
@@ -945,6 +953,11 @@ public class PaymentService {
             status = "CREDIT_EXHAUSTED";
         }
         
+        BigDecimal ledgerBalance = distributorLedgerRepository.getDistributorBalance(distributorId);
+        if (ledgerBalance == null) ledgerBalance = BigDecimal.ZERO;
+        // totalOutstanding = ledger deficit + credit used (both represent money owed to the company)
+        BigDecimal totalOutstanding = ledgerBalance.subtract(creditUsed);
+
         com.nector.userservice.dto.payment.CreditBalanceResponse response = new com.nector.userservice.dto.payment.CreditBalanceResponse();
         response.setDistributorId(distributorId);
         response.setDistributorName(distributor.getFirstName());
@@ -953,7 +966,9 @@ public class PaymentService {
         response.setCreditUsed(creditUsed);
         response.setAvailablePercentage(availablePercentage);
         response.setStatus(status);
-        
+        response.setLedgerBalance(ledgerBalance);
+        response.setTotalOutstanding(totalOutstanding);
+
         return response;
     }
 

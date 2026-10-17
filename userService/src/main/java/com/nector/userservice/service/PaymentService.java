@@ -226,13 +226,28 @@ public class PaymentService {
     
     public PaymentHistoryResponse getPaymentHistoryWithBalance(Long distributorId) {
         List<DistributorLedger> paymentHistory = distributorLedgerRepository.findByDistributorIdOrderByCreatedAtDesc(distributorId);
-        BigDecimal closingBalance = distributorLedgerRepository.getDistributorBalance(distributorId);
-        
+
+        BigDecimal totalCredits = paymentHistory.stream()
+                .filter(e -> isCreditType(e.getTransactionType()))
+                .map(DistributorLedger::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalDebits = paymentHistory.stream()
+                .filter(e -> isDebitType(e.getTransactionType()))
+                .map(DistributorLedger::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal closingBalance = totalCredits.subtract(totalDebits);
+        BigDecimal netBalance = distributorLedgerRepository.getDistributorBalance(distributorId);
+
         PaymentHistoryResponse response = new PaymentHistoryResponse();
         response.setPaymentHistory(paymentHistory);
+        response.setTotalCredits(totalCredits);
+        response.setTotalDebits(totalDebits);
         response.setClosingBalance(closingBalance);
+        response.setNetBalance(netBalance);
         response.setDistributorId(distributorId);
-        
+
         return response;
     }
     

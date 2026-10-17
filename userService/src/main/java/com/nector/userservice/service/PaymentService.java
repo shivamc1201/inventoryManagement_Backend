@@ -192,6 +192,33 @@ public class PaymentService {
         ledger.setCreatedAt(date != null ? date : LocalDateTime.now());
         distributorLedgerRepository.save(ledger);
     }
+
+    // For direct credit entries: credit is a loan — restore it first, then credit the ledger.
+    public void updateDistributorBalanceWithCreditSplit(Long distributorId, BigDecimal amount, String transactionType, String description, LocalDateTime date) {
+        if (!"CREDIT".equalsIgnoreCase(transactionType)) {
+            updateDistributorBalance(distributorId, amount, transactionType, description, date);
+            return;
+        }
+
+        var distributor = distributorRepository.findById(distributorId)
+                .orElseThrow(() -> new RuntimeException("Distributor not found: " + distributorId));
+
+        BigDecimal creditLimit = distributor.getCreditLimit() != null ? distributor.getCreditLimit() : BigDecimal.ZERO;
+        BigDecimal creditBalance = distributor.getCreditBalance() != null ? distributor.getCreditBalance() : BigDecimal.ZERO;
+
+        BigDecimal creditUsed = creditLimit.subtract(creditBalance);
+        BigDecimal creditRestored = amount.min(creditUsed);
+        BigDecimal ledgerPortion = amount.subtract(creditRestored);
+
+        if (creditRestored.compareTo(BigDecimal.ZERO) > 0) {
+            distributor.setCreditBalance(creditBalance.add(creditRestored));
+            distributorRepository.save(distributor);
+            updateDistributorBalance(distributorId, creditRestored, "CREDIT", description + " (Credit Restored)", date);
+        }
+        if (ledgerPortion.compareTo(BigDecimal.ZERO) > 0) {
+            updateDistributorBalance(distributorId, ledgerPortion, "CREDIT", description + " (Ledger Balance)", date);
+        }
+    }
     
     public List<DistributorLedger> getPaymentHistory(Long distributorId) {
         return distributorLedgerRepository.findByDistributorIdOrderByCreatedAtDesc(distributorId);
@@ -978,11 +1005,6 @@ public class PaymentService {
             status = "CREDIT_EXHAUSTED";
         }
         
-        BigDecimal ledgerBalance = distributorLedgerRepository.getDistributorBalance(distributorId);
-        if (ledgerBalance == null) ledgerBalance = BigDecimal.ZERO;
-        // totalOutstanding = ledger deficit + credit used (both represent money owed to the company)
-        BigDecimal totalOutstanding = ledgerBalance.subtract(creditUsed);
-
         com.nector.userservice.dto.payment.CreditBalanceResponse response = new com.nector.userservice.dto.payment.CreditBalanceResponse();
         response.setDistributorId(distributorId);
         response.setDistributorName(distributor.getFirstName());
@@ -991,8 +1013,6 @@ public class PaymentService {
         response.setCreditUsed(creditUsed);
         response.setAvailablePercentage(availablePercentage);
         response.setStatus(status);
-        response.setLedgerBalance(ledgerBalance);
-        response.setTotalOutstanding(totalOutstanding);
 
         return response;
     }

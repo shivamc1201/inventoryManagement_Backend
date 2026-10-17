@@ -332,8 +332,9 @@ public class AccountsController {
             @RequestParam String description,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime date) {
 
-        // Directly update ledger for all transaction types (JV, CREDIT, DEBIT)
-        paymentService.updateDistributorBalance(distributorId, amount, transactionType.name(), description, date);
+        // CREDIT entries apply split: restore credit first, remainder to ledger.
+        // DEBIT / JV entries write directly.
+        paymentService.updateDistributorBalanceWithCreditSplit(distributorId, amount, transactionType.name(), description, date);
 
         PaymentApprovalResponse response = new PaymentApprovalResponse();
         response.setPaymentId(null);

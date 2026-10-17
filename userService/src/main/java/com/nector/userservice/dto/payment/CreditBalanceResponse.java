@@ -12,5 +12,7 @@ public class CreditBalanceResponse {
     private BigDecimal creditUsed;
     private BigDecimal availablePercentage;
     private String status;
+    private BigDecimal ledgerBalance;
+    private BigDecimal totalOutstanding;
 }
 

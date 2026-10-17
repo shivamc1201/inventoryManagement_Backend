@@ -978,6 +978,11 @@ public class PaymentService {
             status = "CREDIT_EXHAUSTED";
         }
         
+        BigDecimal ledgerBalance = distributorLedgerRepository.getDistributorBalance(distributorId);
+        if (ledgerBalance == null) ledgerBalance = BigDecimal.ZERO;
+        // totalOutstanding = ledger deficit + credit used (both represent money owed to the company)
+        BigDecimal totalOutstanding = ledgerBalance.subtract(creditUsed);
+
         com.nector.userservice.dto.payment.CreditBalanceResponse response = new com.nector.userservice.dto.payment.CreditBalanceResponse();
         response.setDistributorId(distributorId);
         response.setDistributorName(distributor.getFirstName());
@@ -986,7 +991,9 @@ public class PaymentService {
         response.setCreditUsed(creditUsed);
         response.setAvailablePercentage(availablePercentage);
         response.setStatus(status);
-        
+        response.setLedgerBalance(ledgerBalance);
+        response.setTotalOutstanding(totalOutstanding);
+
         return response;
     }
 

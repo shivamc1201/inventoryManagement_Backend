@@ -61,13 +61,15 @@ public class StockMovementReportServiceImpl implements StockMovementReportServic
                 .map(code -> { try { return Long.parseLong(code); } catch (NumberFormatException e) { return null; } })
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-        Map<Long, String> nameById = buildRawProductNameMap(ids);
+        Map<Long, RawProduct> productById = rawProductRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(RawProduct::getId, p -> p));
 
         return totalInward.entrySet().stream()
                 .map(e -> {
                     Long id = Long.parseLong(e.getKey());
-                    String name = nameById.get(id);
-                    if (name == null) name = "Raw Material #" + e.getKey();
+                    RawProduct product = productById.get(id);
+                    String name = (product != null && product.getName() != null)
+                            ? product.getName() : "Raw Material #" + e.getKey();
                     BigDecimal inward = e.getValue();
                     BigDecimal outward = totalOutward.getOrDefault(e.getKey(), BigDecimal.ZERO);
                     BigDecimal balance = inward.subtract(outward);
@@ -78,6 +80,12 @@ public class StockMovementReportServiceImpl implements StockMovementReportServic
                             .inwardQty(inward)
                             .outwardQty(outward)
                             .balanceQty(balance)
+                            .date(nowLocal)
+                            .quantity(balance)
+                            .unit(product != null && product.getUnit() != null ? product.getUnit().name() : null)
+                            .pricePerUnit(product != null ? product.getPrice() : null)
+                            .supplierId(product != null ? product.getVendorId() : null)
+                            .supplierName(product != null ? product.getVendorName() : null)
                             .build();
                 })
                 .sorted(Comparator.comparing(StockMovementRowDto::getMaterialName,

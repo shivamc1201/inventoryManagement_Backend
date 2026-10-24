@@ -199,10 +199,7 @@ public class MisReportServiceImpl implements MisReportService {
 
         BigDecimal stockValue = totalStockValue();
 
-        Map<String, Object> agingMap = receivablesReportService.getAgeingBuckets(singleDistId);
-        BigDecimal totalOutstanding = agingMap.values().stream()
-                .map(v -> v instanceof BigDecimal ? (BigDecimal) v : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalOutstanding = receivablesReportService.getOutstandingSummary().getTotalOutstanding();
 
         MisSummaryDto summary = MisSummaryDto.builder()
                 .totalSales(kpiCard(curSales, prevSales))

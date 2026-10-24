@@ -3,6 +3,8 @@ package com.nector.userservice.interceptors.products;
 import com.nector.userservice.dto.inventory.StockUpdateRequest;
 import com.nector.userservice.interceptors.products.impl.UpdateMachinePart;
 import com.nector.userservice.interceptors.products.model.*;
+import jakarta.validation.Valid;
+import org.springframework.validation.annotation.Validated;
 import com.nector.userservice.interceptors.products.service.FinishedProductService;
 import com.nector.userservice.interceptors.products.service.MachinePartService;
 import com.nector.userservice.interceptors.products.service.ProductInwardApprovalService;
@@ -149,7 +151,7 @@ public class ProductsController {
     // JSON endpoint - Swagger and web without image
     @PostMapping(value = "/raw-materials", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Create raw material (JSON)", description = "Creates a new raw material with JSON payload. Use this for requests without image.")
-    public ResponseEntity<RawProductResponse> createRawProduct(@RequestBody RawProductRequest request) {
+    public ResponseEntity<RawProductResponse> createRawProduct(@Validated(RawProductRequest.OnCreate.class) @RequestBody RawProductRequest request) {
         RawProductResponse response = rawProductService.createRawProduct(request, null);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -160,7 +162,7 @@ public class ProductsController {
     public ResponseEntity<RawProductResponse> createRawProductMultipart(
             @Parameter(description = "Raw product request JSON",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE))
-            @RequestPart("request") RawProductRequest request,
+            @Validated(RawProductRequest.OnCreate.class) @RequestPart("request") RawProductRequest request,
             @RequestPart(value = "image", required = false) MultipartFile image) {
         RawProductResponse response = rawProductService.createRawProduct(request, image);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -235,7 +237,7 @@ public class ProductsController {
 
     @PatchMapping(value = "/raw-materials/{id}")
     @Operation(summary = "Submit raw material inward for approval (PATCH)", description = "Submits an inward stock entry for a raw material. Requires admin approval before the stock is updated.")
-    public ResponseEntity<Map<String, Object>> patchRawProduct(@PathVariable Long id, @RequestBody RawProductRequest request) {
+    public ResponseEntity<Map<String, Object>> patchRawProduct(@PathVariable Long id, @Validated(RawProductRequest.OnInward.class) @RequestBody RawProductRequest request) {
         Map<String, Object> response = productInwardApprovalService.createRawProductInwardApproval(id, request);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
     }
@@ -260,6 +262,20 @@ public class ProductsController {
     @Operation(summary = "Decrease raw material stock", description = "Decreases stock for a raw material")
     public ResponseEntity<RawProductResponse> decreaseRawProductStock(@PathVariable Long id, @RequestBody StockUpdateRequest request) {
         RawProductResponse response = rawProductService.decreaseStock(id, request.getQuantity());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/raw-materials/{id}/damaged")
+    @Operation(summary = "Record damaged raw material", description = "Writes off a quantity of raw material as damaged. Deducts from stock and FIFO lots and saves a damage record for audit.")
+    public ResponseEntity<DamageResponse> recordRawMaterialDamage(@PathVariable Long id, @RequestBody DamageRequest request) {
+        DamageResponse response = rawProductService.recordDamage(id, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/raw-materials/{id}/damaged")
+    @Operation(summary = "Get damage history for a raw material", description = "Returns all damage/write-off records for a given raw material, newest first.")
+    public ResponseEntity<List<DamageResponse>> getRawMaterialDamageHistory(@PathVariable Long id) {
+        List<DamageResponse> response = rawProductService.getDamageHistory(id);
         return ResponseEntity.ok(response);
     }
 

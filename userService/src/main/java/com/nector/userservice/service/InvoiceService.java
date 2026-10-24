@@ -225,8 +225,8 @@ public class InvoiceService {
         }
 
         invoiceEntity.setTotalAmount(totalAmount);
-        invoiceEntity.setTaxAmount(totalAmount.multiply(java.math.BigDecimal.valueOf(0.18))); // 18% GST
-        invoiceEntity.setGrandTotal(totalAmount.add(invoiceEntity.getTaxAmount()));
+        invoiceEntity.setTaxAmount(java.math.BigDecimal.ZERO);
+        invoiceEntity.setGrandTotal(totalAmount);
         invoiceEntity.setInvoiceStatus(com.nector.userservice.model.Invoice.InvoiceStatus.GENERATED);
         
         log.info("Invoice entity created with status: {} for invoice: {}", 

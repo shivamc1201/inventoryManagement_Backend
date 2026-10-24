@@ -1,5 +1,7 @@
 package com.nector.userservice.interceptors.products.service;
 
+import com.nector.userservice.interceptors.products.model.DamageRequest;
+import com.nector.userservice.interceptors.products.model.DamageResponse;
 import com.nector.userservice.interceptors.products.model.RawProductRequest;
 import com.nector.userservice.interceptors.products.model.RawProductResponse;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,4 +36,8 @@ public interface RawProductService {
     String getRawProductImageUrl(Long id);
 
     String getRawProductImageUrlByMaterialCode(String materialCode);
+
+    DamageResponse recordDamage(Long id, DamageRequest request);
+
+    List<DamageResponse> getDamageHistory(Long id);
 }

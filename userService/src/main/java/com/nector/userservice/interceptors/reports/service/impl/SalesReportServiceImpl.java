@@ -50,6 +50,8 @@ public class SalesReportServiceImpl implements SalesReportService {
             m.put("distributorName", r[1]);
             m.put("invoiceCount", r[2]);
             m.put("totalValue", r[3]);
+            m.put("totalQuantity", r[4] != null ? ((Number) r[4]).longValue() : 0L);
+            m.put("totalWeight", r[5] != null ? new java.math.BigDecimal(r[5].toString()) : java.math.BigDecimal.ZERO);
             return m;
         }).collect(Collectors.toList());
     }
@@ -67,6 +69,7 @@ public class SalesReportServiceImpl implements SalesReportService {
             m.put("orderCount", r[4] != null ? ((Number) r[4]).longValue() : 0L);
             m.put("totalQty", r[5] != null ? ((Number) r[5]).longValue() : 0L);
             m.put("totalRevenue", r[6] != null ? new java.math.BigDecimal(r[6].toString()) : java.math.BigDecimal.ZERO);
+            m.put("totalWeight", r[7] != null ? new java.math.BigDecimal(r[7].toString()) : java.math.BigDecimal.ZERO);
             return m;
         }).collect(Collectors.toList());
     }
@@ -82,6 +85,7 @@ public class SalesReportServiceImpl implements SalesReportService {
             m.put("totalValue", r[2]);
             m.put("invoiceCount", r[3]);
             m.put("totalQty", r[4]);
+            m.put("totalWeight", r[5] != null ? new java.math.BigDecimal(r[5].toString()) : java.math.BigDecimal.ZERO);
             long count = r[3] != null ? ((Number) r[3]).longValue() : 0L;
             java.math.BigDecimal total = r[2] != null ? new java.math.BigDecimal(r[2].toString()) : java.math.BigDecimal.ZERO;
             m.put("avgInvoiceValue", count > 0

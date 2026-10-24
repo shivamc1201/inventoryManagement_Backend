@@ -150,9 +150,12 @@ public class ProductionReportServiceImpl implements ProductionReportService {
         return productionLogRepository.getDailySummary(from, to).stream().map(r -> {
             Map<String, Object> m = new HashMap<>();
             m.put("productionDate", r[0]);
-            m.put("totalRuns", r[1]);
-            m.put("totalQuantityProduced", r[2]);
-            m.put("totalProductionCost", r[3]);
+            m.put("finishedProductId", r[1]);
+            m.put("finishedProductName", r[2]);
+            m.put("outputUnit", r[3]);
+            m.put("totalRuns", r[4]);
+            m.put("totalQuantityProduced", r[5]);
+            m.put("totalProductionCost", r[6]);
             return m;
         }).collect(Collectors.toList());
     }

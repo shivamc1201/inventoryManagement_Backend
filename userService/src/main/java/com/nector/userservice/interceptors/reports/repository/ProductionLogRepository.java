@@ -31,9 +31,11 @@ public interface ProductionLogRepository extends JpaRepository<ProductionLog, Lo
                                                    @Param("from") LocalDate from,
                                                    @Param("to") LocalDate to);
 
-    @Query("SELECT pl.productionDate, COUNT(pl), SUM(pl.quantityProduced), SUM(pl.totalProductionCost) " +
+    @Query("SELECT pl.productionDate, pl.finishedProductId, pl.finishedProductName, pl.outputUnit, " +
+           "COUNT(pl), SUM(pl.quantityProduced), SUM(pl.totalProductionCost) " +
            "FROM ProductionLog pl WHERE pl.productionDate BETWEEN :from AND :to " +
-           "GROUP BY pl.productionDate ORDER BY pl.productionDate DESC")
+           "GROUP BY pl.productionDate, pl.finishedProductId, pl.finishedProductName, pl.outputUnit " +
+           "ORDER BY pl.productionDate DESC, pl.finishedProductName ASC")
     List<Object[]> getDailySummary(@Param("from") LocalDate from, @Param("to") LocalDate to);
 
     List<ProductionLog> findByProductionDateBetweenOrderByProductionDateDesc(LocalDate from, LocalDate to);

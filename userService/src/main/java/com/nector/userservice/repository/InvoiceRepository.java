@@ -61,9 +61,14 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
                                                   @Param("from") LocalDateTime from,
                                                   @Param("to") LocalDateTime to);
 
-    @Query("SELECT i.distributorId, i.distributorName, COUNT(i), SUM(i.grandTotal) " +
-           "FROM Invoice i WHERE i.invoiceDate BETWEEN :from AND :to " +
-           "GROUP BY i.distributorId, i.distributorName ORDER BY SUM(i.grandTotal) DESC")
+    @Query(value = "SELECT i.distributor_id, i.distributor_name, COUNT(i.id), SUM(i.grand_total), " +
+                   "COALESCE(SUM(liq.total_qty), 0), COALESCE(SUM(liq.total_weight), 0) " +
+                   "FROM invoices i " +
+                   "LEFT JOIN (SELECT ili.invoice_id, SUM(ili.quantity) AS total_qty, SUM(ili.quantity * COALESCE(fp.weight, 0)) AS total_weight " +
+                   "FROM invoice_line_items ili LEFT JOIN finished_products fp ON fp.id = ili.product_id GROUP BY ili.invoice_id) liq ON liq.invoice_id = i.id " +
+                   "WHERE i.invoice_date BETWEEN :from AND :to " +
+                   "GROUP BY i.distributor_id, i.distributor_name ORDER BY SUM(i.grand_total) DESC",
+           nativeQuery = true)
     List<Object[]> getSalesByDistributor(@Param("from") LocalDateTime from,
                                          @Param("to") LocalDateTime to,
                                          Pageable pageable);
@@ -95,9 +100,10 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     List<Object[]> getSalesByRegion(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     @Query(value = "SELECT EXTRACT(MONTH FROM i.invoice_date), EXTRACT(YEAR FROM i.invoice_date), " +
-                   "SUM(i.grand_total), COUNT(i.id), COALESCE(SUM(ili.quantity), 0) " +
+                   "SUM(i.grand_total), COUNT(i.id), COALESCE(SUM(liq.total_qty), 0), COALESCE(SUM(liq.total_weight), 0) " +
                    "FROM invoices i " +
-                   "LEFT JOIN invoice_line_items ili ON ili.invoice_id = i.id " +
+                   "LEFT JOIN (SELECT ili.invoice_id, SUM(ili.quantity) AS total_qty, SUM(ili.quantity * COALESCE(fp.weight, 0)) AS total_weight " +
+                   "FROM invoice_line_items ili LEFT JOIN finished_products fp ON fp.id = ili.product_id GROUP BY ili.invoice_id) liq ON liq.invoice_id = i.id " +
                    "WHERE (:distributorId IS NULL OR i.distributor_id = :distributorId) " +
                    "AND i.invoice_date BETWEEN :from AND :to " +
                    "GROUP BY EXTRACT(YEAR FROM i.invoice_date), EXTRACT(MONTH FROM i.invoice_date) " +

@@ -23,6 +23,8 @@ import com.nector.userservice.interceptors.distributor.repository.DistributorRep
 import com.nector.userservice.interceptors.distributor.model.Distributor;
 import com.nector.userservice.repository.DistributorLedgerRepository;
 import com.nector.userservice.model.DistributorLedger;
+import com.nector.userservice.stock.entity.StockTransaction;
+import com.nector.userservice.stock.service.StockTransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -66,6 +68,7 @@ public class GdnService {
     private final DistributorLedgerRepository distributorLedgerRepository;
     private final com.nector.userservice.service.DocumentNumberService documentNumberService;
     private final com.nector.userservice.service.EmployeeKpiAssignmentService employeeKpiAssignmentService;
+    private final StockTransactionService stockTransactionService;
     
     /**
      * Get current user ID from security context
@@ -242,9 +245,10 @@ public class GdnService {
         }
 
         Gdn savedGdn = gdnRepository.save(gdn);
+        recordGdnOutward(savedGdn);
         return mapToResponse(savedGdn);
     }
-    
+
     @Transactional
     public GdnResponse generateSimpleGdn(Long orderId, SimpleGdnRequest request) {
         log.info("Generating simple GDN for order: {} - using live cart data", orderId);
@@ -337,6 +341,7 @@ public class GdnService {
         }
 
         Gdn savedGdn = gdnRepository.save(gdn);
+        recordGdnOutward(savedGdn);
 
         cart.setStatus(Cart.CartStatus.GDN_GENERATED);
         cartRepository.save(cart);
@@ -1099,6 +1104,20 @@ public class GdnService {
         } catch (Exception e) {
             log.error("Failed to revert money to distributor ledger for order {}: {}", orderId, e.getMessage());
             throw new RuntimeException("Failed to revert money: " + e.getMessage(), e);
+        }
+    }
+
+    private void recordGdnOutward(Gdn gdn) {
+        java.time.LocalDate txnDate = gdn.getGdnDate() != null
+                ? gdn.getGdnDate().toLocalDate()
+                : java.time.LocalDate.now();
+        for (GdnItem item : gdn.getGdnItems()) {
+            stockTransactionService.record(
+                StockTransaction.ItemType.FINISHED_PRODUCT, item.getItemId(),
+                null, item.getItemDescription(),
+                StockTransaction.TxnType.OUTWARD,
+                BigDecimal.valueOf(item.getNoOfUnitsDispatch()),
+                item.getUnitType(), null, gdn.getGdnNumber(), null, txnDate);
         }
     }
 

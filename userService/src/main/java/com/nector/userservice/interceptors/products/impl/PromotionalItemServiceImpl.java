@@ -9,6 +9,9 @@ import com.nector.userservice.interceptors.products.service.ProductPriceHistoryS
 import com.nector.userservice.interceptors.products.service.PromotionalItemService;
 import com.nector.userservice.model.PromotionalItem;
 import com.nector.userservice.repository.PromotionalItemRepository;
+import com.nector.userservice.stock.entity.StockTransaction;
+import com.nector.userservice.stock.service.StockTransactionService;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -27,6 +30,7 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
     
     private final PromotionalItemRepository promotionalItemRepository;
     private final ProductPriceHistoryService productPriceHistoryService;
+    private final StockTransactionService stockTransactionService;
     
     @Override
     @Transactional
@@ -59,7 +63,17 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
 
         PromotionalItem savedItem = promotionalItemRepository.save(item);
         log.info("Promotional item created successfully with ID: {}", savedItem.getId());
-        
+
+        if (savedItem.getQuantity() != null && savedItem.getQuantity() > 0) {
+            stockTransactionService.record(
+                StockTransaction.ItemType.PROMOTIONAL, savedItem.getId(),
+                savedItem.getItemCode(), savedItem.getName(),
+                StockTransaction.TxnType.INWARD,
+                new BigDecimal(savedItem.getQuantity()),
+                savedItem.getUnit() != null ? savedItem.getUnit().name() : null,
+                savedItem.getVendorName(), null, null, LocalDate.now());
+        }
+
         return mapToResponse(savedItem);
     }
     

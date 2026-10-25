@@ -5,6 +5,10 @@ import com.nector.userservice.interceptors.reports.entity.ProductionLog;
 import com.nector.userservice.interceptors.reports.entity.ProductionLogComponent;
 import com.nector.userservice.interceptors.reports.repository.ProductionLogRepository;
 import com.nector.userservice.interceptors.reports.service.ProductionLogService;
+import com.nector.userservice.stock.entity.StockTransaction;
+import com.nector.userservice.stock.service.StockTransactionService;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,13 +22,37 @@ import java.util.stream.Collectors;
 public class ProductionLogServiceImpl implements ProductionLogService {
 
     private final ProductionLogRepository productionLogRepository;
+    private final StockTransactionService stockTransactionService;
 
     @Override
     @Transactional
     public ProductionLogDto create(ProductionLogDto dto) {
         ProductionLog log = toEntity(dto);
-        log = productionLogRepository.save(log);
-        return toDto(log);
+        ProductionLog saved = productionLogRepository.save(log);
+
+        // Finished product inward
+        if (saved.getFinishedProductId() != null && saved.getQuantityProduced() != null) {
+            stockTransactionService.record(
+                StockTransaction.ItemType.FINISHED_PRODUCT, saved.getFinishedProductId(),
+                null, saved.getFinishedProductName(),
+                StockTransaction.TxnType.INWARD, saved.getQuantityProduced(),
+                saved.getOutputUnit(), null, null, saved.getProductionNumber(),
+                saved.getProductionDate());
+        }
+
+        // Raw material outward per component
+        for (ProductionLogComponent comp : saved.getComponents()) {
+            if (comp.getQuantityActual() != null && comp.getQuantityActual().compareTo(BigDecimal.ZERO) > 0) {
+                stockTransactionService.record(
+                    StockTransaction.ItemType.RAW_MATERIAL, comp.getRawMaterialId(),
+                    null, comp.getRawMaterialName(),
+                    StockTransaction.TxnType.OUTWARD, comp.getQuantityActual(),
+                    comp.getUnit(), null, null, saved.getProductionNumber(),
+                    saved.getProductionDate());
+            }
+        }
+
+        return toDto(saved);
     }
 
     @Override

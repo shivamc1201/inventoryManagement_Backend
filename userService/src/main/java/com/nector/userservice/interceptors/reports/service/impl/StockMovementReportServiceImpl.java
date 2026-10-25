@@ -6,7 +6,9 @@ import com.nector.userservice.interceptors.reports.dto.MaterialInwardRowDto;
 import com.nector.userservice.interceptors.reports.dto.ReportFilterRequest;
 import com.nector.userservice.interceptors.reports.dto.StockMovementRowDto;
 import com.nector.userservice.interceptors.reports.dto.SupplierInwardSummaryDto;
+import com.nector.userservice.interceptors.reports.repository.ProductionLogComponentRepository;
 import com.nector.userservice.interceptors.reports.service.StockMovementReportService;
+import com.nector.userservice.stock.repository.StockTransactionRepository;
 import com.nector.userservice.model.OutwardItemTransaction;
 import com.nector.userservice.model.RawProduct;
 import com.nector.userservice.repository.OutwardItemTransactionRepository;
@@ -32,60 +34,38 @@ public class StockMovementReportServiceImpl implements StockMovementReportServic
 
     private final RawMaterialInventoryLotRepository lotRepository;
     private final OutwardItemTransactionRepository outwardRepository;
+    private final ProductionLogComponentRepository productionLogComponentRepository;
     private final RawProductRepository rawProductRepository;
+    private final StockTransactionRepository stockTransactionRepository;
 
     @Override
     public List<StockMovementRowDto> getLedger(ReportFilterRequest filter) {
-        Instant now = Instant.now();
-        LocalDateTime nowLocal = LocalDateTime.now();
+        LocalDate toDate = resolveTo(filter);
+        LocalDateTime reportDate = toDate.atTime(23, 59, 59);
 
-        Map<String, BigDecimal> totalInward = new HashMap<>();
-        Map<String, BigDecimal> totalOutward = new HashMap<>();
-
-        lotRepository.sumInwardByMaterialBefore(now).forEach(row -> {
-            String code = String.valueOf(((Number) row[0]).longValue());
-            BigDecimal qty = row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO;
-            totalInward.merge(code, qty, BigDecimal::add);
-        });
-
-        outwardRepository.sumOutwardByMaterialBefore(nowLocal).forEach(row -> {
-            String code = (String) row[0];
-            if (code == null) return;
-            BigDecimal qty = row[1] != null ? new BigDecimal(row[1].toString()) : BigDecimal.ZERO;
-            if (totalInward.containsKey(code)) {
-                totalOutward.merge(code, qty, BigDecimal::add);
-            }
-        });
-
-        Set<Long> ids = totalInward.keySet().stream()
-                .map(code -> { try { return Long.parseLong(code); } catch (NumberFormatException e) { return null; } })
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-        Map<Long, RawProduct> productById = rawProductRepository.findAllById(ids).stream()
-                .collect(Collectors.toMap(RawProduct::getId, p -> p));
-
-        return totalInward.entrySet().stream()
-                .map(e -> {
-                    Long id = Long.parseLong(e.getKey());
-                    RawProduct product = productById.get(id);
-                    String name = (product != null && product.getName() != null)
-                            ? product.getName() : "Raw Material #" + e.getKey();
-                    BigDecimal inward = e.getValue();
-                    BigDecimal outward = totalOutward.getOrDefault(e.getKey(), BigDecimal.ZERO);
+        return stockTransactionRepository.summariseByItem(toDate).stream()
+                .map(row -> {
+                    String itemType    = row[0].toString();
+                    Long   itemId      = row[1] != null ? ((Number) row[1]).longValue() : null;
+                    String itemCode    = (String) row[2];
+                    String itemName    = (String) row[3];
+                    String unit        = (String) row[4];
+                    String partyName   = (String) row[5];
+                    BigDecimal inward  = row[6] != null ? (BigDecimal) row[6] : BigDecimal.ZERO;
+                    BigDecimal outward = row[7] != null ? (BigDecimal) row[7] : BigDecimal.ZERO;
                     BigDecimal balance = inward.subtract(outward);
+
                     return StockMovementRowDto.builder()
-                            .movementType("BALANCE")
-                            .materialCode(e.getKey())
-                            .materialName(name)
+                            .movementType(itemType)
+                            .materialCode(itemCode != null ? itemCode : (itemId != null ? itemId.toString() : null))
+                            .materialName(itemName)
                             .inwardQty(inward)
                             .outwardQty(outward)
                             .balanceQty(balance)
-                            .date(nowLocal)
                             .quantity(balance)
-                            .unit(product != null && product.getUnit() != null ? product.getUnit().name() : null)
-                            .pricePerUnit(product != null ? product.getPrice() : null)
-                            .supplierId(product != null ? product.getVendorId() : null)
-                            .supplierName(product != null ? product.getVendorName() : null)
+                            .unit(unit)
+                            .supplierName(partyName)
+                            .date(reportDate)
                             .build();
                 })
                 .sorted(Comparator.comparing(StockMovementRowDto::getMaterialName,
@@ -95,21 +75,17 @@ public class StockMovementReportServiceImpl implements StockMovementReportServic
 
     private Map<String, BigDecimal> buildOpeningBalance(LocalDate startDate) {
         Instant beforeInstant = startDate.atStartOfDay().toInstant(ZoneOffset.UTC);
-        LocalDateTime beforeLocal = startDate.atStartOfDay();
 
         Map<String, BigDecimal> balance = new HashMap<>();
 
-        // Inward opening: raw material lots received before start date
         lotRepository.sumInwardByMaterialBefore(beforeInstant).forEach(row -> {
             String code = String.valueOf(((Number) row[0]).longValue());
             BigDecimal qty = row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO;
             balance.merge(code, qty, BigDecimal::add);
         });
 
-        // Outward opening: only subtract for materials that have inward history.
-        // Outward-only items (promotional) have no stock baseline, so their period balance starts from 0.
-        outwardRepository.sumOutwardByMaterialBefore(beforeLocal).forEach(row -> {
-            String code = (String) row[0];
+        productionLogComponentRepository.sumOutwardByMaterialBefore(startDate).forEach(row -> {
+            String code = String.valueOf(((Number) row[0]).longValue());
             BigDecimal qty = row[1] != null ? new BigDecimal(row[1].toString()) : BigDecimal.ZERO;
             if (balance.containsKey(code)) {
                 balance.merge(code, qty.negate(), BigDecimal::add);

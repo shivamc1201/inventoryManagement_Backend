@@ -24,12 +24,12 @@ public class RawProductRequest {
     @NotNull(groups = OnCreate.class, message = "Unit is required")
     private Unit unit;
 
-    @NotNull(groups = {OnCreate.class, OnInward.class}, message = "Price is required")
-    @Positive(groups = {OnCreate.class, OnInward.class}, message = "Price must be greater than zero")
+    @NotNull(groups = OnInward.class, message = "Price is required")
+    @Positive(groups = OnInward.class, message = "Price must be greater than zero")
     private BigDecimal price;
 
-    @NotNull(groups = {OnCreate.class, OnInward.class}, message = "Quantity is required")
-    @Positive(groups = {OnCreate.class, OnInward.class}, message = "Quantity must be greater than zero")
+    @NotNull(groups = OnInward.class, message = "Quantity is required")
+    @Positive(groups = OnInward.class, message = "Quantity must be greater than zero")
     private BigDecimal quantity;
 
     private BigDecimal minimumThreshold;
@@ -40,7 +40,7 @@ public class RawProductRequest {
 
     private String vendorId;
 
-    @NotBlank(groups = {OnCreate.class, OnInward.class}, message = "Vendor name is required")
+    @NotBlank(groups = OnInward.class, message = "Vendor name is required")
     private String vendorName;
 
     private String transportName;
@@ -57,6 +57,6 @@ public class RawProductRequest {
 
     private BigDecimal grossAmount;
 
-    @NotBlank(groups = {OnCreate.class, OnInward.class}, message = "Voucher number is required")
+    @NotBlank(groups = OnInward.class, message = "Voucher number is required")
     private String voucherNo;
 }

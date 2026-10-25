@@ -5,6 +5,10 @@ import com.nector.userservice.interceptors.products.model.MachinePartResponse;
 import com.nector.userservice.exception.MachinePartNotFoundException;
 import com.nector.userservice.model.MachinePart;
 import com.nector.userservice.repository.MachinePartRepository;
+import com.nector.userservice.stock.entity.StockTransaction;
+import com.nector.userservice.stock.service.StockTransactionService;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -20,6 +24,7 @@ import java.util.stream.Collectors;
 public class MachinePartService {
     
     private final MachinePartRepository machinePartRepository;
+    private final StockTransactionService stockTransactionService;
     
     @Transactional
     public MachinePartResponse createMachinePart(MachinePartRequest request) {
@@ -41,7 +46,15 @@ public class MachinePartService {
         
         MachinePart savedPart = machinePartRepository.save(part);
         log.info("Machine part created successfully with ID: {}", savedPart.getId());
-        
+
+        if (savedPart.getQuantity() != null && savedPart.getQuantity() > 0) {
+            stockTransactionService.record(
+                StockTransaction.ItemType.SPARE_PART, savedPart.getId(),
+                savedPart.getPartNumber(), savedPart.getName(),
+                StockTransaction.TxnType.INWARD, BigDecimal.valueOf(savedPart.getQuantity()),
+                savedPart.getUnit(), savedPart.getVendor(), null, null, LocalDate.now());
+        }
+
         return mapToResponse(savedPart);
     }
     
@@ -125,9 +138,20 @@ public class MachinePartService {
         MachinePart part = machinePartRepository.findActiveById(id)
             .orElseThrow(() -> new MachinePartNotFoundException(id));
         
+        int oldQty = part.getQuantity() != null ? part.getQuantity() : 0;
         part.setQuantity(quantity);
         MachinePart updatedPart = machinePartRepository.save(part);
-        
+
+        int delta = quantity - oldQty;
+        if (delta != 0) {
+            StockTransaction.TxnType txnType = delta > 0 ? StockTransaction.TxnType.INWARD : StockTransaction.TxnType.OUTWARD;
+            stockTransactionService.record(
+                StockTransaction.ItemType.SPARE_PART, updatedPart.getId(),
+                updatedPart.getPartNumber(), updatedPart.getName(),
+                txnType, BigDecimal.valueOf(Math.abs(delta)),
+                updatedPart.getUnit(), updatedPart.getVendor(), null, null, LocalDate.now());
+        }
+
         log.info("Quantity updated successfully for machine part ID: {}", id);
         return mapToResponse(updatedPart);
     }

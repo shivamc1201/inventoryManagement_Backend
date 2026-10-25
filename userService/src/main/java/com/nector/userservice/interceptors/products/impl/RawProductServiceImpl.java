@@ -1,6 +1,7 @@
 package com.nector.userservice.interceptors.products.impl;
 
 import com.nector.userservice.bom.entity.RawMaterialInventoryLot;
+import com.nector.userservice.bom.repository.BomComponentRepository;
 import com.nector.userservice.bom.repository.RawMaterialInventoryLotRepository;
 import com.nector.userservice.bom.service.BomPriceChangeService;
 import com.nector.userservice.cloudinary.CloudinaryService;
@@ -15,6 +16,9 @@ import com.nector.userservice.repository.RawMaterialDamageRecordRepository;
 import com.nector.userservice.repository.RawProductRepository;
 import com.nector.userservice.interceptors.products.service.RawProductService;
 import com.nector.userservice.model.RawProduct;
+import com.nector.userservice.stock.entity.StockTransaction;
+import com.nector.userservice.stock.service.StockTransactionService;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -37,6 +41,8 @@ public class RawProductServiceImpl implements RawProductService {
     private final BomPriceChangeService bomPriceChangeService;
     private final RawMaterialInventoryLotRepository inventoryLotRepository;
     private final RawMaterialDamageRecordRepository damageRecordRepository;
+    private final BomComponentRepository bomComponentRepository;
+    private final StockTransactionService stockTransactionService;
 
     @Override
     @Transactional
@@ -163,6 +169,15 @@ public class RawProductServiceImpl implements RawProductService {
 
         RawProduct product = rawProductRepository.findById(id)
                 .orElseThrow(() -> new RawProductNotFoundException(id));
+
+        List<String> referencingBoms = bomComponentRepository.findBomNamesByRawMaterialId(id);
+        if (!referencingBoms.isEmpty()) {
+            String bomList = String.join(", ", referencingBoms);
+            throw new IllegalStateException(
+                    "Cannot delete raw material '" + product.getName() + "' (ID: " + id + ") " +
+                    "because it is used in the following active BOM(s): " + bomList +
+                    ". Please remove it from these BOMs before deleting.");
+        }
 
         product.setActive(false);
         rawProductRepository.save(product);
@@ -439,5 +454,15 @@ public class RawProductServiceImpl implements RawProductService {
                 .build();
         inventoryLotRepository.save(lot);
         log.info("Created FIFO inventory lot for raw material ID {}: {} units @ {}", rawMaterialId, quantity, price);
+
+        rawProductRepository.findById(rawMaterialId).ifPresent(product ->
+            stockTransactionService.record(
+                StockTransaction.ItemType.RAW_MATERIAL, rawMaterialId,
+                product.getMaterialCode(),
+                product.getName() != null ? product.getName() : "Raw Material #" + rawMaterialId,
+                StockTransaction.TxnType.INWARD, quantity,
+                product.getUnit() != null ? product.getUnit().name() : null,
+                supplierName, voucherNo, null, LocalDate.now())
+        );
     }
 }

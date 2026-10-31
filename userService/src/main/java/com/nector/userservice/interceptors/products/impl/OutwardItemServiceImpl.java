@@ -54,7 +54,7 @@ public class OutwardItemServiceImpl implements OutwardItemService {
             case SCRAP_MATERIAL    -> StockTransaction.ItemType.SCRAP;
         };
         stockTransactionService.record(
-            stockItemType, null,
+            stockItemType, savedTransaction.getId(),
             savedTransaction.getMaterialCode(), savedTransaction.getMaterialName(),
             StockTransaction.TxnType.OUTWARD,
             savedTransaction.getQuantity() != null ? BigDecimal.valueOf(savedTransaction.getQuantity()) : null,

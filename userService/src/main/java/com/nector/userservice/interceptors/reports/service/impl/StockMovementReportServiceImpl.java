@@ -43,28 +43,26 @@ public class StockMovementReportServiceImpl implements StockMovementReportServic
         LocalDate toDate = resolveTo(filter);
         LocalDateTime reportDate = toDate.atTime(23, 59, 59);
 
-        return stockTransactionRepository.summariseByItem(toDate).stream()
+        LocalDate fromDate = resolveFrom(filter);
+        return stockTransactionRepository.summariseByItem(fromDate, toDate).stream()
                 .map(row -> {
                     String itemType    = row[0].toString();
-                    Long   itemId      = row[1] != null ? ((Number) row[1]).longValue() : null;
-                    String itemCode    = (String) row[2];
-                    String itemName    = (String) row[3];
-                    String unit        = (String) row[4];
-                    String partyName   = (String) row[5];
-                    BigDecimal inward  = row[6] != null ? (BigDecimal) row[6] : BigDecimal.ZERO;
-                    BigDecimal outward = row[7] != null ? (BigDecimal) row[7] : BigDecimal.ZERO;
+                    String itemCode    = (String) row[1];
+                    String itemName    = (String) row[2];
+                    String unit        = (String) row[3];
+                    BigDecimal inward  = row[4] != null ? (BigDecimal) row[4] : BigDecimal.ZERO;
+                    BigDecimal outward = row[5] != null ? (BigDecimal) row[5] : BigDecimal.ZERO;
                     BigDecimal balance = inward.subtract(outward);
 
                     return StockMovementRowDto.builder()
                             .movementType(itemType)
-                            .materialCode(itemCode != null ? itemCode : (itemId != null ? itemId.toString() : null))
+                            .materialCode(itemCode)
                             .materialName(itemName)
                             .inwardQty(inward)
                             .outwardQty(outward)
                             .balanceQty(balance)
                             .quantity(balance)
                             .unit(unit)
-                            .supplierName(partyName)
                             .date(reportDate)
                             .build();
                 })

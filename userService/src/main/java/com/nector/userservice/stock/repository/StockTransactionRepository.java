@@ -12,15 +12,15 @@ import java.util.List;
 @Repository
 public interface StockTransactionRepository extends JpaRepository<StockTransaction, Long> {
 
-    // [itemType, itemId, itemCode, itemName, unit, partyName, totalInward, totalOutward]
+    // [itemType, itemCode, itemName, unit, totalInward, totalOutward]
     @Query("""
-        SELECT s.itemType, s.itemId, s.itemCode, s.itemName, s.unit, s.partyName,
+        SELECT s.itemType, s.itemCode, s.itemName, s.unit,
                SUM(CASE WHEN s.txnType = 'INWARD'  THEN s.quantity ELSE 0 END),
                SUM(CASE WHEN s.txnType = 'OUTWARD' THEN s.quantity ELSE 0 END)
         FROM StockTransaction s
-        WHERE s.txnDate <= :toDate
-        GROUP BY s.itemType, s.itemId, s.itemCode, s.itemName, s.unit, s.partyName
+        WHERE s.txnDate >= :fromDate AND s.txnDate <= :toDate
+        GROUP BY s.itemType, s.itemCode, s.itemName, s.unit
         ORDER BY s.itemType, s.itemName
         """)
-    List<Object[]> summariseByItem(@Param("toDate") LocalDate toDate);
+    List<Object[]> summariseByItem(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 }

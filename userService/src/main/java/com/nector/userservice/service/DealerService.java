@@ -190,7 +190,8 @@ public class DealerService {
         Distributor distributor = distributorRepository.findById(dealer.getDistributorId())
                 .orElse(null);
         if (distributor != null) {
-            response.setDistributorName(distributor.getFirstName() + " " + distributor.getLastName());
+            String lastName = distributor.getLastName();
+            response.setDistributorName(lastName != null ? distributor.getFirstName() + " " + lastName : distributor.getFirstName());
         }
         
         // Fetch salesperson name if assigned

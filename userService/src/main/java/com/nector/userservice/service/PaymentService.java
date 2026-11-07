@@ -238,7 +238,7 @@ public class PaymentService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal closingBalance = totalCredits.subtract(totalDebits);
-        BigDecimal netBalance = distributorLedgerRepository.getDistributorBalance(distributorId);
+        BigDecimal netBalance = computeBalanceFromLastZeroPoint(distributorId);
 
         PaymentHistoryResponse response = new PaymentHistoryResponse();
         response.setPaymentHistory(paymentHistory);
@@ -253,73 +253,52 @@ public class PaymentService {
     
     public PaymentHistoryWithRunningBalanceResponse getPaymentHistoryWithRunningBalance(Long distributorId) {
         List<DistributorLedger> paymentHistory = distributorLedgerRepository.findByDistributorIdOrderByCreatedAtDesc(distributorId);
-        BigDecimal closingBalance = distributorLedgerRepository.getDistributorBalance(distributorId);
-        
-        // Calculate running balance for each transaction
-        List<PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance> paymentHistoryWithBalance = 
-            calculateRunningBalance(paymentHistory, closingBalance);
-        
+        BigDecimal closingBalance = computeBalanceFromLastZeroPoint(distributorId);
+
+        List<PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance> paymentHistoryWithBalance =
+            calculateRunningBalance(paymentHistory);
+
         PaymentHistoryWithRunningBalanceResponse response = new PaymentHistoryWithRunningBalanceResponse();
         response.setPaymentHistory(paymentHistoryWithBalance);
         response.setClosingBalance(closingBalance);
         response.setDistributorId(distributorId);
-        
+
         return response;
     }
     
     private List<PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance> calculateRunningBalance(
-            List<DistributorLedger> paymentHistory, BigDecimal closingBalance) {
-        
+            List<DistributorLedger> paymentHistory) {
+
         List<PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance> result = new ArrayList<>();
-        
-        // Calculate opening balance by working backwards from closing balance
-        BigDecimal openingBalance = closingBalance;
-        List<DistributorLedger> reversedHistory = new ArrayList<>(paymentHistory);
-        Collections.reverse(reversedHistory); // Now oldest to newest
-        
-        // Calculate opening balance by subtracting all transactions from closing balance.
-        // Skip credit-line rows: they don't affect the ledger balance.
-        for (DistributorLedger transaction : reversedHistory) {
-            if (isCreditLineOnly(transaction)) {
-                continue;
-            }
+
+        // Input is newest-first; reverse to oldest-first for forward accumulation.
+        List<DistributorLedger> chronological = new ArrayList<>(paymentHistory);
+        Collections.reverse(chronological);
+
+        BigDecimal runningBalance = BigDecimal.ZERO;
+
+        for (DistributorLedger transaction : chronological) {
             if (isDebitType(transaction.getTransactionType())) {
-                openingBalance = openingBalance.add(transaction.getAmount());
+                runningBalance = runningBalance.subtract(transaction.getAmount());
             } else if (isCreditType(transaction.getTransactionType())) {
-                openingBalance = openingBalance.subtract(transaction.getAmount());
+                runningBalance = runningBalance.add(transaction.getAmount());
             }
-        }
 
-        // Now calculate running balance forward from opening balance
-        BigDecimal runningBalance = openingBalance;
-
-        for (DistributorLedger transaction : reversedHistory) {
             PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance item =
                 new PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance();
-
-            // Credit-line rows are shown in history but leave running balance unchanged.
-            if (!isCreditLineOnly(transaction)) {
-                if (isDebitType(transaction.getTransactionType())) {
-                    runningBalance = runningBalance.subtract(transaction.getAmount());
-                } else if (isCreditType(transaction.getTransactionType())) {
-                    runningBalance = runningBalance.add(transaction.getAmount());
-                }
-            }
-            
             item.setId(transaction.getId());
             item.setAmount(transaction.getAmount());
             item.setCreatedAt(transaction.getCreatedAt());
             item.setDescription(transaction.getDescription());
             item.setDistributorId(transaction.getDistributorId());
             item.setTransactionType(transaction.getTransactionType());
-            item.setCurrentCB(runningBalance); // Balance AFTER this transaction
-            
+            item.setCurrentCB(runningBalance);
+
             result.add(item);
         }
-        
-        // Reverse the list to maintain chronological order (newest first)
+
+        // Return newest-first for display.
         Collections.reverse(result);
-        
         return result;
     }
     
@@ -437,6 +416,145 @@ public class PaymentService {
     }
 
     /**
+     * Unified order approval: combines ledger balance + credit balance.
+     * Allocation order: ledger first (advance deposits), credit as fallback.
+     *
+     * Ledger entry description encodes the exact split so the statement is self-auditable:
+     *   - Ledger only  → "Payment for Order #X (Ledger Balance)"
+     *   - Credit only  → "Payment for Order #X (using credit)"
+     *   - Combined     → "Payment for Order #X (Ledger ₹50000 + Credit ₹78500)"
+     *
+     * Always acquires a PESSIMISTIC_WRITE lock on the Distributor row to prevent
+     * concurrent approvals from double-spending either balance pool.
+     */
+    @Transactional
+    public UnifiedOrderApprovalResponse approveOrderUnified(Long orderId) {
+        Cart cart = cartRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        Long distributorId = cart.getDistributorId();
+
+        UnifiedOrderApprovalResponse response = new UnifiedOrderApprovalResponse();
+        response.setOrderId(orderId);
+        response.setDistributorId(distributorId);
+
+        // Idempotency guard on cart status
+        if (cart.getStatus() == Cart.CartStatus.PAYMENT_APPROVED) {
+            response.setStatus("ALREADY_APPROVED");
+            response.setMessage("Order " + orderId + " is already payment approved — no deduction made");
+            log.warn("approveOrderUnified: order {} already PAYMENT_APPROVED, skipping", orderId);
+            return response;
+        }
+
+        ProformaInvoice pi = proformaInvoiceRepository.findByCartId(orderId)
+                .orElseThrow(() -> new RuntimeException("Proforma Invoice not found for order: " + orderId));
+
+        // Idempotency guard on PI status
+        if (pi.getPaymentStatus() == ProformaInvoice.PaymentStatus.PAID) {
+            response.setStatus("ALREADY_APPROVED");
+            response.setMessage("PI for order " + orderId + " is already PAID — no deduction made");
+            log.warn("approveOrderUnified: PI for order {} already PAID, skipping", orderId);
+            return response;
+        }
+
+        BigDecimal orderAmount = pi.getAmount();
+        response.setOrderAmount(orderAmount);
+
+        // Row-level lock on distributor — serializes all concurrent approvals for this distributor
+        // so neither ledger balance nor creditBalance can be double-spent.
+        var distributor = distributorRepository.findByIdForUpdate(distributorId)
+                .orElseThrow(() -> new RuntimeException("Distributor not found: " + distributorId));
+
+        // Available balances
+        BigDecimal ledgerBalance = computeBalanceFromLastZeroPoint(distributorId);
+        BigDecimal effectiveLedger = ledgerBalance.max(BigDecimal.ZERO); // negative ledger = ₹0 contribution
+        BigDecimal creditBalance = distributor.getCreditBalance() != null
+                ? distributor.getCreditBalance() : BigDecimal.ZERO;
+        BigDecimal combinedAvailable = effectiveLedger.add(creditBalance);
+
+        log.info("approveOrderUnified: order={}, amount={}, effectiveLedger={}, creditBalance={}, combined={}",
+                orderId, orderAmount, effectiveLedger, creditBalance, combinedAvailable);
+
+        if (combinedAvailable.compareTo(orderAmount) < 0) {
+            BigDecimal shortfall = orderAmount.subtract(combinedAvailable);
+            response.setStatus("PENDING");
+            response.setMessage("Insufficient balance — required ₹" + orderAmount
+                    + ", available ₹" + combinedAvailable + " (shortfall ₹" + shortfall + ")");
+            response.setAvailableLedgerBalance(effectiveLedger);
+            response.setAvailableCreditBalance(creditBalance);
+            response.setCombinedAvailableBalance(combinedAvailable);
+            response.setShortfall(shortfall);
+            log.warn("approveOrderUnified: REJECTED order={} — shortfall={} (ledger={}, credit={})",
+                    orderId, shortfall, effectiveLedger, creditBalance);
+            return response;
+        }
+
+        // Allocate: ledger first, credit for the remainder
+        BigDecimal ledgerUsed  = effectiveLedger.min(orderAmount);
+        BigDecimal creditUsed  = orderAmount.subtract(ledgerUsed);
+
+        // Determine ledger entry description
+        String ledgerDescription;
+        if (creditUsed.compareTo(BigDecimal.ZERO) == 0) {
+            ledgerDescription = "Payment for Order #" + orderId + " (Ledger Balance)";
+        } else if (ledgerUsed.compareTo(BigDecimal.ZERO) == 0) {
+            ledgerDescription = "Payment for Order #" + orderId + " (using credit)";
+        } else {
+            ledgerDescription = String.format(
+                    "Payment for Order #%d (Ledger ₹%s + Credit ₹%s)",
+                    orderId,
+                    ledgerUsed.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString(),
+                    creditUsed.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString());
+        }
+
+        // Single DEBIT ledger entry for the full order amount — description encodes the split
+        updateDistributorBalance(distributorId, orderAmount, "DEBIT", ledgerDescription, LocalDateTime.now());
+
+        // Deduct credit portion from the entity field
+        if (creditUsed.compareTo(BigDecimal.ZERO) > 0) {
+            distributor.setCreditBalance(creditBalance.subtract(creditUsed));
+            distributorRepository.save(distributor);
+        }
+
+        // Update PI and cart
+        pi.setPaymentStatus(ProformaInvoice.PaymentStatus.PAID);
+        proformaInvoiceRepository.save(pi);
+        cart.setStatus(Cart.CartStatus.PAYMENT_APPROVED);
+        cartRepository.save(cart);
+
+        // Order tracking
+        ensureOrderTrackingExists(orderId);
+        updateAwaitingPaymentStep(orderId);
+        updatePaymentApprovedStep(orderId);
+
+        // Build success response
+        BigDecimal remainingLedger = ledgerBalance.subtract(ledgerUsed);
+        BigDecimal remainingCredit = creditBalance.subtract(creditUsed);
+
+        response.setStatus("APPROVED");
+        response.setLedgerBalanceUsed(ledgerUsed);
+        response.setCreditBalanceUsed(creditUsed);
+        response.setRemainingLedgerBalance(remainingLedger);
+        response.setRemainingCreditBalance(remainingCredit);
+
+        if (creditUsed.compareTo(BigDecimal.ZERO) == 0) {
+            response.setMessage("Order approved using ledger balance");
+        } else if (ledgerUsed.compareTo(BigDecimal.ZERO) == 0) {
+            response.setMessage("Order approved using credit balance");
+        } else {
+            response.setMessage(String.format(
+                    "Order approved using combined balance (Ledger ₹%s + Credit ₹%s)",
+                    ledgerUsed.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString(),
+                    creditUsed.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString()));
+        }
+
+        log.info("approveOrderUnified: APPROVED order={} — amount={}, ledgerUsed={}, creditUsed={}, remainingLedger={}, remainingCredit={}",
+                orderId, orderAmount, ledgerUsed, creditUsed, remainingLedger, remainingCredit);
+
+        return response;
+    }
+
+    /**
      * Adds credit amount to a distributor's credit balance.
      * This increases the distributor's creditBalance but cannot exceed creditLimit.
      * @param distributorId  the distributor to credit
@@ -474,8 +592,7 @@ public class PaymentService {
         distributorRepository.save(distributor);
 
         // Create a ledger entry so the transaction appears in history. Tagged '(Credit Restored)'
-        // so getDistributorBalance excludes it — this call only refills the credit line, it is not
-        // cash going into the ledger balance.
+        // to identify it as a credit-line refill rather than a direct cash payment.
         updateDistributorBalance(distributorId, amount, "CREDIT",
                 description + " (Credit Restored)", LocalDateTime.now());
     }
@@ -487,7 +604,7 @@ public class PaymentService {
     }
     
     private java.math.BigDecimal getDistributorBalance(Long distributorId) {
-        return distributorLedgerRepository.getDistributorBalance(distributorId);
+        return computeBalanceFromLastZeroPoint(distributorId);
     }
     
     private void updateDistributorLedger(Long distributorId, java.math.BigDecimal amount) {
@@ -540,7 +657,7 @@ public class PaymentService {
 
         // For CREDIT transactions: incoming payment first restores credit line (up to limit),
         // any excess becomes ledger balance. Both are logged in distributor_ledger for history,
-        // but only the '(Ledger Balance)' portion contributes to getDistributorBalance.
+        // Both portions are recorded in distributor_ledger for full history.
         if ("CREDIT".equalsIgnoreCase(payment.getTransactionType())) {
             var distributor = distributorRepository.findByIdForUpdate(payment.getDistributorId())
                     .orElseThrow(() -> new RuntimeException("Distributor not found: " + payment.getDistributorId()));
@@ -730,6 +847,26 @@ public class PaymentService {
 
     private boolean isDebitType(String transactionType) {
         return "DEBIT".equalsIgnoreCase(transactionType) || "JV_DEBIT".equalsIgnoreCase(transactionType);
+    }
+
+    // Returns the net balance of all entries since the last time the running balance hit exactly zero.
+    // When a distributor fully clears their account (balance == 0), that is a natural reset point.
+    // The "current balance" is the net from that zero point forward, so old carry-forwards don't pollute it.
+    public BigDecimal computeBalanceFromLastZeroPoint(Long distributorId) {
+        List<DistributorLedger> entries = distributorLedgerRepository.findByDistributorIdOrderByCreatedAtAsc(distributorId);
+        BigDecimal runningBalance = BigDecimal.ZERO;
+        BigDecimal partialBalance = BigDecimal.ZERO;
+        for (DistributorLedger entry : entries) {
+            BigDecimal delta = isCreditType(entry.getTransactionType())
+                    ? entry.getAmount()
+                    : entry.getAmount().negate();
+            runningBalance = runningBalance.add(delta);
+            partialBalance = partialBalance.add(delta);
+            if (runningBalance.compareTo(BigDecimal.ZERO) == 0) {
+                partialBalance = BigDecimal.ZERO;
+            }
+        }
+        return partialBalance;
     }
 
     // Rows that only move the credit line, never the ledger balance.
@@ -974,7 +1111,7 @@ public class PaymentService {
     }
 
     public BigDecimal getCurrentLedgerBalance(Long distributorId) {
-        return distributorLedgerRepository.getDistributorBalance(distributorId);
+        return computeBalanceFromLastZeroPoint(distributorId);
     }
 
     /**

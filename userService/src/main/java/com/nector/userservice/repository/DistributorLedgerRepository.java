@@ -11,14 +11,16 @@ import java.util.List;
 public interface DistributorLedgerRepository extends JpaRepository<DistributorLedger, Long> {
 
     long deleteByDistributorId(Long distributorId);
-    
+
     List<DistributorLedger> findByDistributorIdOrderByCreatedAtDesc(Long distributorId);
-    
+
     List<DistributorLedger> findByDistributorIdAndTransactionTypeOrderByCreatedAtDesc(Long distributorId, String transactionType);
 
     List<DistributorLedger> findByDistributorIdAndTransactionTypeOrderByCreatedAtAsc(Long distributorId, String transactionType);
 
     List<DistributorLedger> findByDistributorIdAndTransactionTypeInOrderByCreatedAtDesc(Long distributorId, List<String> transactionTypes);
+
+    List<DistributorLedger> findByDistributorIdOrderByCreatedAtAsc(Long distributorId);
 
     // Ledger balance is a distinct account from the credit line.
     // Rows whose description contains '(using credit)' or '(Credit Restored)' belong to the

@@ -3,8 +3,10 @@ package com.nector.userservice.interceptors.reports.service.impl;
 import com.nector.userservice.dispatch.entity.Gdn;
 import com.nector.userservice.dispatch.entity.Gdn.DeliveryStatus;
 import com.nector.userservice.dispatch.repository.GdnRepository;
+import com.nector.userservice.interceptors.distributor.model.Distributor;
 import com.nector.userservice.interceptors.distributor.model.OrderConfirmation;
 import com.nector.userservice.interceptors.distributor.model.OrderConfirmationRequest;
+import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.interceptors.distributor.repository.OrderConfirmationRepository;
 import com.nector.userservice.interceptors.reports.dto.DeliveryConfirmationRowDto;
 import com.nector.userservice.interceptors.reports.dto.DispatchRegisterRowDto;
@@ -36,6 +38,7 @@ public class DispatchReportServiceImpl implements DispatchReportService {
     private final GdnRepository gdnRepository;
     private final CartRepository cartRepository;
     private final OrderConfirmationRepository orderConfirmationRepository;
+    private final DistributorRepository distributorRepository;
 
     @Override
     public Page<DispatchRegisterRowDto> getRegister(ReportFilterRequest filter) {
@@ -88,7 +91,18 @@ public class DispatchReportServiceImpl implements DispatchReportService {
         Map<Long, String> customerNames = cartRepository.findAllById(orderIds).stream()
                 .collect(Collectors.toMap(Cart::getId, c -> c.getDistributorName() != null ? c.getDistributorName() : ""));
 
-        return confirmations.map(oc -> toDeliveryConfirmationDto(oc, customerNames.getOrDefault(oc.getOrderId(), "")));
+        List<Long> distributorIds = confirmations.getContent().stream()
+                .map(OrderConfirmation::getDistributorId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, String> distributorNames = distributorRepository.findAllById(distributorIds).stream()
+                .collect(Collectors.toMap(Distributor::getId, d ->
+                        d.getAccountName() != null && !d.getAccountName().isBlank()
+                                ? d.getAccountName()
+                                : (d.getFirstName() + " " + d.getLastName()).trim()));
+
+        return confirmations.map(oc -> toDeliveryConfirmationDto(oc, customerNames.getOrDefault(oc.getOrderId(), ""), distributorNames.getOrDefault(oc.getDistributorId(), "")));
     }
 
     private DispatchRegisterRowDto toRegisterDto(Gdn g, String customerName) {
@@ -127,13 +141,13 @@ public class DispatchReportServiceImpl implements DispatchReportService {
                 .build();
     }
 
-    private DeliveryConfirmationRowDto toDeliveryConfirmationDto(OrderConfirmation oc, String customerName) {
+    private DeliveryConfirmationRowDto toDeliveryConfirmationDto(OrderConfirmation oc, String customerName, String distributorName) {
         return DeliveryConfirmationRowDto.builder()
                 .id(oc.getId())
                 .challanNo(oc.getGdnNumber())
                 .customer(customerName)
                 .deliveredDate(oc.getConfirmedAt())
-                .receivedBy(oc.getReceivedBy())
+                .receivedBy(distributorName)
                 .podStatus(mapPodStatus(oc.getStatus()))
                 .build();
     }

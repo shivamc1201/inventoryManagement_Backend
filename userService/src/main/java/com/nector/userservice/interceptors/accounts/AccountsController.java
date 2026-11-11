@@ -48,8 +48,13 @@ public class AccountsController {
         return ResponseEntity.ok(processedPayment);
     }
 
+    @Deprecated
     @PostMapping("/approve-PI/{orderId}")
-    @Operation(summary = "Check and approve PI", description = "Checks distributor balance and approves PI if sufficient funds")
+    @Operation(
+        summary = "[DEPRECATED] Check and approve PI (ledger only)",
+        description = "Deprecated — use POST /api/order/{orderId}/approve instead. " +
+                      "That endpoint automatically combines ledger + credit balance and requires no distributorId from the client.",
+        deprecated = true)
     @ApiResponse(responseCode = "200", description = "Order approval status returned")
     public ResponseEntity<OrderApprovalResponse> approveOrder(
             @PathVariable Long orderId,
@@ -78,8 +83,13 @@ public class AccountsController {
         return ResponseEntity.ok(pendingPIs);
     }
     
+    @Deprecated
     @PostMapping("/approve-payment/{orderId}")
-    @Operation(summary = "Approve payment for order", description = "Approves payment and updates order status to PAYMENT_APPROVED")
+    @Operation(
+        summary = "[DEPRECATED] Approve payment for order (ledger only)",
+        description = "Deprecated — use POST /api/order/{orderId}/approve instead. " +
+                      "That endpoint automatically combines ledger + credit balance and requires no distributorId from the client.",
+        deprecated = true)
     @ApiResponse(responseCode = "200", description = "Payment approved successfully")
     public ResponseEntity<OrderApprovalResponse> approvePayment(
             @PathVariable Long orderId,
@@ -108,8 +118,13 @@ public class AccountsController {
         return ResponseEntity.ok(response);
     }
 
+    @Deprecated
     @PostMapping("/approve-PI-using-credit/{orderId}")
-    @Operation(summary = "Approve PI using credit", description = "Approves PI using available credit without balance check")
+    @Operation(
+        summary = "[DEPRECATED] Approve PI using credit balance only",
+        description = "Deprecated — use POST /api/order/{orderId}/approve instead. " +
+                      "That endpoint automatically combines ledger + credit balance and requires no distributorId from the client.",
+        deprecated = true)
     @ApiResponse(responseCode = "200", description = "PI approved using credit successfully")
     public ResponseEntity<OrderApprovalResponse> approvePIUsingCredit(
             @PathVariable Long orderId,

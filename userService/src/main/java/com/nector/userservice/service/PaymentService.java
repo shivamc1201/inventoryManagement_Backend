@@ -238,7 +238,11 @@ public class PaymentService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal closingBalance = totalCredits.subtract(totalDebits);
-        BigDecimal netBalance = computeBalanceFromLastZeroPoint(distributorId);
+        // If all-time net is exactly zero the account is fully settled — no need to scan for
+        // the last zero point, the balance IS zero (fresh start).
+        BigDecimal netBalance = closingBalance.compareTo(BigDecimal.ZERO) == 0
+                ? BigDecimal.ZERO
+                : computeBalanceFromLastZeroPoint(distributorId);
 
         PaymentHistoryResponse response = new PaymentHistoryResponse();
         response.setPaymentHistory(paymentHistory);
@@ -253,7 +257,15 @@ public class PaymentService {
     
     public PaymentHistoryWithRunningBalanceResponse getPaymentHistoryWithRunningBalance(Long distributorId) {
         List<DistributorLedger> paymentHistory = distributorLedgerRepository.findByDistributorIdOrderByCreatedAtDesc(distributorId);
-        BigDecimal closingBalance = computeBalanceFromLastZeroPoint(distributorId);
+
+        // Per-row running balance starts from zero; if the all-time net is also zero the
+        // account is fully settled and we short-circuit rather than scanning for the last zero point.
+        BigDecimal allTimeNet = paymentHistory.stream()
+                .map(e -> isCreditType(e.getTransactionType()) ? e.getAmount() : e.getAmount().negate())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal closingBalance = allTimeNet.compareTo(BigDecimal.ZERO) == 0
+                ? BigDecimal.ZERO
+                : computeBalanceFromLastZeroPoint(distributorId);
 
         List<PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance> paymentHistoryWithBalance =
             calculateRunningBalance(paymentHistory);

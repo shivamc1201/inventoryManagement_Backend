@@ -14,10 +14,12 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class PendingDispatchRowDto {
     private Long id;
+    private Long orderId;
     private String challanNo;
     private String customer;
     private int items;
     private BigDecimal amount;
     private long readySinceDays;
     private LocalDateTime gdnDate;
+    private LocalDateTime piDate;
 }

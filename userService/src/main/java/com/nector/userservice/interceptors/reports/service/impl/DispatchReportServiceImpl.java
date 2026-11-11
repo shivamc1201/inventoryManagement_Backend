@@ -14,7 +14,9 @@ import com.nector.userservice.interceptors.reports.dto.PendingDispatchRowDto;
 import com.nector.userservice.interceptors.reports.dto.ReportFilterRequest;
 import com.nector.userservice.interceptors.reports.service.DispatchReportService;
 import com.nector.userservice.model.Cart;
+import com.nector.userservice.model.ProformaInvoice;
 import com.nector.userservice.repository.CartRepository;
+import com.nector.userservice.repository.ProformaInvoiceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -39,6 +41,7 @@ public class DispatchReportServiceImpl implements DispatchReportService {
     private final CartRepository cartRepository;
     private final OrderConfirmationRepository orderConfirmationRepository;
     private final DistributorRepository distributorRepository;
+    private final ProformaInvoiceRepository proformaInvoiceRepository;
 
     @Override
     public Page<DispatchRegisterRowDto> getRegister(ReportFilterRequest filter) {
@@ -76,8 +79,10 @@ public class DispatchReportServiceImpl implements DispatchReportService {
         List<Long> orderIds = gdns.getContent().stream().map(Gdn::getOrderId).collect(Collectors.toList());
         Map<Long, Cart> cartMap = cartRepository.findAllById(orderIds).stream()
                 .collect(Collectors.toMap(Cart::getId, c -> c));
+        Map<Long, ProformaInvoice> piMap = proformaInvoiceRepository.findByCartIdIn(orderIds).stream()
+                .collect(Collectors.toMap(ProformaInvoice::getCartId, pi -> pi));
 
-        return gdns.map(g -> toPendingDto(g, cartMap.get(g.getOrderId())));
+        return gdns.map(g -> toPendingDto(g, cartMap.get(g.getOrderId()), piMap.get(g.getOrderId())));
     }
 
     @Override
@@ -124,7 +129,7 @@ public class DispatchReportServiceImpl implements DispatchReportService {
                 .build();
     }
 
-    private PendingDispatchRowDto toPendingDto(Gdn g, Cart cart) {
+    private PendingDispatchRowDto toPendingDto(Gdn g, Cart cart, ProformaInvoice pi) {
         String customer = cart != null && cart.getDistributorName() != null ? cart.getDistributorName() : "";
         java.math.BigDecimal amount = cart != null ? cart.getTotalCartAmount() : java.math.BigDecimal.ZERO;
         long readySinceDays = g.getGdnDate() != null
@@ -132,12 +137,14 @@ public class DispatchReportServiceImpl implements DispatchReportService {
                 : 0;
         return PendingDispatchRowDto.builder()
                 .id(g.getId())
+                .orderId(g.getOrderId())
                 .challanNo(g.getGdnNumber())
                 .customer(customer)
                 .items(g.getGdnItems() != null ? g.getGdnItems().size() : 0)
                 .amount(amount)
                 .readySinceDays(readySinceDays)
                 .gdnDate(g.getGdnDate())
+                .piDate(pi != null ? pi.getCreatedAt() : null)
                 .build();
     }
 

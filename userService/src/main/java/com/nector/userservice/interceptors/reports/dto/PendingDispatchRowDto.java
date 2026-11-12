@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class PendingDispatchRowDto {
     private Long id;
-    private Long orderId;
+    private String piNumber;
     private String challanNo;
     private String customer;
     private int items;

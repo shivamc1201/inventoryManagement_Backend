@@ -137,7 +137,7 @@ public class DispatchReportServiceImpl implements DispatchReportService {
                 : 0;
         return PendingDispatchRowDto.builder()
                 .id(g.getId())
-                .orderId(g.getOrderId())
+                .piNumber(pi != null ? pi.getPiNumber() : null)
                 .challanNo(g.getGdnNumber())
                 .customer(customer)
                 .items(g.getGdnItems() != null ? g.getGdnItems().size() : 0)

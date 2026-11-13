@@ -63,7 +63,20 @@ public class SalesOrdersReportServiceImpl implements SalesOrdersReportService {
                 .totalAmount(o.getTotalAmount())
                 .currentStatus(computeStatus(o))
                 .salespersonId(o.getSalespersonId())
+                .receivedByDistributor(computeReceivedStatus(o))
                 .build();
+    }
+
+    private String computeReceivedStatus(OrderTracking o) {
+        return o.getSteps().stream()
+                .filter(s -> s.getStepSequence() == 11)
+                .findFirst()
+                .map(s -> {
+                    if ("yes".equalsIgnoreCase(s.getActionResponse())) return "RECEIVED";
+                    if ("no".equalsIgnoreCase(s.getActionResponse()))  return "REJECTED";
+                    return "PENDING";
+                })
+                .orElse("PENDING");
     }
 
     @Override

@@ -21,4 +21,5 @@ public class SalesOrderRowDto {
     private BigDecimal totalAmount;
     private String currentStatus;
     private Long salespersonId;
+    private String receivedByDistributor;
 }

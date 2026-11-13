@@ -64,6 +64,7 @@ public class SalesOrdersReportServiceImpl implements SalesOrdersReportService {
                 .currentStatus(computeStatus(o))
                 .salespersonId(o.getSalespersonId())
                 .receivedByDistributor(computeReceivedStatus(o))
+                .pendingStage(computePendingStage(o))
                 .build();
     }
 
@@ -77,6 +78,17 @@ public class SalesOrdersReportServiceImpl implements SalesOrdersReportService {
                     return "PENDING";
                 })
                 .orElse("PENDING");
+    }
+
+    private String computePendingStage(OrderTracking o) {
+        java.util.Map<Integer, StepStatus> statusMap = o.getSteps().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        com.nector.userservice.ordertracking.entity.OrderTrackingStep::getStepSequence,
+                        com.nector.userservice.ordertracking.entity.OrderTrackingStep::getStatus));
+        if (statusMap.getOrDefault(3, StepStatus.PENDING) != StepStatus.COMPLETED) return "SALES";
+        if (statusMap.getOrDefault(6, StepStatus.PENDING) != StepStatus.COMPLETED) return "ACCOUNTS";
+        if (statusMap.getOrDefault(8, StepStatus.PENDING) != StepStatus.COMPLETED) return "DISPATCH";
+        return null;
     }
 
     @Override

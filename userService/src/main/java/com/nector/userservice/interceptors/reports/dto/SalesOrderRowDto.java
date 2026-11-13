@@ -22,4 +22,5 @@ public class SalesOrderRowDto {
     private String currentStatus;
     private Long salespersonId;
     private String receivedByDistributor;
+    private String pendingStage;
 }

@@ -26,6 +26,8 @@ public interface PaymentApprovalRepository extends JpaRepository<PaymentApproval
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM PaymentApproval p WHERE p.distributorId = :distributorId AND p.status = 'LEDGER_UPDATED' AND p.transactionType = 'CREDIT'")
     BigDecimal sumAllLedgerUpdatedByDistributor(@Param("distributorId") Long distributorId);
 
+    List<PaymentApproval> findAllByOrderByCreatedAtDesc();
+
     // Bulk: all approved payments grouped by distributor (all time) — for outstanding summary
     @Query("SELECT p.distributorId, COALESCE(SUM(p.amount), 0) FROM PaymentApproval p " +
            "WHERE p.status = 'LEDGER_UPDATED' AND p.transactionType = 'CREDIT' " +

@@ -63,7 +63,32 @@ public class SalesOrdersReportServiceImpl implements SalesOrdersReportService {
                 .totalAmount(o.getTotalAmount())
                 .currentStatus(computeStatus(o))
                 .salespersonId(o.getSalespersonId())
+                .receivedByDistributor(computeReceivedStatus(o))
+                .pendingStage(computePendingStage(o))
                 .build();
+    }
+
+    private String computeReceivedStatus(OrderTracking o) {
+        return o.getSteps().stream()
+                .filter(s -> s.getStepSequence() == 11)
+                .findFirst()
+                .map(s -> {
+                    if ("yes".equalsIgnoreCase(s.getActionResponse())) return "RECEIVED";
+                    if ("no".equalsIgnoreCase(s.getActionResponse()))  return "REJECTED";
+                    return "PENDING";
+                })
+                .orElse("PENDING");
+    }
+
+    private String computePendingStage(OrderTracking o) {
+        java.util.Map<Integer, StepStatus> statusMap = o.getSteps().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        com.nector.userservice.ordertracking.entity.OrderTrackingStep::getStepSequence,
+                        com.nector.userservice.ordertracking.entity.OrderTrackingStep::getStatus));
+        if (statusMap.getOrDefault(3, StepStatus.PENDING) != StepStatus.COMPLETED) return "SALES";
+        if (statusMap.getOrDefault(6, StepStatus.PENDING) != StepStatus.COMPLETED) return "ACCOUNTS";
+        if (statusMap.getOrDefault(8, StepStatus.PENDING) != StepStatus.COMPLETED) return "DISPATCH";
+        return null;
     }
 
     @Override

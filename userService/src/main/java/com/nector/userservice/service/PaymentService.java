@@ -625,37 +625,108 @@ public class PaymentService {
         updateDistributorBalance(distributorId, amount.abs(), transactionType, description, LocalDateTime.now());
     }
 
-    public Long addPaymentForApproval(Long distributorId, BigDecimal amount, String transactionType, String description, LocalDateTime date,
-                                       String utrTxnNo, String refNo, String chequeNo) {
+    public Long addPaymentFromRequest(com.nector.userservice.dto.payment.PaymentSubmissionRequest req) {
         PaymentApproval payment = new PaymentApproval();
-        payment.setDistributorId(distributorId);
-        payment.setAmount(amount);
-        payment.setTransactionType(transactionType);
-        payment.setDescription(description);
+        payment.setDistributorId(req.getDistributorId());
+        payment.setSalespersonId(req.getSalespersonId());
+        payment.setAmount(req.getAmount());
+        payment.setTransactionType(req.getTransactionType() != null ? req.getTransactionType().name() : null);
+        payment.setDescription(req.getDescription());
         payment.setStatus("PAYMENT_ADDED");
-        payment.setCreatedAt(date != null ? date : LocalDateTime.now());
-        payment.setUtrTxnNo(utrTxnNo);
-        payment.setRefNo(refNo);
-        payment.setChequeNo(chequeNo);
-        PaymentApproval savedPayment = paymentApprovalRepository.save(payment);
-        return savedPayment.getId();
+        payment.setCreatedAt(req.getDate() != null ? req.getDate() : LocalDateTime.now());
+
+        if (req.getPaymentMode() != null) {
+            payment.setPaymentMode(req.getPaymentMode().name());
+            switch (req.getPaymentMode()) {
+                case RTGS, NEFT -> payment.setUtrTxnNo(req.getUtrNumber());
+                case CHEQUE -> {
+                    payment.setChequeNo(req.getChequeNumber());
+                    payment.setBankName(req.getBankName());
+                }
+                case IMPS, UPI -> payment.setRefNo(req.getTransactionNumber());
+                case CASH -> { /* no reference number */ }
+            }
+        }
+
+        return paymentApprovalRepository.save(payment).getId();
     }
 
-    public Long addPaymentForApprovalWithSalesperson(Long distributorId, Long salespersonId, BigDecimal amount, String transactionType, String description, LocalDateTime date,
-                                                      String utrTxnNo, String refNo, String chequeNo) {
-        PaymentApproval payment = new PaymentApproval();
-        payment.setDistributorId(distributorId);
-        payment.setSalespersonId(salespersonId);
-        payment.setAmount(amount);
-        payment.setTransactionType(transactionType);
-        payment.setDescription(description);
-        payment.setStatus("PAYMENT_ADDED");
-        payment.setCreatedAt(date != null ? date : LocalDateTime.now());
-        payment.setUtrTxnNo(utrTxnNo);
-        payment.setRefNo(refNo);
-        payment.setChequeNo(chequeNo);
-        PaymentApproval savedPayment = paymentApprovalRepository.save(payment);
-        return savedPayment.getId();
+    // kept for internal use by deprecated param-based endpoints
+    public Long addPaymentForApproval(Long distributorId, BigDecimal amount, String transactionType, String description,
+                                       LocalDateTime date, String paymentMode, String transactionNumber) {
+        com.nector.userservice.dto.payment.PaymentSubmissionRequest req =
+                new com.nector.userservice.dto.payment.PaymentSubmissionRequest();
+        req.setDistributorId(distributorId);
+        req.setAmount(amount);
+        req.setTransactionType(com.nector.userservice.enums.TransactionType.valueOf(transactionType));
+        req.setDescription(description);
+        req.setDate(date);
+        if (paymentMode != null) req.setPaymentMode(com.nector.userservice.enums.PaymentMode.valueOf(paymentMode));
+        req.setUtrNumber(transactionNumber);
+        req.setTransactionNumber(transactionNumber);
+        req.setChequeNumber(transactionNumber);
+        return addPaymentFromRequest(req);
+    }
+
+    public Long addPaymentForApprovalWithSalesperson(Long distributorId, Long salespersonId, BigDecimal amount,
+                                                      String transactionType, String description, LocalDateTime date,
+                                                      String paymentMode, String transactionNumber) {
+        com.nector.userservice.dto.payment.PaymentSubmissionRequest req =
+                new com.nector.userservice.dto.payment.PaymentSubmissionRequest();
+        req.setDistributorId(distributorId);
+        req.setSalespersonId(salespersonId);
+        req.setAmount(amount);
+        req.setTransactionType(com.nector.userservice.enums.TransactionType.valueOf(transactionType));
+        req.setDescription(description);
+        req.setDate(date);
+        if (paymentMode != null) req.setPaymentMode(com.nector.userservice.enums.PaymentMode.valueOf(paymentMode));
+        req.setUtrNumber(transactionNumber);
+        req.setTransactionNumber(transactionNumber);
+        req.setChequeNumber(transactionNumber);
+        return addPaymentFromRequest(req);
+    }
+
+
+    public List<com.nector.userservice.dto.payment.PaymentReceivedLogResponse> getAllPaymentReceivedLogs() {
+        List<PaymentApproval> payments = paymentApprovalRepository.findAllByOrderByCreatedAtDesc();
+
+        return payments.stream().map(payment -> {
+            com.nector.userservice.dto.payment.PaymentReceivedLogResponse dto =
+                    new com.nector.userservice.dto.payment.PaymentReceivedLogResponse();
+
+            dto.setPaymentId(payment.getId());
+            dto.setDistributorId(payment.getDistributorId());
+            dto.setAmount(payment.getAmount());
+            dto.setTransactionType(payment.getTransactionType());
+            dto.setPaymentMode(payment.getPaymentMode());
+            dto.setDescription(payment.getDescription());
+            dto.setStatus(payment.getStatus());
+            dto.setCreatedAt(payment.getCreatedAt());
+            dto.setApprovedAt(payment.getApprovedAt());
+
+            // Mode-specific reference fields
+            dto.setUtrNumber(payment.getUtrTxnNo());           // RTGS / NEFT
+            dto.setChequeNumber(payment.getChequeNo());         // CHEQUE
+            dto.setBankName(payment.getBankName());             // CHEQUE
+            dto.setTransactionNumber(payment.getRefNo());       // IMPS / UPI
+
+            // Party name
+            distributorRepository.findById(payment.getDistributorId())
+                    .ifPresent(d -> dto.setPartyName(d.getFirstName() + " " + d.getLastName()));
+
+            // Name of person who added the payment
+            // — if salespersonId is set, it was added by an internal user (salesperson/accounts)
+            // — if null, the distributor added it themselves
+            if (payment.getSalespersonId() != null) {
+                userRepository.findById(payment.getSalespersonId())
+                        .ifPresent(u -> dto.setAddedByName(u.getFirstName() + " " + u.getLastName()));
+            } else {
+                distributorRepository.findById(payment.getDistributorId())
+                        .ifPresent(d -> dto.setAddedByName(d.getFirstName() + " " + d.getLastName() + " (Self)"));
+            }
+
+            return dto;
+        }).collect(java.util.stream.Collectors.toList());
     }
 
     @Transactional

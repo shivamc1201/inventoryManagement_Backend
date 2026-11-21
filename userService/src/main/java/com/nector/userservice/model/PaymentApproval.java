@@ -53,6 +53,12 @@ public class PaymentApproval {
     @Column(name = "cheque_no")
     private String chequeNo;
 
+    @Column(name = "payment_mode")
+    private String paymentMode; // NEFT, RTGS, IMPS, UPI, CHEQUE, CASH
+
+    @Column(name = "bank_name")
+    private String bankName; // used for CHEQUE payments
+
     @Transient
     private String distributorName;
 }

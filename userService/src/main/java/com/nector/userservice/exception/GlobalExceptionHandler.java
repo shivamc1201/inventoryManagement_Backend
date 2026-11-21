@@ -198,6 +198,10 @@ public class GlobalExceptionHandler {
         if (cause instanceof InvalidFormatException ife && ife.getTargetType() != null) {
             String typeName = ife.getTargetType().getSimpleName();
             switch (typeName) {
+                case "PaymentMode" -> error.put("error",
+                        "Invalid paymentMode '" + ife.getValue() + "'. Allowed values are: RTGS, NEFT, IMPS, UPI, CHEQUE, CASH");
+                case "TransactionType" -> error.put("error",
+                        "Invalid transactionType '" + ife.getValue() + "'. Allowed values are: CREDIT, DEBIT");
                 case "KPICategory" -> error.put("error",
                         "Invalid kpiCategory '" + ife.getValue() + "'. Allowed values are: KRA, KPI");
                 case "KPIMeasurementUnit" -> error.put("error",

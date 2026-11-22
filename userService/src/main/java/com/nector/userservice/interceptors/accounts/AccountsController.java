@@ -14,21 +14,20 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.List;
-import java.io.ByteArrayOutputStream;
-import java.io.PrintWriter;
-import java.time.format.DateTimeFormatter;
-import com.lowagie.text.*;
-import com.lowagie.text.pdf.*;
 
 @RestController
 @RequestMapping("/api/accounts")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "Accounts", description = "APIs for Accounts Team management")
 public class AccountsController {
 
@@ -39,19 +38,26 @@ public class AccountsController {
     @Operation(summary = "Process payment", description = "Processes payment and updates distributor ledger")
     @ApiResponse(responseCode = "200", description = "Payment processed successfully")
     public ResponseEntity<PaymentResponse> processPayment(@RequestBody PaymentRequest paymentRequest) {
+        log.info("Entering processPayment() - distributorId: {}, amount: {}", paymentRequest.getDistributorId(), paymentRequest.getAmount());
         PaymentResponse processedPayment = paymentService.processPayment(paymentRequest);
+        log.info("Exiting processPayment() - processed payment for distributorId: {}", paymentRequest.getDistributorId());
         return ResponseEntity.ok(processedPayment);
     }
-    
+
+    @Deprecated
     @PostMapping("/approve-PI/{orderId}")
-    @Operation(summary = "Check and approve PI", description = "Checks distributor balance and approves PI if sufficient funds")
+    @Operation(
+        summary = "[DEPRECATED] Check and approve PI (ledger only)",
+        description = "Deprecated — use POST /api/order/{orderId}/approve instead. " +
+                      "That endpoint automatically combines ledger + credit balance and requires no distributorId from the client.",
+        deprecated = true)
     @ApiResponse(responseCode = "200", description = "Order approval status returned")
     public ResponseEntity<OrderApprovalResponse> approveOrder(
             @PathVariable Long orderId,
             @RequestParam Long distributorId) {
-        
-        // Check if cart is active
+        log.info("Entering approveOrder() - orderId: {}, distributorId: {}", orderId, distributorId);
         if (!paymentService.isCartApproved(orderId)) {
+            log.warn("Exiting approveOrder() - cart not approved for orderId: {}", orderId);
             OrderApprovalResponse response = new OrderApprovalResponse();
             response.setOrderId(orderId);
             response.setDistributorId(distributorId);
@@ -59,8 +65,9 @@ public class AccountsController {
             response.setMessage("Cart is not approved or does not exist");
             return ResponseEntity.status(400).body(response);
         }
-        
+
         OrderApprovalResponse approval = paymentService.checkAndApproveOrder(orderId, distributorId);
+        log.info("Exiting approveOrder() - orderId: {}, status: {}", orderId, approval.getStatus());
         return ResponseEntity.ok(approval);
     }
     
@@ -72,16 +79,23 @@ public class AccountsController {
         return ResponseEntity.ok(pendingPIs);
     }
     
+    @Deprecated
     @PostMapping("/approve-payment/{orderId}")
-    @Operation(summary = "Approve payment for order", description = "Approves payment and updates order status to PAYMENT_APPROVED")
+    @Operation(
+        summary = "[DEPRECATED] Approve payment for order (ledger only)",
+        description = "Deprecated — use POST /api/order/{orderId}/approve instead. " +
+                      "That endpoint automatically combines ledger + credit balance and requires no distributorId from the client.",
+        deprecated = true)
     @ApiResponse(responseCode = "200", description = "Payment approved successfully")
     public ResponseEntity<OrderApprovalResponse> approvePayment(
             @PathVariable Long orderId,
             @RequestParam Long distributorId) {
+        log.info("Entering approvePayment() - orderId: {}, distributorId: {}", orderId, distributorId);
         OrderApprovalResponse approval = paymentService.approvePaymentForOrder(orderId, distributorId);
+        log.info("Exiting approvePayment() - orderId: {}, status: {}", orderId, approval.getStatus());
         return ResponseEntity.ok(approval);
     }
-    
+
     @PostMapping("/add-credit/{distributorId}")
     @Operation(summary = "Add credit to distributor", description = "Increases the credit limit (creditAmount) for a distributor")
     @ApiResponse(responseCode = "200", description = "Credit added successfully")
@@ -89,18 +103,24 @@ public class AccountsController {
             @PathVariable Long distributorId,
             @RequestParam BigDecimal amount,
             @RequestParam(required = false, defaultValue = "Credit added by accounts team") String description) {
+        log.info("Entering addCreditToDistributor() - distributorId: {}, amount: {}", distributorId, amount);
         paymentService.addCreditToDistributor(distributorId, amount, description);
 
         PaymentApprovalResponse response = new PaymentApprovalResponse();
         response.setPaymentId(null);
         response.setMessage("Credit of " + amount + " added successfully to distributor " + distributorId);
         response.setStatus("CREDIT_ADDED");
-
+        log.info("Exiting addCreditToDistributor() - added credit {} to distributorId: {}", amount, distributorId);
         return ResponseEntity.ok(response);
     }
 
+    @Deprecated
     @PostMapping("/approve-PI-using-credit/{orderId}")
-    @Operation(summary = "Approve PI using credit", description = "Approves PI using available credit without balance check")
+    @Operation(
+        summary = "[DEPRECATED] Approve PI using credit balance only",
+        description = "Deprecated — use POST /api/order/{orderId}/approve instead. " +
+                      "That endpoint automatically combines ledger + credit balance and requires no distributorId from the client.",
+        deprecated = true)
     @ApiResponse(responseCode = "200", description = "PI approved using credit successfully")
     public ResponseEntity<OrderApprovalResponse> approvePIUsingCredit(
             @PathVariable Long orderId,
@@ -134,15 +154,14 @@ public class AccountsController {
     }
 
     @PostMapping("/update-balance")
-    @Operation(summary = "Add payment for approval", description = "Creates payment entry with PAYMENT_ADDED status")
+    @Operation(
+        summary = "Add payment for approval",
+        description = "Submit a payment entry for approval. " +
+                      "paymentMode: RTGS/NEFT → provide utrNumber | CHEQUE → provide chequeNumber + bankName | IMPS/UPI → provide transactionNumber | CASH → no reference needed.")
     @ApiResponse(responseCode = "200", description = "Payment added for approval successfully")
     public ResponseEntity<PaymentApprovalResponse> updateBalance(
-            @RequestParam Long distributorId,
-            @RequestParam BigDecimal amount,
-            @RequestParam TransactionType transactionType,
-            @RequestParam String description,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime date) {
-        Long paymentId = paymentService.addPaymentForApproval(distributorId, amount, transactionType.name(), description, date);
+            @Valid @RequestBody PaymentSubmissionRequest request) {
+        Long paymentId = paymentService.addPaymentFromRequest(request);
 
         PaymentApprovalResponse response = new PaymentApprovalResponse();
         response.setPaymentId(paymentId);
@@ -152,17 +171,15 @@ public class AccountsController {
         return ResponseEntity.ok(response);
     }
 
+    @Deprecated
     @PostMapping("/update-balance-with-salesperson")
-    @Operation(summary = "Add payment for approval with salesperson", description = "Creates payment entry with PAYMENT_ADDED status including salesperson ID")
+    @Operation(
+        summary = "[DEPRECATED] Add payment with salesperson — use POST /update-balance with salespersonId in body",
+        deprecated = true)
     @ApiResponse(responseCode = "200", description = "Payment added for approval successfully")
     public ResponseEntity<PaymentApprovalResponse> updateBalanceWithSalesperson(
-            @RequestParam Long distributorId,
-            @RequestParam Long salespersonId,
-            @RequestParam BigDecimal amount,
-            @RequestParam TransactionType transactionType,
-            @RequestParam String description,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime date) {
-        Long paymentId = paymentService.addPaymentForApprovalWithSalesperson(distributorId, salespersonId, amount, transactionType.name(), description, date);
+            @Valid @RequestBody PaymentSubmissionRequest request) {
+        Long paymentId = paymentService.addPaymentFromRequest(request);
 
         PaymentApprovalResponse response = new PaymentApprovalResponse();
         response.setPaymentId(paymentId);
@@ -178,7 +195,9 @@ public class AccountsController {
     public ResponseEntity<String> paymentApproval(
             @PathVariable Long paymentId,
             @RequestParam Long approvedBy) {
+        log.info("Entering paymentApproval() - paymentId: {}, approvedBy: {}", paymentId, approvedBy);
         paymentService.approvePayment(paymentId, approvedBy);
+        log.info("Exiting paymentApproval() - approved paymentId: {}", paymentId);
         return ResponseEntity.ok("Payment approved and ledger updated");
     }
 
@@ -189,7 +208,9 @@ public class AccountsController {
             @PathVariable Long paymentId,
             @RequestParam Long rejectedBy,
             @RequestBody PaymentRejectionRequest request) {
+        log.info("Entering paymentRejection() - paymentId: {}, rejectedBy: {}", paymentId, rejectedBy);
         paymentService.rejectPayment(paymentId, rejectedBy, request.getReason());
+        log.info("Exiting paymentRejection() - rejected paymentId: {}", paymentId);
         return ResponseEntity.ok("Payment rejected successfully");
     }
 
@@ -235,6 +256,14 @@ public class AccountsController {
             @RequestParam(required = false) Long distributorId) {
         List<PaymentApproval> ledgerUpdatedPayments = paymentService.getLedgerUpdatedPayments(salespersonId, distributorId);
         return ResponseEntity.ok(ledgerUpdatedPayments);
+    }
+
+    @GetMapping("/collection-analytics")
+    @Operation(summary = "Get collection analytics", description = "Returns collectionMonthly (current month) and collectionYearly (all-time total) for LEDGER_UPDATED CREDIT payments by distributorId")
+    @ApiResponse(responseCode = "200", description = "Collection analytics retrieved successfully")
+    public ResponseEntity<Map<String, BigDecimal>> getCollectionAnalytics(
+            @RequestParam Long distributorId) {
+        return ResponseEntity.ok(paymentService.getCollectionAnalytics(distributorId));
     }
 
     private void populateDistributorNames(List<PaymentApproval> payments) {
@@ -305,8 +334,9 @@ public class AccountsController {
             @RequestParam String description,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime date) {
 
-        // Directly update ledger for all transaction types (JV, CREDIT, DEBIT)
-        paymentService.updateDistributorBalance(distributorId, amount, transactionType.name(), description, date);
+        // CREDIT entries apply split: restore credit first, remainder to ledger.
+        // DEBIT / JV entries write directly.
+        paymentService.updateDistributorBalanceWithCreditSplit(distributorId, amount, transactionType.name(), description, date);
 
         PaymentApprovalResponse response = new PaymentApprovalResponse();
         response.setPaymentId(null);
@@ -324,206 +354,11 @@ public class AccountsController {
         return ResponseEntity.ok(creditBalance);
     }
 
-    @GetMapping("/payment-history/{distributorId}/download")
-    @Operation(summary = "Download payment history as CSV", description = "Downloads payment history for a distributor in CSV format")
-    @ApiResponse(responseCode = "200", description = "Payment history CSV downloaded successfully")
-    public ResponseEntity<byte[]> downloadPaymentHistory(@PathVariable Long distributorId) {
-        PaymentHistoryResponse paymentResponse = paymentService.getPaymentHistoryWithBalance(distributorId);
-        List<DistributorLedger> history = paymentResponse.getPaymentHistory();
-        BigDecimal closingBalance = paymentResponse.getClosingBalance();
-        
-        // Get distributor name for the header
-        String distributorName = paymentService.getDistributorRepository()
-                .findById(distributorId)
-                .map(distributor -> distributor.getFirstName() + " " + distributor.getLastName())
-                .orElse("Unknown Distributor");
-        
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        PrintWriter writer = new PrintWriter(outputStream);
-        
-        // Write header
-        writer.println("Nectar Origin Private Limited");
-        writer.println("360 K, Shiv Parwati Nagar, Block Road No-2,");
-        writer.println("Ward No 16, Kahalgaon, Bhagalpur Bihar");
-        writer.println("Bihar - 813203, India");
-        writer.println("CIN: U74999BR2016PTC032690");
-        writer.println("Contact : 06429-450126,9797979522");
-        writer.println("E-Mail : nectarorigin@gmail.com");
-        writer.println("http://www.nectarorigin.com");
-        writer.println();
-        writer.println("LEDGER ACCOUNT: " + distributorName.toUpperCase());
-        writer.println("FROM: Nectar Origin Private Limited");
-        writer.println("PERIOD: 01-04-2025 TO " + java.time.LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")));
-        writer.println();
-        
-        // Write CSV headers
-        writer.println("Date,Particulars,Vch Type,Vch No.,Debit,Credit");
-        
-        // Write data rows
-        BigDecimal totalDebit = BigDecimal.ZERO;
-        BigDecimal totalCredit = BigDecimal.ZERO;
-        
-        for (DistributorLedger entry : history) {
-            String date = entry.getCreatedAt().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
-            String particulars = entry.getDescription();
-            String vchType = entry.getTransactionType();
-            String vchNo = entry.getId().toString();
-            String debit = "";
-            String credit = "";
-            
-            if ("DEBIT".equalsIgnoreCase(entry.getTransactionType())) {
-                particulars = "Dr " + particulars;
-                debit = String.format("%,.2f", entry.getAmount());
-                totalDebit = totalDebit.add(entry.getAmount());
-            } else {
-                particulars = "Cr " + particulars;
-                credit = String.format("%,.2f", entry.getAmount());
-                totalCredit = totalCredit.add(entry.getAmount());
-            }
-            
-            writer.println(String.format("%s,%s,%s,%s,%s,%s", 
-                    date, particulars, vchType, vchNo, debit, credit));
-        }
-        
-        // Add total row
-        writer.println(String.format("TOTAL,,,,%s,%s", 
-                String.format("%,.2f", totalDebit), String.format("%,.2f", totalCredit)));
-        
-        writer.flush();
-        byte[] csvBytes = outputStream.toByteArray();
-        writer.close();
-        
-        return ResponseEntity.ok()
-                .header("Content-Type", "text/csv")
-                .header("Content-Disposition", "attachment; filename=\"ledger_" + distributorId + ".csv\"")
-                .body(csvBytes);
+    @GetMapping("/payment-received-logs")
+    @Operation(summary = "Get all payment received logs", description = "Returns all payment submissions across all parties with party name, payment mode (NEFT/RTGS/IMPS/UPI/CHEQUE/CASH), reference numbers, and the person who added each payment")
+    @ApiResponse(responseCode = "200", description = "Payment received logs retrieved successfully")
+    public ResponseEntity<List<PaymentReceivedLogResponse>> getPaymentReceivedLogs() {
+        return ResponseEntity.ok(paymentService.getAllPaymentReceivedLogs());
     }
 
-    @GetMapping("/payment-history/{distributorId}/download-pdf")
-    @Operation(summary = "Download payment history as PDF", description = "Downloads payment history for a distributor in PDF format")
-    @ApiResponse(responseCode = "200", description = "Payment history PDF downloaded successfully")
-    public ResponseEntity<byte[]> downloadPaymentHistoryPDF(@PathVariable Long distributorId) throws DocumentException {
-        PaymentHistoryResponse paymentResponse = paymentService.getPaymentHistoryWithBalance(distributorId);
-        List<DistributorLedger> history = paymentResponse.getPaymentHistory();
-        BigDecimal closingBalance = paymentResponse.getClosingBalance();
-        
-        // Get distributor name for the header
-        String distributorName = paymentService.getDistributorRepository()
-                .findById(distributorId)
-                .map(distributor -> distributor.getFirstName() + " " + distributor.getLastName())
-                .orElse("Unknown Distributor");
-        
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        Document document = new Document(PageSize.A4);
-        PdfWriter writer = PdfWriter.getInstance(document, outputStream);
-        
-        document.open();
-        
-        // Add company header
-        Font companyFont = new Font(Font.HELVETICA, 10, Font.NORMAL);
-        document.add(new Paragraph("Nectar Origin Private Limited", new Font(Font.HELVETICA, 12, Font.BOLD)));
-        document.add(new Paragraph("360 K, Shiv Parwati Nagar, Block Road No-2,", companyFont));
-        document.add(new Paragraph("Ward No 16, Kahalgaon, Bhagalpur Bihar", companyFont));
-        document.add(new Paragraph("Bihar - 813203, India", companyFont));
-        document.add(new Paragraph("CIN: U74999BR2016PTC032690", companyFont));
-        document.add(new Paragraph("Contact : 06429-450126,9797979522", companyFont));
-        document.add(new Paragraph("E-Mail : nectarorigin@gmail.com", companyFont));
-        document.add(new Paragraph("http://www.nectarorigin.com", companyFont));
-        document.add(new Paragraph(" "));
-        
-        // Add title and header
-        Font titleFont = new Font(Font.HELVETICA, 16, Font.BOLD);
-        Font headerFont = new Font(Font.HELVETICA, 12, Font.NORMAL);
-        Font tableHeaderFont = new Font(Font.HELVETICA, 10, Font.BOLD);
-        Font tableFont = new Font(Font.HELVETICA, 9, Font.NORMAL);
-        
-        Paragraph title = new Paragraph("LEDGER ACCOUNT: " + distributorName.toUpperCase(), titleFont);
-        title.setAlignment(Element.ALIGN_CENTER);
-        document.add(title);
-        
-        Paragraph company = new Paragraph("FROM: Nectar Origin Private Limited", headerFont);
-        company.setAlignment(Element.ALIGN_CENTER);
-        document.add(company);
-        
-        Paragraph period = new Paragraph("PERIOD: 01-04-2025 TO " + java.time.LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")), headerFont);
-        period.setAlignment(Element.ALIGN_CENTER);
-        document.add(period);
-        
-        document.add(Chunk.NEWLINE);
-        
-        // Create table
-        PdfPTable table = new PdfPTable(6);
-        table.setWidthPercentage(100);
-        table.setWidths(new float[]{2f, 4f, 1.5f, 1.5f, 2f, 2f});
-        
-        // Table headers
-        table.addCell(new PdfPCell(new Phrase("Date", tableHeaderFont)));
-        table.addCell(new PdfPCell(new Phrase("Particulars", tableHeaderFont)));
-        table.addCell(new PdfPCell(new Phrase("Vch Type", tableHeaderFont)));
-        table.addCell(new PdfPCell(new Phrase("Vch No.", tableHeaderFont)));
-        table.addCell(new PdfPCell(new Phrase("Debit", tableHeaderFont)));
-        table.addCell(new PdfPCell(new Phrase("Credit", tableHeaderFont)));
-        
-        // Table data
-        BigDecimal totalDebit = BigDecimal.ZERO;
-        BigDecimal totalCredit = BigDecimal.ZERO;
-
-        for (DistributorLedger entry : history) {
-            String date = entry.getCreatedAt().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
-            String particulars = entry.getDescription();
-            String vchType = entry.getTransactionType();
-            String vchNo = entry.getId().toString();
-            String debit = "";
-            String credit = "";
-            
-            if ("DEBIT".equalsIgnoreCase(entry.getTransactionType())) {
-                particulars = "Dr " + particulars;
-                debit = String.format("%,.2f", entry.getAmount());
-                totalDebit = totalDebit.add(entry.getAmount());
-            } else {
-                particulars = "Cr " + particulars;
-                credit = String.format("%,.2f", entry.getAmount());
-                totalCredit = totalCredit.add(entry.getAmount());
-            }
-            
-            table.addCell(new PdfPCell(new Phrase(date, tableFont)));
-            table.addCell(new PdfPCell(new Phrase(particulars, tableFont)));
-            table.addCell(new PdfPCell(new Phrase(vchType, tableFont)));
-            table.addCell(new PdfPCell(new Phrase(vchNo, tableFont)));
-            
-            PdfPCell debitCell = new PdfPCell(new Phrase(debit, tableFont));
-            debitCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            table.addCell(debitCell);
-            
-            PdfPCell creditCell = new PdfPCell(new Phrase(credit, tableFont));
-            creditCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            table.addCell(creditCell);
-        }
-        
-        // Add total row
-        PdfPCell totalTextCell = new PdfPCell(new Phrase("TOTAL", new Font(Font.HELVETICA, 10, Font.BOLD)));
-        totalTextCell.setColspan(4);
-        totalTextCell.setBackgroundColor(new java.awt.Color(240, 240, 240));
-        table.addCell(totalTextCell);
-        
-        PdfPCell totalDebitCell = new PdfPCell(new Phrase(String.format("%,.2f", totalDebit), new Font(Font.HELVETICA, 10, Font.BOLD)));
-        totalDebitCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        totalDebitCell.setBackgroundColor(new java.awt.Color(240, 240, 240));
-        table.addCell(totalDebitCell);
-        
-        PdfPCell totalCreditCell = new PdfPCell(new Phrase(String.format("%,.2f", totalCredit), new Font(Font.HELVETICA, 10, Font.BOLD)));
-        totalCreditCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        totalCreditCell.setBackgroundColor(new java.awt.Color(240, 240, 240));
-        table.addCell(totalCreditCell);
-        
-        document.add(table);
-        document.close();
-        
-        byte[] pdfBytes = outputStream.toByteArray();
-        
-        return ResponseEntity.ok()
-                .header("Content-Type", "application/pdf")
-                .header("Content-Disposition", "attachment; filename=\"ledger_" + distributorId + ".pdf\"")
-                .body(pdfBytes);
-    }
 }

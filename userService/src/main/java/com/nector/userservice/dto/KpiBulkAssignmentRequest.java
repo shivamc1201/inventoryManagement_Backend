@@ -1,5 +1,6 @@
 package com.nector.userservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -7,7 +8,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.util.List;
 
 
@@ -33,24 +33,23 @@ public class KpiBulkAssignmentRequest {
     @Valid
     private List<KpiBulkAssignmentItem> assignments;
 
-    @NotNull(message = "Month is required")
-    @Min(value = 1, message = "Month must be between 1 and 12")
-    @Max(value = 12, message = "Month must be between 1 and 12")
-    private Integer month;
+    @NotNull(message = "Start date is required")
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate startDate;
 
-    @NotNull(message = "Year is required")
-    @Min(value = 2000, message = "Year must be 2000 or later")
-    private Integer year;
+    @NotNull(message = "End date is required")
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate endDate;
 
     @Size(max = 500, message = "Remarks cannot exceed 500 characters")
     private String remarks;
 
     public LocalDate getEffectiveStartDate() {
-        return YearMonth.of(year, month).atDay(1);
+        return startDate;
     }
 
     public LocalDate getEffectiveEndDate() {
-        return YearMonth.of(year, month).atEndOfMonth();
+        return endDate;
     }
 }
 

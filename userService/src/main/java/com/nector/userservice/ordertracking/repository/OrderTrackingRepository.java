@@ -95,6 +95,23 @@ public interface OrderTrackingRepository extends JpaRepository<OrderTracking, Lo
            nativeQuery = true)
     int backfillSalespersonIds();
 
+    // --- Salesman performance ---
+
+    @Query(value = "SELECT ot.salesperson_id, MAX(c.salesperson_name) AS salesperson_name, " +
+                   "COUNT(ot.id) AS order_count, SUM(ot.total_amount) AS total_value, " +
+                   "SUM(COALESCE(g.total_weight, c.total_weight, 0)) / 1000 AS total_quantity_tons, " +
+                   "SUM(COALESCE(g.total_weight, c.total_weight, 0)) AS total_quantity_kg " +
+                   "FROM order_tracking ot " +
+                   "LEFT JOIN carts c ON ot.cart_id = c.id " +
+                   "LEFT JOIN gdn g ON g.order_id = ot.id " +
+                   "WHERE ot.salesperson_id IS NOT NULL " +
+                   "AND ot.order_date BETWEEN :from AND :to " +
+                   "GROUP BY ot.salesperson_id " +
+                   "ORDER BY SUM(ot.total_amount) DESC",
+           nativeQuery = true)
+    List<Object[]> getSalesmanPerformance(@Param("from") java.time.LocalDate from,
+                                           @Param("to") java.time.LocalDate to);
+
     // Methods for distributor-based filtering
     Page<OrderTracking> findByDistributorId(Long distributorId, Pageable pageable);
     
@@ -102,4 +119,30 @@ public interface OrderTrackingRepository extends JpaRepository<OrderTracking, Lo
     
     @Query("SELECT COUNT(o) FROM OrderTracking o WHERE o.distributorId = :distributorId")
     long countByDistributorId(@Param("distributorId") Long distributorId);
+
+    // --- Report queries ---
+
+    @Query("SELECT DISTINCT o FROM OrderTracking o WHERE o.distributorId = :distributorId " +
+           "AND o.orderDate BETWEEN :from AND :to ORDER BY o.orderDate DESC")
+    Page<OrderTracking> findByDistributorIdAndDateRange(@Param("distributorId") Long distributorId,
+                                                         @Param("from") java.time.LocalDate from,
+                                                         @Param("to") java.time.LocalDate to,
+                                                         Pageable pageable);
+
+    @Query("SELECT DISTINCT o FROM OrderTracking o " +
+           "WHERE o.orderDate BETWEEN :from AND :to ORDER BY o.orderDate DESC")
+    Page<OrderTracking> findAllByDateRange(@Param("from") java.time.LocalDate from,
+                                            @Param("to") java.time.LocalDate to,
+                                            Pageable pageable);
+
+    @Query("SELECT DISTINCT o FROM OrderTracking o " +
+           "WHERE o.orderDate BETWEEN :from AND :to ORDER BY o.orderDate DESC")
+    List<OrderTracking> findAllByDateRangeUnpaged(@Param("from") java.time.LocalDate from,
+                                                   @Param("to") java.time.LocalDate to);
+
+    @Query("SELECT DISTINCT o FROM OrderTracking o WHERE o.distributorId = :distributorId " +
+           "AND o.orderDate BETWEEN :from AND :to ORDER BY o.orderDate DESC")
+    List<OrderTracking> findByDistributorIdAndDateRangeUnpaged(@Param("distributorId") Long distributorId,
+                                                                @Param("from") java.time.LocalDate from,
+                                                                @Param("to") java.time.LocalDate to);
 }

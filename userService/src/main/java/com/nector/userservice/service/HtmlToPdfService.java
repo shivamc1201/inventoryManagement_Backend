@@ -1,5 +1,6 @@
 package com.nector.userservice.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -15,24 +16,30 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 @Service
+@Slf4j
 public class HtmlToPdfService {
 
     @Autowired
     private ResourceLoader resourceLoader;
 
     private volatile String logoUri;
+    private volatile String dealerInvoiceLogoUri;
     private volatile String emailIconUri;
     private volatile String webIconUri;
 
     public byte[] convertHtmlToPdf(String html) {
+        log.info("Entering convertHtmlToPdf() - htmlLength: {} characters", html != null ? html.length() : 0);
         try {
             ITextRenderer renderer = new ITextRenderer();
             renderer.setDocumentFromString(html);
             renderer.layout();
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             renderer.createPDF(out);
-            return out.toByteArray();
+            byte[] pdfBytes = out.toByteArray();
+            log.info("Exiting convertHtmlToPdf() - generated PDF of {} bytes", pdfBytes.length);
+            return pdfBytes;
         } catch (Exception e) {
+            log.error("convertHtmlToPdf() failed - {}", e.getMessage(), e);
             throw new RuntimeException("Failed to convert HTML to PDF", e);
         }
     }
@@ -48,6 +55,17 @@ public class HtmlToPdfService {
             }
         }
         return logoUri;
+    }
+
+    public String getDealerInvoiceLogoDataUri() {
+        if (dealerInvoiceLogoUri == null) {
+            synchronized (this) {
+                if (dealerInvoiceLogoUri == null) {
+                    dealerInvoiceLogoUri = loadResourceToTempFile("classpath:templates/dealer_invoice_logo.jpeg", "dealer-invoice-logo", ".jpeg");
+                }
+            }
+        }
+        return dealerInvoiceLogoUri;
     }
 
     public String getEmailIconUri() {

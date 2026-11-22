@@ -1,7 +1,6 @@
 package com.nector.userservice.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -41,6 +40,10 @@ public class Dealer {
 
     @Column(name = "is_active")
     private Boolean isActive = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 20)
+    private DealerStatus status = DealerStatus.ACTIVE;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

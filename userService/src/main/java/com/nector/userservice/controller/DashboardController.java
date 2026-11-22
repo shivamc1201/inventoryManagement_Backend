@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +29,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "Dashboard", description = "APIs for dashboard analytics and metrics")
 public class DashboardController {
     
@@ -42,7 +44,9 @@ public class DashboardController {
     @ApiResponse(responseCode = "200", description = "Analytics data retrieved successfully")
     public ResponseEntity<DashboardResponse> getDashboardAnalytics(
             @RequestParam(required = false) String period) {
+        log.info("Entering getDashboardAnalytics() with period: {}", period);
         DashboardResponse response = dashboardService.getDashboardData(period);
+        log.info("Exiting getDashboardAnalytics() with period: {}", period);
         return ResponseEntity.ok(response);
     }
 
@@ -53,7 +57,9 @@ public class DashboardController {
             @RequestParam(required = false) String period,
             @RequestParam(required = false) Long salespersonId,
             @RequestParam(required = false) Long distributorId) {
+        log.info("Entering getVolumeAnalytics() with period: {}, salespersonId: {}, distributorId: {}", period, salespersonId, distributorId);
         VolumeAnalyticsResponse response = volumeAnalyticsService.getVolumeAnalyticsData(period, salespersonId, distributorId);
+        log.info("Exiting getVolumeAnalytics() with period: {}", period);
         return ResponseEntity.ok(response);
     }
 
@@ -62,18 +68,22 @@ public class DashboardController {
     @ApiResponse(responseCode = "200", description = "Hierarchy analytics retrieved successfully")
     public ResponseEntity<SalesHierarchyAnalyticsResponse> getSalesHierarchyAnalytics(
             @RequestParam Long salesPersonId) {
+        log.info("Entering getSalesHierarchyAnalytics() with salesPersonId: {}", salesPersonId);
         SalesHierarchyAnalyticsResponse response = volumeAnalyticsService.getHierarchyAnalytics(salesPersonId);
+        log.info("Exiting getSalesHierarchyAnalytics() with salesPersonId: {}", salesPersonId);
         return ResponseEntity.ok(response);
     }
 
-    
+
 
     @PostMapping("/userprofile")
     @Operation(summary = "Get user profile", description = "Retrieves user profile data for the logged-in user")
     @ApiResponse(responseCode = "200", description = "User profile retrieved successfully")
     public ResponseEntity<User> getUserProfile(@RequestBody Map<String, String> request) {
         String username = request.get("username");
+        log.info("Entering getUserProfile() for username: {}", username);
         User user = userService.getUserByUsername(username);
+        log.info("Exiting getUserProfile() for username: {}", username);
         return ResponseEntity.ok(user);
     }
 
@@ -83,7 +93,7 @@ public class DashboardController {
     public ResponseEntity<OrderDashboardResponse> getOrderDashboard(
             @RequestParam(required = false) String period,
             @RequestParam(required = false) Long salespersonId) {
-
+        log.info("Entering getOrderDashboard() with period: {}, salespersonId: {}", period, salespersonId);
         if (period == null) period = "month";
         LocalDate now = LocalDate.now();
         LocalDate startDate = getStartDateForOrders(now, period);
@@ -109,6 +119,7 @@ public class DashboardController {
         totalAmount = totalAmount != null ? totalAmount : BigDecimal.ZERO;
 
         OrderDashboardResponse response = new OrderDashboardResponse(totalOrders, totalAmount, period);
+        log.info("Exiting getOrderDashboard() - totalOrders: {}, period: {}", totalOrders, period);
         return ResponseEntity.ok(response);
     }
 
@@ -128,7 +139,10 @@ public class DashboardController {
     @Operation(summary = "Get monthly sales revenue", description = "Retrieves monthly revenue and order count for GDN_GENERATED orders across the current Indian financial year (Apr–Mar)")
     @ApiResponse(responseCode = "200", description = "Monthly sales data retrieved successfully")
     public ResponseEntity<MonthlySalesResponse> getMonthlySales() {
-        return ResponseEntity.ok(dashboardService.getMonthlySalesData());
+        log.info("Entering getMonthlySales()");
+        MonthlySalesResponse response = dashboardService.getMonthlySalesData();
+        log.info("Exiting getMonthlySales()");
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/distributor-orders")
@@ -137,8 +151,9 @@ public class DashboardController {
     public ResponseEntity<OrderDashboardResponse> getDistributorOrderDashboard(
             @RequestParam(defaultValue = "month") String period,
             @RequestParam(required = false) Long distributorId) {
-
+        log.info("Entering getDistributorOrderDashboard() with period: {}, distributorId: {}", period, distributorId);
         OrderDashboardResponse response = distributorDashboardService.getDistributorOrderDashboardData(period, distributorId);
+        log.info("Exiting getDistributorOrderDashboard() with period: {}, distributorId: {}", period, distributorId);
         return ResponseEntity.ok(response);
     }
 

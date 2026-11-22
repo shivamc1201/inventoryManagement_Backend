@@ -1,6 +1,5 @@
 package com.nector.userservice.dto;
 
-import com.nector.userservice.common.RoleType;
 import com.nector.userservice.common.UserStatus;
 import lombok.Data;
 
@@ -28,5 +27,5 @@ public class UserDetailsDTO {
     private LocalDateTime lastLoginTime;
     private boolean isLoggedIn;
     private LocalDateTime passwordSetDate;
-    private RoleType roleType;
+    private String roleType;
 }

@@ -14,15 +14,17 @@ import com.nector.userservice.model.CartItem;
 import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.service.InventoryService;
 import com.nector.userservice.service.HtmlToPdfService;
+import com.nector.userservice.ordertracking.service.OrderDocumentService;
 import com.nector.userservice.ordertracking.service.OrderTrackingService;
 import com.nector.userservice.ordertracking.repository.OrderTrackingStepRepository;
 import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
 import com.nector.userservice.repository.UserRepository;
-import com.nector.userservice.service.RbacService;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.interceptors.distributor.model.Distributor;
 import com.nector.userservice.repository.DistributorLedgerRepository;
 import com.nector.userservice.model.DistributorLedger;
+import com.nector.userservice.stock.entity.StockTransaction;
+import com.nector.userservice.stock.service.StockTransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -58,14 +60,15 @@ public class GdnService {
     private final HtmlToPdfService htmlToPdfService;
     private final TemplateEngine templateEngine;
     private final CloudinaryStorageService cloudinaryStorageService;
+    private final OrderDocumentService orderDocumentService;
     private final OrderTrackingService orderTrackingService;
     private final OrderTrackingStepRepository orderTrackingStepRepository;
     private final UserRepository userRepository;
-    private final RbacService rbacService;
     private final DistributorRepository distributorRepository;
     private final DistributorLedgerRepository distributorLedgerRepository;
     private final com.nector.userservice.service.DocumentNumberService documentNumberService;
     private final com.nector.userservice.service.EmployeeKpiAssignmentService employeeKpiAssignmentService;
+    private final StockTransactionService stockTransactionService;
     
     /**
      * Get current user ID from security context
@@ -242,9 +245,10 @@ public class GdnService {
         }
 
         Gdn savedGdn = gdnRepository.save(gdn);
+        recordGdnOutward(savedGdn);
         return mapToResponse(savedGdn);
     }
-    
+
     @Transactional
     public GdnResponse generateSimpleGdn(Long orderId, SimpleGdnRequest request) {
         log.info("Generating simple GDN for order: {} - using live cart data", orderId);
@@ -337,6 +341,7 @@ public class GdnService {
         }
 
         Gdn savedGdn = gdnRepository.save(gdn);
+        recordGdnOutward(savedGdn);
 
         cart.setStatus(Cart.CartStatus.GDN_GENERATED);
         cartRepository.save(cart);
@@ -382,7 +387,6 @@ public class GdnService {
                 step9Request.setDate(java.time.LocalDate.now().toString());
                 step9Request.setHasDownload(true);
                 step9Request.setDownloadLabel("Download GDN");
-                step9Request.setDocumentPath("/documents/gdn/" + savedGdn.getGdnNumber() + ".pdf");
                 
                 // Add assigned person (logistics team) information
                 setCurrentUserDetails(step9Request);
@@ -413,6 +417,21 @@ public class GdnService {
         }
 
         PdfGenerationResult pdfResult = generateGdnPdf(savedGdn, cart);
+        if (pdfResult.isSuccess() && pdfResult.getPdfUrl() != null) {
+            try {
+                com.nector.userservice.ordertracking.entity.OrderTracking trackingOrder =
+                    orderTrackingService.getOrderRepository().findByCartId(orderId);
+                if (trackingOrder != null) {
+                    orderDocumentService.saveDocument(
+                        trackingOrder.getId(), "GDN",
+                        savedGdn.getGdnNumber().replace("/", "-") + ".pdf",
+                        pdfResult.getPdfUrl());
+                    log.info("OrderDocument (GDN) saved for order tracking {} cart {}", trackingOrder.getId(), orderId);
+                }
+            } catch (Exception e) {
+                log.warn("Could not save GDN OrderDocument for order {}: {}", orderId, e.getMessage());
+            }
+        }
         GdnResponse response = mapToResponse(savedGdn);
         if (pdfResult.isSuccess()) {
             response.setPdfGenerationStatus("SUCCESS");
@@ -1085,6 +1104,20 @@ public class GdnService {
         } catch (Exception e) {
             log.error("Failed to revert money to distributor ledger for order {}: {}", orderId, e.getMessage());
             throw new RuntimeException("Failed to revert money: " + e.getMessage(), e);
+        }
+    }
+
+    private void recordGdnOutward(Gdn gdn) {
+        java.time.LocalDate txnDate = gdn.getGdnDate() != null
+                ? gdn.getGdnDate().toLocalDate()
+                : java.time.LocalDate.now();
+        for (GdnItem item : gdn.getGdnItems()) {
+            stockTransactionService.record(
+                StockTransaction.ItemType.FINISHED_PRODUCT, item.getItemId(),
+                null, item.getItemDescription(),
+                StockTransaction.TxnType.OUTWARD,
+                BigDecimal.valueOf(item.getNoOfUnitsDispatch()),
+                item.getUnitType(), null, gdn.getGdnNumber(), null, txnDate);
         }
     }
 

@@ -1,0 +1,22 @@
+package com.nector.userservice.interceptors.reports.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ProductSalesRowDto {
+    private int rank;
+    private Long productId;
+    private String productName;
+    private Long totalQuantity;
+    private BigDecimal totalAmount;
+    private Long invoiceCount;
+    private BigDecimal sharePercentage;
+}

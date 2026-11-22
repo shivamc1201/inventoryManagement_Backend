@@ -10,6 +10,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -70,6 +71,9 @@ public class FinishedProduct {
 
     @Column(name = "batch_number", length = 100)
     private String batchNumber;
+
+    @Column(name = "expiry_date")
+    private LocalDate expiryDate;
     
     @Column(length = 50)
     private String hsn;

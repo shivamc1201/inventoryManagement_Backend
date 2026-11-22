@@ -49,10 +49,12 @@ public interface DealerLedgerTransactionRepository extends JpaRepository<DealerL
     @Query("SELECT COUNT(dlt) FROM DealerLedgerTransaction dlt WHERE dlt.dealerId = :dealerId AND dlt.distributorId = :distributorId")
     long countTransactionsByDealer(@Param("dealerId") Long dealerId, @Param("distributorId") Long distributorId);
 
-    @Query("SELECT SUM(dlt.debit) FROM DealerLedgerTransaction dlt WHERE dlt.dealerId = :dealerId AND dlt.distributorId = :distributorId")
+    @Query("SELECT SUM(dlt.debit) FROM DealerLedgerTransaction dlt WHERE dlt.dealerId = :dealerId " +
+           "AND (:distributorId IS NULL OR dlt.distributorId = :distributorId)")
     BigDecimal sumDebitsByDealer(@Param("dealerId") Long dealerId, @Param("distributorId") Long distributorId);
 
-    @Query("SELECT SUM(dlt.credit) FROM DealerLedgerTransaction dlt WHERE dlt.dealerId = :dealerId AND dlt.distributorId = :distributorId")
+    @Query("SELECT SUM(dlt.credit) FROM DealerLedgerTransaction dlt WHERE dlt.dealerId = :dealerId " +
+           "AND (:distributorId IS NULL OR dlt.distributorId = :distributorId)")
     BigDecimal sumCreditsByDealer(@Param("dealerId") Long dealerId, @Param("distributorId") Long distributorId);
 
     @Query("SELECT dlt.balance FROM DealerLedgerTransaction dlt WHERE dlt.dealerId = :dealerId AND dlt.distributorId = :distributorId " +
@@ -69,10 +71,16 @@ public interface DealerLedgerTransactionRepository extends JpaRepository<DealerL
     // All transactions for a dealer (any distributor) - used for PDF generation
     List<DealerLedgerTransaction> findByDealerIdOrderByDateAscCreatedAtAsc(Long dealerId);
 
-    // Distributor overview
-    @Query("SELECT dlt.dealerId, d.fullName, dlt.balance FROM DealerLedgerTransaction dlt " +
-           "JOIN Dealer d ON dlt.dealerId = d.id WHERE dlt.distributorId = :distributorId AND " +
-           "dlt.id IN (SELECT MAX(sub.id) FROM DealerLedgerTransaction sub " +
-           "WHERE sub.dealerId = dlt.dealerId AND sub.distributorId = :distributorId)")
+    // Distributor overview — distributorId is optional; null returns all distributors.
+    // DISTINCT ON picks the single latest row per dealer ordered by date+createdAt.
+    @Query(value = "SELECT DISTINCT ON (dlt.dealer_id) dlt.dealer_id, d.full_name, dlt.balance " +
+                   "FROM dealer_ledger_transactions dlt " +
+                   "JOIN dealers d ON dlt.dealer_id = d.id " +
+                   "WHERE (:distributorId IS NULL OR dlt.distributor_id = :distributorId) " +
+                   "ORDER BY dlt.dealer_id, dlt.date DESC, dlt.created_at DESC",
+           nativeQuery = true)
     List<Object[]> getDistributorOverview(@Param("distributorId") Long distributorId);
+
+    @Query("SELECT dlt FROM DealerLedgerTransaction dlt WHERE (:distributorId IS NULL OR dlt.distributorId = :distributorId)")
+    List<DealerLedgerTransaction> findByOptionalDistributorId(@Param("distributorId") Long distributorId);
 }

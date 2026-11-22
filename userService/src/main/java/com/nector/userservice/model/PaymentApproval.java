@@ -44,6 +44,21 @@ public class PaymentApproval {
     @Column(name = "rejection_reason")
     private String rejectionReason;
 
+    @Column(name = "utr_txn_no")
+    private String utrTxnNo;
+
+    @Column(name = "ref_no")
+    private String refNo;
+
+    @Column(name = "cheque_no")
+    private String chequeNo;
+
+    @Column(name = "payment_mode")
+    private String paymentMode; // NEFT, RTGS, IMPS, UPI, CHEQUE, CASH
+
+    @Column(name = "bank_name")
+    private String bankName; // used for CHEQUE payments
+
     @Transient
     private String distributorName;
 }

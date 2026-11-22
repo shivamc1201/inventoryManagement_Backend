@@ -49,8 +49,8 @@ public class KpiAdminController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Update KPI/KRA", description = "Update an existing KPI or KRA definition")
+    @PatchMapping("/{id}")
+    @Operation(summary = "Update KPI/KRA", description = "Partially update an existing KPI or KRA definition — only provided fields are changed")
     public ResponseEntity<KpiMasterResponse> updateKpi(
             @Parameter(description = "KPI ID") @PathVariable Long id,
             @Valid @RequestBody KpiMasterUpdateRequest request) {

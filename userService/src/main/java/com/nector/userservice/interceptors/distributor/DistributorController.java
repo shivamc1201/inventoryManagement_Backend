@@ -13,6 +13,7 @@ import com.nector.userservice.model.DistributorLedger;
 import com.nector.userservice.repository.CartRepository;
 import com.nector.userservice.repository.DistributorLedgerRepository;
 import com.nector.userservice.service.CartService;
+import com.nector.userservice.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -41,6 +42,7 @@ public class DistributorController {
     private final DistributorLedgerRepository distributorLedgerRepository;
     private final CartService cartService;
     private final CartRepository cartRepository;
+    private final PaymentService paymentService;
 
     @PostMapping("/create-distributor")
     @Operation(summary = "Create distributor", description = "Create a new distributor")
@@ -164,7 +166,7 @@ public class DistributorController {
     @Operation(summary = "Get distributor current balance", description = "Get current balance from distributor_ledger table")
     public ResponseEntity<ApiResponse<BigDecimal>> getDistributorCurrentBalance(@PathVariable Long distributorId) {
         try {
-            BigDecimal balance = distributorLedgerRepository.getDistributorBalance(distributorId);
+            BigDecimal balance = paymentService.computeBalanceFromLastZeroPoint(distributorId);
             return ResponseEntity.ok(new ApiResponse<>(true, "Distributor balance retrieved successfully", balance));
         } catch (Exception e) {
             log.error("Error retrieving balance for distributor {}: {}", distributorId, e.getMessage());

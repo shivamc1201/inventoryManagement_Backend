@@ -91,6 +91,10 @@
         .total-row td:first-child { border-left: 1px solid #000; }
         .total-row td:last-child  { border-right: 1px solid #000; border-bottom: 1px solid #000; }
 
+        /* bank section inner table */
+        .bank-inner { width: 100%; border-collapse: collapse; }
+        .bank-inner td { border: none; padding: 1px 2px; font-size: 10px; vertical-align: top; }
+
         @media print {
             @page { size: A4; margin: 10mm; }
             html { width: 190mm; }
@@ -122,11 +126,9 @@
                                 <span th:if="${invoice.sellerGstin != null and !#strings.isEmpty(invoice.sellerGstin)}">
                                     <span style="font-weight:bold;">GSTIN: </span><span th:text="${invoice.sellerGstin}"></span><br/>
                                 </span>
-                                <span th:if="${invoice.sellerPhone != null and !#strings.isEmpty(invoice.sellerPhone)}">
-                                    Contact: <span th:text="${invoice.sellerPhone}"></span><br/>
-                                </span>
+                                Contact No : <span th:text="${invoice.sellerPhone != null and !#strings.isEmpty(invoice.sellerPhone) ? invoice.sellerPhone : 'N/A'}"></span><br/>
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" style="vertical-align:middle;"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7"/></svg>
-                                Email : account@nectarorigin.com<br/>
+                                <span th:text="${invoice.sellerEmail != null and !#strings.isEmpty(invoice.sellerEmail) ? invoice.sellerEmail : 'N/A'}"></span><br/>
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" style="vertical-align:middle;"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4" ry="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
                                 www.nectarorigin.com
                             </div>
@@ -235,17 +237,43 @@
             </td>
         </tr>
 
-        <!-- ===== DECLARATION (open, no box) + SIGNATORY (in box) ===== -->
+        <!-- ===== TAX + PAN + DECLARATION + BANK DETAILS + SIGNATORY ===== -->
         <tr>
-            <td colspan="4" style="border:none; vertical-align:top; padding:6px;">
-                <div class="bold" style="margin-bottom:4px;">Declaration:</div>
+            <td colspan="3" style="border:none; vertical-align:top; padding:6px;">
+                <span class="lbl">Tax Amount (in words) :</span>
+                <span class="bold" th:text="${invoice.taxInWords != null and !#strings.isEmpty(invoice.taxInWords) ? invoice.taxInWords : 'NIL'}">NIL</span><br/><br/>
+                <div>Firm's PAN : <span class="bold" th:text="${invoice.sellerPan != null and !#strings.isEmpty(invoice.sellerPan) ? invoice.sellerPan : 'N/A'}"></span></div>
+                <div style="margin-top:4px;">Declaration:</div>
                 <div style="font-size:9px; line-height:1.2;">
                     We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
                 </div>
             </td>
-            <td colspan="4" style="border:none; vertical-align:top; padding:6px;">
-                <div style="border:1px solid #000; padding:8px; text-align:right; font-size:10px;">
-                    for <span class="bold" th:text="${invoice.sellerName}"></span>
+            <td colspan="5" style="border:none; vertical-align:top; padding:6px;">
+                <div style="font-size:10px; margin-bottom:3px;">Firm's Bank Details</div>
+                <table class="bank-inner">
+                    <tr>
+                        <td style="width:38%;">A/c Holder Name</td>
+                        <td>: <span class="bold" th:text="${invoice.sellerBankAccountHolder != null and !#strings.isEmpty(invoice.sellerBankAccountHolder) ? invoice.sellerBankAccountHolder : 'N/A'}"></span></td>
+                    </tr>
+                    <tr>
+                        <td>Bank Name</td>
+                        <td>: <span class="bold" th:text="${invoice.sellerBankName != null and !#strings.isEmpty(invoice.sellerBankName) ? invoice.sellerBankName : 'N/A'}"></span></td>
+                    </tr>
+                    <tr>
+                        <td>Account No.</td>
+                        <td>: <span class="bold" th:text="${invoice.sellerBankAccountNo != null and !#strings.isEmpty(invoice.sellerBankAccountNo) ? invoice.sellerBankAccountNo : 'N/A'}"></span></td>
+                    </tr>
+                    <tr>
+                        <td>Branch &amp; IFSC Code</td>
+                        <td>: <span class="bold" th:text="${invoice.sellerBankIfsc != null and !#strings.isEmpty(invoice.sellerBankIfsc) ? invoice.sellerBankIfsc : 'N/A'}"></span></td>
+                    </tr>
+                    <tr>
+                        <td>SWIFT Code</td>
+                        <td>: </td>
+                    </tr>
+                </table>
+                <div style="border:1px solid #000; padding:8px; margin-top:10px; text-align:right; font-size:10px;">
+                    from <span class="bold" th:text="${invoice.sellerName}"></span>
                     <br/><br/><br/>
                     <span class="bold">Authorised Signatory</span>
                 </div>

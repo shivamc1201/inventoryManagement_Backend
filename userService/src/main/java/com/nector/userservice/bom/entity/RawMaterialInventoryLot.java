@@ -38,4 +38,19 @@ public class RawMaterialInventoryLot {
     @CreationTimestamp
     @Column(name = "received_at", updatable = false)
     private Instant receivedAt;
+
+    @Column(name = "supplier_id")
+    private String supplierId;
+
+    @Column(name = "supplier_name")
+    private String supplierName;
+
+    @Column(name = "voucher_no", length = 50)
+    private String voucherNo;
+
+    @Column(name = "batch_no", length = 100)
+    private String batchNo;
+
+    @Column(name = "warehouse_location", length = 200)
+    private String warehouseLocation;
 }

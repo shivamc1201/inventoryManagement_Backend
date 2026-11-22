@@ -32,6 +32,10 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
 
     List<Cart> findByDistributorIdAndStatusIn(Long distributorId, List<Cart.CartStatus> statuses);
 
+    @Query("SELECT c FROM Cart c LEFT JOIN FETCH c.cartItems ci LEFT JOIN FETCH ci.item " +
+           "WHERE c.totalWeight IS NULL OR c.totalWeight = 0")
+    List<Cart> findCartsWithMissingWeight();
+
     @Query("SELECT c.totalCartAmount FROM Cart c WHERE c.id = :id")
     BigDecimal findTotalCartAmountById(@Param("id") Long id);
 

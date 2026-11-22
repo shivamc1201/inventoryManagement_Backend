@@ -1,5 +1,6 @@
 package com.nector.userservice.dto;
 
+import com.nector.userservice.model.DealerStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,6 +21,7 @@ public class DealerResponse {
     private String phone;
     private String address;
     private Boolean isActive;
+    private DealerStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

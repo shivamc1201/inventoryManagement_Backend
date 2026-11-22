@@ -3,9 +3,11 @@ package com.nector.userservice.controller;
 import com.nector.userservice.dto.ApiResponse;
 import com.nector.userservice.dto.DealerCreateRequest;
 import com.nector.userservice.dto.DealerResponse;
+import com.nector.userservice.dto.DealerStatusRequest;
 import com.nector.userservice.dto.DealerUpdateRequest;
 import com.nector.userservice.interceptors.distributor.model.DistributorResponseDTO;
 import com.nector.userservice.interceptors.distributor.service.DistributorService;
+import com.nector.userservice.model.DealerStatus;
 import com.nector.userservice.service.DealerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -45,14 +47,12 @@ public class DealerController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all active dealers", description = "Retrieve all active dealers for the authenticated distributor")
+    @Operation(summary = "Get all dealers", description = "Retrieve all dealers")
     public ResponseEntity<List<DealerResponse>> getDealers(
-            @Parameter(description = "Search term to filter dealers by name or phone") 
-            @RequestParam(required = false) String search,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        
-        Long distributorId = getDistributorIdFromUser(userDetails);
-        List<DealerResponse> dealers = dealerService.getActiveDealers(distributorId, search);
+            @Parameter(description = "Search term to filter dealers by name or phone")
+            @RequestParam(required = false) String search) {
+
+        List<DealerResponse> dealers = dealerService.getActiveDealers(search);
         return ResponseEntity.ok(dealers);
     }
 
@@ -93,16 +93,18 @@ public class DealerController {
         return ResponseEntity.ok(dealer);
     }
 
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Soft delete dealer", description = "Deactivate a dealer (soft delete)")
-    public ResponseEntity<Void> deleteDealer(
-            @Parameter(description = "Dealer ID") 
+    @PatchMapping("/{id}/status")
+    @Operation(summary = "Update dealer status", description = "Set dealer status to ACTIVE or SUSPENDED")
+    public ResponseEntity<ApiResponse<DealerResponse>> updateDealerStatus(
+            @Parameter(description = "Dealer ID")
             @PathVariable Long id,
+            @RequestBody DealerStatusRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
-        
+
         Long distributorId = getDistributorIdFromUser(userDetails);
-        dealerService.softDeleteDealer(id, distributorId);
-        return ResponseEntity.ok().build();
+        DealerResponse dealer = dealerService.updateDealerStatus(id, request.getStatus(), distributorId);
+        String message = request.getStatus() == DealerStatus.SUSPENDED ? "Dealer suspended successfully" : "Dealer activated successfully";
+        return ResponseEntity.ok(new ApiResponse<>(true, message, dealer));
     }
 
     private Long getDistributorIdFromUser(UserDetails userDetails) {
@@ -112,7 +114,7 @@ public class DealerController {
         return 1L; // Placeholder - replace with actual extraction logic
     }
 
-    @GetMapping("/salesperson/{salespersonId}")
+    @GetMapping("analytics/salesperson/{salespersonId}")
     @Operation(summary = "Get distributors by salesperson ID", description = "Retrieve all distributors for a specific salesperson")
     public ResponseEntity<ApiResponse<List<DistributorResponseDTO>>> getDistributorsBySalespersonId(
             @Parameter(description = "Salesperson ID")

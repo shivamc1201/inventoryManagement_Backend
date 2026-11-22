@@ -1,11 +1,14 @@
 package com.nector.userservice.interceptors.distributor.repository;
 
 import com.nector.userservice.interceptors.distributor.model.OrderConfirmation;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,4 +25,9 @@ public interface OrderConfirmationRepository extends JpaRepository<OrderConfirma
 
     @Query("SELECT oc FROM OrderConfirmation oc LEFT JOIN FETCH oc.itemConfirmations WHERE oc.id = :id")
     Optional<OrderConfirmation> findByIdWithItems(@Param("id") Long id);
+
+    @Query("SELECT oc FROM OrderConfirmation oc WHERE oc.confirmedAt BETWEEN :from AND :to ORDER BY oc.confirmedAt DESC")
+    Page<OrderConfirmation> findConfirmationsForReport(@Param("from") LocalDateTime from,
+                                                       @Param("to") LocalDateTime to,
+                                                       Pageable pageable);
 }

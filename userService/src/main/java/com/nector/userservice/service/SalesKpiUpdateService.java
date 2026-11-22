@@ -13,6 +13,7 @@ import com.nector.userservice.repository.SalesKpiUpdateRepository;
 import com.nector.userservice.repository.SalesPersonRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -50,26 +52,43 @@ public class SalesKpiUpdateService {
 
     @Transactional
     public CustomResponse saveAll(List<SalesKpiUpdateRequest> requests) {
-        List<SalesKpiUpdate> saved = new ArrayList<>();
+        int savedCount = 0, duplicateCount = 0, unknownEmpCount = 0;
 
         for (SalesKpiUpdateRequest req : requests) {
             LocalDate entryDate = LocalDate.parse(req.getDate());
-            if (salesKpiUpdateRepository.existsByEmpCodeAndDate(req.getEmpCode(), entryDate)) {
-                log.warn("Duplicate entry skipped for empCode={} date={}", req.getEmpCode(), req.getDate());
+
+            // Resolve SalesPerson first so we can normalize empCode before duplicate check
+            Optional<SalesPerson> spOpt = salesPersonRepository.findByEmployeeRollNoIgnoreCase(req.getEmpCode());
+            String canonicalEmpCode = spOpt.map(SalesPerson::getEmployeeRollNo).orElse(req.getEmpCode());
+
+            // App-level fast-path duplicate check
+            if (salesKpiUpdateRepository.existsByEmpCodeAndDate(canonicalEmpCode, entryDate)) {
+                log.info("Duplicate skipped empCode={} date={}", canonicalEmpCode, req.getDate());
+                duplicateCount++;
                 continue;
             }
 
             SalesKpiUpdate entity = new SalesKpiUpdate();
             entity.setUserName(req.getUserName());
-            entity.setEmpCode(req.getEmpCode());
+            entity.setEmpCode(canonicalEmpCode);
             entity.setDate(entryDate);
             entity.setTotalDistanceInKm(req.getTotalDistanceInKm());
             entity.setNoOfMeetings(req.getNoOfMeetings());
+
+            Long salesPersonId = null;
+            if (spOpt.isPresent()) {
+                entity.setSalesPerson(spOpt.get());
+                salesPersonId = spOpt.get().getId();
+            } else {
+                log.warn("No SalesPerson found for empCode: {}", req.getEmpCode());
+                unknownEmpCount++;
+            }
 
             if (req.getMeetingDetails() != null) {
                 for (MeetingDetailRequest mdReq : req.getMeetingDetails()) {
                     SalesKpiMeetingDetail detail = new SalesKpiMeetingDetail();
                     detail.setSalesKpiUpdate(entity);
+                    detail.setSalesPersonId(salesPersonId);
                     detail.setClientName(mdReq.getClientName());
                     detail.setContactPerson(mdReq.getContactPerson());
                     detail.setClientContactNo(mdReq.getClientContactNo());
@@ -82,18 +101,29 @@ public class SalesKpiUpdateService {
                 }
             }
 
-            saved.add(salesKpiUpdateRepository.save(entity));
+            try {
+                salesKpiUpdateRepository.saveAndFlush(entity);
+                savedCount++;
+            } catch (DataIntegrityViolationException e) {
+                // DB unique constraint caught a concurrent duplicate (race condition)
+                log.info("Duplicate rejected by DB constraint empCode={} date={}", canonicalEmpCode, req.getDate());
+                duplicateCount++;
+                continue;
+            }
 
             // Update KPI achievements AFTER saving so meeting details are persisted
-            Optional<SalesPerson> spOpt = salesPersonRepository.findByEmployeeRollNo(req.getEmpCode());
             if (spOpt.isPresent()) {
                 updateKpiFromMeetingDetails(spOpt.get().getId(), req.getMeetingDetails());
-            } else {
-                log.warn("No SalesPerson found for empCode: {}", req.getEmpCode());
             }
         }
 
-        return CustomResponse.success(saved, "Sales KPI data saved successfully");
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("saved", savedCount);
+        summary.put("duplicatesSkipped", duplicateCount);
+        if (unknownEmpCount > 0) {
+            summary.put("unknownEmpCodes", unknownEmpCount);
+        }
+        return CustomResponse.success(summary, "Sales KPI data processed");
     }
 
     /**
@@ -138,32 +168,73 @@ public class SalesKpiUpdateService {
     }
 
     /**
+     * Deletes duplicate rows in sales_KPI_update for a given month, keeping the
+     * lowest-id row per (empCode, date). Cascade-deletes their meeting details.
+     * Returns counts of duplicates removed per empCode for auditability.
+     */
+    @Transactional
+    public Map<String, Object> deduplicateMonth(int month, int year) {
+        LocalDate startDate = LocalDate.of(year, month, 1);
+        LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+
+        List<Long> duplicateIds = salesKpiUpdateRepository.findDuplicateIds(startDate, endDate);
+        if (duplicateIds.isEmpty()) {
+            log.info("No duplicates found for {}/{}", month, year);
+            return Map.of("month", month, "year", year, "duplicatesRemoved", 0);
+        }
+
+        log.info("Removing {} duplicate sales_KPI_update rows for {}/{}", duplicateIds.size(), month, year);
+        // Delete children first (FK constraint), then parents
+        salesKpiUpdateRepository.deleteMeetingDetailsByUpdateIds(duplicateIds);
+        salesKpiUpdateRepository.deleteByIds(duplicateIds);
+
+        return Map.of("month", month, "year", year, "duplicatesRemoved", duplicateIds.size());
+    }
+
+    /**
      * Recalculates achieved values for all KPI assignments in a given month by:
      * 1. Resetting all assignments' achievedValue to 0
-     * 2. Replaying all stored meeting details for that date range
+     * 2. Replaying stored meeting details — using only the canonical (lowest-id) row
+     *    per (empCode, date) to guard against any remaining duplicates.
      *
-     * Safe to call multiple times (idempotent). Handles past-month assignments
-     * that may be EXPIRED (bypasses the date-range constraint used by live updates).
+     * Safe to call multiple times (idempotent). Call deduplicateMonth first to
+     * permanently clean up duplicates, then recalculate to get correct KPI values.
      */
     @Transactional
     public Map<String, Object> recalculateForMonth(int month, int year) {
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
 
-        // Step 1: Aggregate meeting type counts per employee across all updates in the month
-        List<SalesKpiUpdate> updates =
+        // Step 1: Fetch all rows ordered by id ASC, then deduplicate in-memory
+        // keeping only the first (lowest id) row per empCode+date.
+        List<SalesKpiUpdate> rawUpdates =
                 salesKpiUpdateRepository.findByDateBetweenWithDetails(startDate, endDate);
+
+        Map<String, SalesKpiUpdate> canonical = new LinkedHashMap<>();
+        for (SalesKpiUpdate u : rawUpdates) {
+            canonical.putIfAbsent(u.getEmpCode() + "|" + u.getDate(), u);
+        }
+        List<SalesKpiUpdate> updates = new ArrayList<>(canonical.values());
 
         // employeeId -> (kpiName -> total count)
         Map<Long, Map<String, Long>> employeeKpiCounts = new HashMap<>();
         int processed = 0, skipped = 0;
 
         for (SalesKpiUpdate update : updates) {
-            if (update.getSalesPerson() == null) {
-                skipped++;
-                continue;
+            SalesPerson sp = update.getSalesPerson();
+            if (sp == null) {
+                Optional<SalesPerson> spOpt = salesPersonRepository.findByEmployeeRollNoIgnoreCase(update.getEmpCode());
+                if (spOpt.isEmpty()) {
+                    log.warn("Recalculate: no SalesPerson for empCode={}, skipping", update.getEmpCode());
+                    skipped++;
+                    continue;
+                }
+                sp = spOpt.get();
+                update.setEmpCode(sp.getEmployeeRollNo()); // normalize case
+                update.setSalesPerson(sp);
+                salesKpiUpdateRepository.save(update);
             }
-            Long spId = update.getSalesPerson().getId();
+            Long spId = sp.getId();
             Map<String, Long> kpiCounts = employeeKpiCounts.computeIfAbsent(spId, k -> new HashMap<>());
 
             update.getMeetingDetails().stream()

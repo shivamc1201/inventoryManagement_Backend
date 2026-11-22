@@ -113,12 +113,20 @@ public class DistributorMapper {
         entity.setIfsc(dto.getIfsc());
         entity.setBankGuaranteeNumber(dto.getBankGuaranteeNumber());
 
-        // Handle credit limit: if creditLimit is true, use creditAmount; otherwise 0
+        // Handle credit limit: if creditLimit is true, use creditAmount; otherwise 0.
+        // creditBalance intentionally NOT reset here: it tracks live credit-line usage
+        // and is only modified by approvePIUsingCredit / approvePayment / addCreditToDistributor.
+        // If the new creditLimit is below the current balance, clamp balance to the new limit.
         BigDecimal creditLimitValue = (dto.getCreditLimit() != null && dto.getCreditLimit())
                 ? dto.getCreditAmount()
                 : BigDecimal.ZERO;
         entity.setCreditLimit(creditLimitValue);
-        entity.setCreditBalance(creditLimitValue);
+        BigDecimal existingBalance = entity.getCreditBalance();
+        if (existingBalance == null) {
+            entity.setCreditBalance(creditLimitValue);
+        } else if (existingBalance.compareTo(creditLimitValue) > 0) {
+            entity.setCreditBalance(creditLimitValue);
+        }
         entity.setBgExpiryDate(dto.getBgExpiryDate());
         entity.setDistrict(dto.getDistrict());
         entity.setState(dto.getState());

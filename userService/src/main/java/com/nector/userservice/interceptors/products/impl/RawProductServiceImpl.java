@@ -1,16 +1,24 @@
 package com.nector.userservice.interceptors.products.impl;
 
 import com.nector.userservice.bom.entity.RawMaterialInventoryLot;
+import com.nector.userservice.bom.repository.BomComponentRepository;
 import com.nector.userservice.bom.repository.RawMaterialInventoryLotRepository;
 import com.nector.userservice.bom.service.BomPriceChangeService;
 import com.nector.userservice.cloudinary.CloudinaryService;
 import com.nector.userservice.exception.InsufficientStockException;
 import com.nector.userservice.exception.RawProductNotFoundException;
+import com.nector.userservice.interceptors.products.model.DamageRequest;
+import com.nector.userservice.interceptors.products.model.DamageResponse;
 import com.nector.userservice.interceptors.products.model.RawProductRequest;
 import com.nector.userservice.interceptors.products.model.RawProductResponse;
+import com.nector.userservice.model.RawMaterialDamageRecord;
+import com.nector.userservice.repository.RawMaterialDamageRecordRepository;
 import com.nector.userservice.repository.RawProductRepository;
 import com.nector.userservice.interceptors.products.service.RawProductService;
 import com.nector.userservice.model.RawProduct;
+import com.nector.userservice.stock.entity.StockTransaction;
+import com.nector.userservice.stock.service.StockTransactionService;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -32,6 +40,9 @@ public class RawProductServiceImpl implements RawProductService {
     private final CloudinaryService cloudinaryService;
     private final BomPriceChangeService bomPriceChangeService;
     private final RawMaterialInventoryLotRepository inventoryLotRepository;
+    private final RawMaterialDamageRecordRepository damageRecordRepository;
+    private final BomComponentRepository bomComponentRepository;
+    private final StockTransactionService stockTransactionService;
 
     @Override
     @Transactional
@@ -79,7 +90,8 @@ public class RawProductServiceImpl implements RawProductService {
 
         if (request.getQuantity() != null && request.getQuantity().compareTo(BigDecimal.ZERO) > 0
                 && request.getPrice() != null && request.getPrice().compareTo(BigDecimal.ZERO) > 0) {
-            createInventoryLot(savedProduct.getId(), request.getQuantity(), request.getPrice());
+            createInventoryLot(savedProduct.getId(), request.getQuantity(), request.getPrice(),
+                    request.getVendorId(), request.getVendorName(), request.getVoucherNo());
         }
 
         return mapToResponse(savedProduct);
@@ -101,9 +113,9 @@ public class RawProductServiceImpl implements RawProductService {
 
         BigDecimal oldPrice = product.getPrice();
 
-        product.setName(request.getName());
-        product.setUnit(request.getUnit());
-        product.setPrice(request.getPrice());
+        if (request.getName() != null) product.setName(request.getName());
+        if (request.getUnit() != null) product.setUnit(request.getUnit());
+        if (request.getPrice() != null) product.setPrice(request.getPrice());
 
         BigDecimal qtyAdded = null;
         if (request.getQuantity() != null && request.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
@@ -112,17 +124,17 @@ public class RawProductServiceImpl implements RawProductService {
             qtyAdded = request.getQuantity();
         }
 
-        product.setMinimumThreshold(request.getMinimumThreshold());
-        product.setHsn(request.getHsn());
-        product.setTaxRate(request.getTaxRate());
-        product.setVendorId(request.getVendorId());
-        product.setVendorName(request.getVendorName());
-        product.setTransportName(request.getTransportName());
-        product.setDriverName(request.getDriverName());
-        product.setDriverMobile(request.getDriverMobile());
-        product.setRate(request.getRate());
-        product.setGst(request.getGst());
-        product.setGrossAmount(request.getGrossAmount());
+        if (request.getMinimumThreshold() != null) product.setMinimumThreshold(request.getMinimumThreshold());
+        if (request.getHsn() != null) product.setHsn(request.getHsn());
+        if (request.getTaxRate() != null) product.setTaxRate(request.getTaxRate());
+        if (request.getVendorId() != null && !request.getVendorId().isBlank()) product.setVendorId(request.getVendorId());
+        if (request.getVendorName() != null && !request.getVendorName().isBlank()) product.setVendorName(request.getVendorName());
+        if (request.getTransportName() != null && !request.getTransportName().isBlank()) product.setTransportName(request.getTransportName());
+        if (request.getDriverName() != null && !request.getDriverName().isBlank()) product.setDriverName(request.getDriverName());
+        if (request.getDriverMobile() != null && !request.getDriverMobile().isBlank()) product.setDriverMobile(request.getDriverMobile());
+        if (request.getRate() != null) product.setRate(request.getRate());
+        if (request.getGst() != null) product.setGst(request.getGst());
+        if (request.getGrossAmount() != null) product.setGrossAmount(request.getGrossAmount());
         if (request.getStatus() != null) product.setStatus(request.getStatus());
 
         if (image != null && !image.isEmpty()) {
@@ -137,7 +149,8 @@ public class RawProductServiceImpl implements RawProductService {
         if (qtyAdded != null) {
             BigDecimal lotPrice = updatedProduct.getPrice() != null ? updatedProduct.getPrice() : BigDecimal.ZERO;
             if (lotPrice.compareTo(BigDecimal.ZERO) > 0) {
-                createInventoryLot(updatedProduct.getId(), qtyAdded, lotPrice);
+                createInventoryLot(updatedProduct.getId(), qtyAdded, lotPrice,
+                        updatedProduct.getVendorId(), updatedProduct.getVendorName(), request.getVoucherNo());
             }
         }
 
@@ -156,6 +169,15 @@ public class RawProductServiceImpl implements RawProductService {
 
         RawProduct product = rawProductRepository.findById(id)
                 .orElseThrow(() -> new RawProductNotFoundException(id));
+
+        List<String> referencingBoms = bomComponentRepository.findBomNamesByRawMaterialId(id);
+        if (!referencingBoms.isEmpty()) {
+            String bomList = String.join(", ", referencingBoms);
+            throw new IllegalStateException(
+                    "Cannot delete raw material '" + product.getName() + "' (ID: " + id + ") " +
+                    "because it is used in the following active BOM(s): " + bomList +
+                    ". Please remove it from these BOMs before deleting.");
+        }
 
         product.setActive(false);
         rawProductRepository.save(product);
@@ -198,7 +220,8 @@ public class RawProductServiceImpl implements RawProductService {
 
         BigDecimal price = updatedProduct.getPrice() != null ? updatedProduct.getPrice() : BigDecimal.ZERO;
         if (price.compareTo(BigDecimal.ZERO) > 0) {
-            createInventoryLot(updatedProduct.getId(), quantity, price);
+            createInventoryLot(updatedProduct.getId(), quantity, price,
+                    updatedProduct.getVendorId(), updatedProduct.getVendorName(), null);
         }
 
         log.info("Stock increased successfully for raw product ID: {}", id);
@@ -240,6 +263,79 @@ public class RawProductServiceImpl implements RawProductService {
         return rawProductRepository.findLowStockItems().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public DamageResponse recordDamage(Long id, DamageRequest request) {
+        log.info("Recording damage for raw product ID: {}, quantity: {}", id, request.getQuantity());
+
+        RawProduct product = rawProductRepository.findActiveById(id)
+                .orElseThrow(() -> new RawProductNotFoundException(id));
+
+        BigDecimal currentQty = product.getQuantity() != null ? product.getQuantity() : BigDecimal.ZERO;
+        if (currentQty.compareTo(request.getQuantity()) < 0) {
+            throw new InsufficientStockException(product.getMaterialCode(), request.getQuantity(), currentQty);
+        }
+
+        BigDecimal quantityAfter = currentQty.subtract(request.getQuantity());
+        product.setQuantity(quantityAfter);
+        rawProductRepository.save(product);
+
+        deductFromFifoLots(product.getId(), request.getQuantity());
+
+        RawMaterialDamageRecord record = RawMaterialDamageRecord.builder()
+                .rawMaterialId(product.getId())
+                .rawMaterialName(product.getName())
+                .materialCode(product.getMaterialCode())
+                .quantityDamaged(request.getQuantity())
+                .quantityBefore(currentQty)
+                .quantityAfter(quantityAfter)
+                .reason(request.getReason())
+                .notes(request.getNotes())
+                .damagedBy(request.getDamagedBy())
+                .build();
+        RawMaterialDamageRecord saved = damageRecordRepository.save(record);
+
+        log.info("Damage recorded for raw product ID: {}. Before: {}, After: {}", id, currentQty, quantityAfter);
+        return mapToDamageResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DamageResponse> getDamageHistory(Long id) {
+        return damageRecordRepository.findByRawMaterialIdOrderByDamagedAtDesc(id)
+                .stream().map(this::mapToDamageResponse).collect(Collectors.toList());
+    }
+
+    private void deductFromFifoLots(Long rawMaterialId, BigDecimal qty) {
+        List<RawMaterialInventoryLot> lots = inventoryLotRepository
+                .findByRawMaterialIdAndQuantityRemainingGreaterThanOrderByReceivedAtAsc(
+                        rawMaterialId, BigDecimal.ZERO);
+        BigDecimal remaining = qty;
+        for (RawMaterialInventoryLot lot : lots) {
+            if (remaining.compareTo(BigDecimal.ZERO) <= 0) break;
+            BigDecimal consume = remaining.min(lot.getQuantityRemaining());
+            lot.setQuantityRemaining(lot.getQuantityRemaining().subtract(consume));
+            inventoryLotRepository.save(lot);
+            remaining = remaining.subtract(consume);
+        }
+    }
+
+    private DamageResponse mapToDamageResponse(RawMaterialDamageRecord record) {
+        return DamageResponse.builder()
+                .id(record.getId())
+                .rawMaterialId(record.getRawMaterialId())
+                .rawMaterialName(record.getRawMaterialName())
+                .materialCode(record.getMaterialCode())
+                .quantityDamaged(record.getQuantityDamaged())
+                .quantityBefore(record.getQuantityBefore())
+                .quantityAfter(record.getQuantityAfter())
+                .reason(record.getReason())
+                .notes(record.getNotes())
+                .damagedBy(record.getDamagedBy())
+                .damagedAt(record.getDamagedAt())
+                .build();
     }
 
     private RawProductResponse mapToResponse(RawProduct product) {
@@ -330,7 +426,8 @@ public class RawProductServiceImpl implements RawProductService {
             if (diff.compareTo(BigDecimal.ZERO) > 0) {
                 BigDecimal lotPrice = updatedProduct.getPrice() != null ? updatedProduct.getPrice() : BigDecimal.ZERO;
                 if (lotPrice.compareTo(BigDecimal.ZERO) > 0) {
-                    createInventoryLot(updatedProduct.getId(), diff, lotPrice);
+                    createInventoryLot(updatedProduct.getId(), diff, lotPrice,
+                            updatedProduct.getVendorId(), updatedProduct.getVendorName(), request.getVoucherNo());
                 }
             }
         }
@@ -344,14 +441,28 @@ public class RawProductServiceImpl implements RawProductService {
         return mapToResponse(updatedProduct);
     }
 
-    private void createInventoryLot(Long rawMaterialId, BigDecimal quantity, BigDecimal price) {
+    private void createInventoryLot(Long rawMaterialId, BigDecimal quantity, BigDecimal price,
+                                     String supplierId, String supplierName, String voucherNo) {
         RawMaterialInventoryLot lot = RawMaterialInventoryLot.builder()
                 .rawMaterialId(rawMaterialId)
                 .quantityOriginal(quantity)
                 .quantityRemaining(quantity)
                 .pricePerUnit(price)
+                .supplierId(supplierId)
+                .supplierName(supplierName)
+                .voucherNo(voucherNo)
                 .build();
         inventoryLotRepository.save(lot);
         log.info("Created FIFO inventory lot for raw material ID {}: {} units @ {}", rawMaterialId, quantity, price);
+
+        rawProductRepository.findById(rawMaterialId).ifPresent(product ->
+            stockTransactionService.record(
+                StockTransaction.ItemType.RAW_MATERIAL, rawMaterialId,
+                product.getMaterialCode(),
+                product.getName() != null ? product.getName() : "Raw Material #" + rawMaterialId,
+                StockTransaction.TxnType.INWARD, quantity,
+                product.getUnit() != null ? product.getUnit().name() : null,
+                supplierName, voucherNo, null, LocalDate.now())
+        );
     }
 }

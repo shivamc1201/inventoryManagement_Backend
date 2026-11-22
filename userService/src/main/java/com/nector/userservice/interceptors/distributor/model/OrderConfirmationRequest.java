@@ -21,6 +21,8 @@ public class OrderConfirmationRequest {
     @Schema(description = "Confirmation status of the order", allowableValues = {"RECEIVED_COMPLETE", "RECEIVED_PARTIAL", "DAMAGED", "REJECTED"})
     private ConfirmationStatus status;
 
+    private String receivedBy;
+
     @Min(value = 1, message = "Rating must be between 1 and 5")
     @Max(value = 5, message = "Rating must be between 1 and 5")
     private Integer overallRating;

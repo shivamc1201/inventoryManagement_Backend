@@ -28,20 +28,26 @@ public class OrderService {
     private final SalesPersonService salesPersonService;
 
     public List<OrderResponse> getAllOrders() {
+        log.info("Entering getAllOrders()");
         List<OrderWithSalesPerson> orders = orderRepository.findAll();
-        return orders.stream()
+        List<OrderResponse> result = orders.stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
+        log.info("Exiting getAllOrders() - returned {} orders", result.size());
+        return result;
     }
 
     public List<OrderResponse> getOrdersWithFilters(OrderStatus status, Long salespersonId,
                                                    Long distributorId, LocalDate dateFrom, LocalDate dateTo) {
+        log.info("Entering getOrdersWithFilters() - status: {}, salespersonId: {}, distributorId: {}, dateFrom: {}, dateTo: {}", status, salespersonId, distributorId, dateFrom, dateTo);
         LocalDateTime dateFromTime = dateFrom != null ? dateFrom.atStartOfDay() : null;
         LocalDateTime dateToTime = dateTo != null ? dateTo.atTime(LocalTime.MAX) : null;
         List<OrderWithSalesPerson> orders = orderRepository.findWithFilters(status, salespersonId, distributorId, dateFromTime, dateToTime);
-        return orders.stream()
+        List<OrderResponse> result = orders.stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
+        log.info("Exiting getOrdersWithFilters() - returned {} orders", result.size());
+        return result;
     }
 
     public List<OrderResponse> getOrdersByHierarchy(Long salespersonId, OrderStatus status, 

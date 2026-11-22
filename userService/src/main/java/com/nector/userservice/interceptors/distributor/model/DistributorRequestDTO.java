@@ -40,10 +40,10 @@ public class DistributorRequestDTO {
     private String contactEmail;
 
     @NotBlank
-    @Pattern(regexp = "^\\+?[1-9]\\d{9,14}$")
+    @Pattern(regexp = "^\\+?[1-9]\\d{9,14}$", message = "Phone number must be 10–15 digits, optionally starting with +, and cannot start with 0")
     private String phoneNumber;
 
-    @Pattern(regexp = "^\\+?[1-9]\\d{9,14}$")
+    @Pattern(regexp = "^\\+?[1-9]\\d{9,14}$", message = "Alternate contact must be 10–15 digits, optionally starting with +, and cannot start with 0")
     private String alternateContact;
 
     @NotBlank

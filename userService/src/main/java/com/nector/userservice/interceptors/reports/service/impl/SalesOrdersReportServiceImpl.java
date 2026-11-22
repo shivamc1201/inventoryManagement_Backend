@@ -1,0 +1,154 @@
+package com.nector.userservice.interceptors.reports.service.impl;
+
+import com.nector.userservice.interceptors.reports.dto.ReportFilterRequest;
+import com.nector.userservice.interceptors.reports.dto.SalesOrderRowDto;
+import com.nector.userservice.interceptors.reports.service.SalesOrdersReportService;
+import com.nector.userservice.model.Cart;
+import com.nector.userservice.ordertracking.entity.OrderTracking;
+import com.nector.userservice.ordertracking.entity.StepStatus;
+import com.nector.userservice.ordertracking.repository.OrderTrackingRepository;
+import com.nector.userservice.repository.CartRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class SalesOrdersReportServiceImpl implements SalesOrdersReportService {
+
+    private final OrderTrackingRepository orderTrackingRepository;
+    private final CartRepository cartRepository;
+
+    @Override
+    public Page<SalesOrderRowDto> getOrderGrid(ReportFilterRequest filter) {
+        LocalDate from = filter.getStartDate() != null ? filter.getStartDate() : LocalDate.now().minusMonths(3);
+        LocalDate to = filter.getEndDate() != null ? filter.getEndDate() : LocalDate.now();
+
+        List<OrderTracking> all = filter.getDistributorId() != null
+                ? orderTrackingRepository.findByDistributorIdAndDateRangeUnpaged(filter.getDistributorId(), from, to)
+                : orderTrackingRepository.findAllByDateRangeUnpaged(from, to);
+
+        List<SalesOrderRowDto> nonCompleted = all.stream()
+                .filter(o -> !"COMPLETED".equals(computeStatus(o)))
+                .map(this::toRowDto)
+                .collect(java.util.stream.Collectors.toList());
+
+        int start = filter.getPage() * filter.getSize();
+        int end = Math.min(start + filter.getSize(), nonCompleted.size());
+        List<SalesOrderRowDto> pageSlice = start >= nonCompleted.size()
+                ? List.of() : nonCompleted.subList(start, end);
+        return new PageImpl<>(pageSlice,
+                PageRequest.of(filter.getPage(), filter.getSize()), nonCompleted.size());
+    }
+
+    private SalesOrderRowDto toRowDto(OrderTracking o) {
+        return SalesOrderRowDto.builder()
+                .id(o.getId())
+                .orderNumber(o.getOrderNumber())
+                .distributorId(o.getDistributorId())
+                .distributorName(o.getDistributorName())
+                .orderDate(o.getOrderDate())
+                .totalAmount(o.getTotalAmount())
+                .currentStatus(computeStatus(o))
+                .salespersonId(o.getSalespersonId())
+                .receivedByDistributor(computeReceivedStatus(o))
+                .pendingStage(computePendingStage(o))
+                .build();
+    }
+
+    private String computeReceivedStatus(OrderTracking o) {
+        return o.getSteps().stream()
+                .filter(s -> s.getStepSequence() == 11)
+                .findFirst()
+                .map(s -> {
+                    if ("yes".equalsIgnoreCase(s.getActionResponse())) return "RECEIVED";
+                    if ("no".equalsIgnoreCase(s.getActionResponse()))  return "REJECTED";
+                    return "PENDING";
+                })
+                .orElse("PENDING");
+    }
+
+    private String computePendingStage(OrderTracking o) {
+        java.util.Map<Integer, StepStatus> statusMap = o.getSteps().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        com.nector.userservice.ordertracking.entity.OrderTrackingStep::getStepSequence,
+                        com.nector.userservice.ordertracking.entity.OrderTrackingStep::getStatus));
+        if (statusMap.getOrDefault(3, StepStatus.PENDING) != StepStatus.COMPLETED) return "SALES";
+        if (statusMap.getOrDefault(6, StepStatus.PENDING) != StepStatus.COMPLETED) return "ACCOUNTS";
+        if (statusMap.getOrDefault(8, StepStatus.PENDING) != StepStatus.COMPLETED) return "DISPATCH";
+        return null;
+    }
+
+    @Override
+    public Map<String, Object> getStatusCounts(Long distributorId) {
+        long completed = orderTrackingRepository.countCompleted();
+        long pending = orderTrackingRepository.countPending();
+        long total = distributorId != null
+                ? orderTrackingRepository.countByDistributorId(distributorId)
+                : orderTrackingRepository.count();
+        Map<String, Object> result = new HashMap<>();
+        result.put("total", total);
+        result.put("completed", completed);
+        result.put("pending", pending);
+        return result;
+    }
+
+    @Override
+    public List<Map<String, Object>> getSalesmanPerformance(LocalDate startDate, LocalDate endDate) {
+        LocalDate from = startDate != null ? startDate : LocalDate.now().withDayOfYear(1);
+        LocalDate to = endDate != null ? endDate : LocalDate.now();
+        List<Map<String, Object>> result = new ArrayList<>();
+        orderTrackingRepository.getSalesmanPerformance(from, to).forEach(r -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("salespersonId", r[0]);
+            m.put("salespersonName", r[1]);
+            m.put("orderCount", r[2]);
+            m.put("totalValue", r[3]);
+            m.put("totalQuantityTons", r[4]);
+            m.put("totalQuantityKg", r[5]);
+            result.add(m);
+        });
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> backfillCartWeights() {
+        List<Cart> carts = cartRepository.findCartsWithMissingWeight();
+        int updated = 0;
+        for (Cart cart : carts) {
+            BigDecimal weight = cart.calculateTotalWeight();
+            if (weight.compareTo(BigDecimal.ZERO) > 0) {
+                cart.setTotalWeight(weight);
+                cartRepository.save(cart);
+                updated++;
+            }
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("cartsFound", carts.size());
+        result.put("cartsUpdated", updated);
+        return result;
+    }
+
+    private String computeStatus(OrderTracking o) {
+        boolean anyPending = o.getSteps().stream()
+                .anyMatch(s -> s.getStatus() == StepStatus.PENDING || s.getStatus() == StepStatus.IN_PROGRESS);
+        boolean allCompleted = o.getSteps().stream()
+                .allMatch(s -> s.getStatus() == StepStatus.COMPLETED);
+        if (allCompleted) return "COMPLETED";
+        if (anyPending) return "IN_PROGRESS";
+        return "PENDING";
+    }
+}

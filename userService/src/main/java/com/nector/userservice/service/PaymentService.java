@@ -13,9 +13,9 @@ import com.nector.userservice.interceptors.distributor.repository.DistributorRep
 import com.nector.userservice.ordertracking.service.OrderTrackingService;
 import com.nector.userservice.ordertracking.dto.UpdateStepRequest;
 import com.nector.userservice.ordertracking.dto.CreateOrderTrackingRequest;
-import com.nector.userservice.service.RbacService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -50,9 +50,6 @@ public class PaymentService {
 
     @Autowired
     private OrderTrackingService orderTrackingService;
-    
-    @Autowired
-    private RbacService rbacService;
     
     @Autowired
     private DocumentNumberService documentNumberService;
@@ -104,7 +101,18 @@ public class PaymentService {
         // Get cart and calculate total amount
         Cart cart = cartRepository.findById(orderId)
             .orElseThrow(() -> new RuntimeException("Cart not found: " + orderId));
-        
+
+        // Idempotency guard: prevent double-deduction if already approved
+        if (cart.getStatus() == Cart.CartStatus.PAYMENT_APPROVED) {
+            OrderApprovalResponse response = new OrderApprovalResponse();
+            response.setOrderId(orderId);
+            response.setDistributorId(distributorId);
+            response.setStatus("ALREADY_APPROVED");
+            response.setMessage("Order is already payment approved — no deduction made");
+            log.warn("checkAndApproveOrder called on already-approved cart {}, skipping deduction", orderId);
+            return response;
+        }
+
         BigDecimal orderAmount = cart.getCartItems().stream()
             .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -184,6 +192,33 @@ public class PaymentService {
         ledger.setCreatedAt(date != null ? date : LocalDateTime.now());
         distributorLedgerRepository.save(ledger);
     }
+
+    // For direct credit entries: credit is a loan — restore it first, then credit the ledger.
+    public void updateDistributorBalanceWithCreditSplit(Long distributorId, BigDecimal amount, String transactionType, String description, LocalDateTime date) {
+        if (!"CREDIT".equalsIgnoreCase(transactionType)) {
+            updateDistributorBalance(distributorId, amount, transactionType, description, date);
+            return;
+        }
+
+        var distributor = distributorRepository.findById(distributorId)
+                .orElseThrow(() -> new RuntimeException("Distributor not found: " + distributorId));
+
+        BigDecimal creditLimit = distributor.getCreditLimit() != null ? distributor.getCreditLimit() : BigDecimal.ZERO;
+        BigDecimal creditBalance = distributor.getCreditBalance() != null ? distributor.getCreditBalance() : BigDecimal.ZERO;
+
+        BigDecimal creditUsed = creditLimit.subtract(creditBalance);
+        BigDecimal creditRestored = amount.min(creditUsed);
+        BigDecimal ledgerPortion = amount.subtract(creditRestored);
+
+        if (creditRestored.compareTo(BigDecimal.ZERO) > 0) {
+            distributor.setCreditBalance(creditBalance.add(creditRestored));
+            distributorRepository.save(distributor);
+            updateDistributorBalance(distributorId, creditRestored, "CREDIT", description + " (Credit Restored)", date);
+        }
+        if (ledgerPortion.compareTo(BigDecimal.ZERO) > 0) {
+            updateDistributorBalance(distributorId, ledgerPortion, "CREDIT", description + " (Ledger Balance)", date);
+        }
+    }
     
     public List<DistributorLedger> getPaymentHistory(Long distributorId) {
         return distributorLedgerRepository.findByDistributorIdOrderByCreatedAtDesc(distributorId);
@@ -191,79 +226,91 @@ public class PaymentService {
     
     public PaymentHistoryResponse getPaymentHistoryWithBalance(Long distributorId) {
         List<DistributorLedger> paymentHistory = distributorLedgerRepository.findByDistributorIdOrderByCreatedAtDesc(distributorId);
-        BigDecimal closingBalance = distributorLedgerRepository.getDistributorBalance(distributorId);
-        
+
+        BigDecimal totalCredits = paymentHistory.stream()
+                .filter(e -> isCreditType(e.getTransactionType()))
+                .map(DistributorLedger::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalDebits = paymentHistory.stream()
+                .filter(e -> isDebitType(e.getTransactionType()))
+                .map(DistributorLedger::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal closingBalance = totalCredits.subtract(totalDebits);
+        // If all-time net is exactly zero the account is fully settled — no need to scan for
+        // the last zero point, the balance IS zero (fresh start).
+        BigDecimal netBalance = closingBalance.compareTo(BigDecimal.ZERO) == 0
+                ? BigDecimal.ZERO
+                : computeBalanceFromLastZeroPoint(distributorId);
+
         PaymentHistoryResponse response = new PaymentHistoryResponse();
         response.setPaymentHistory(paymentHistory);
+        response.setTotalCredits(totalCredits);
+        response.setTotalDebits(totalDebits);
         response.setClosingBalance(closingBalance);
+        response.setNetBalance(netBalance);
         response.setDistributorId(distributorId);
-        
+
         return response;
     }
     
     public PaymentHistoryWithRunningBalanceResponse getPaymentHistoryWithRunningBalance(Long distributorId) {
         List<DistributorLedger> paymentHistory = distributorLedgerRepository.findByDistributorIdOrderByCreatedAtDesc(distributorId);
-        BigDecimal closingBalance = distributorLedgerRepository.getDistributorBalance(distributorId);
-        
-        // Calculate running balance for each transaction
-        List<PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance> paymentHistoryWithBalance = 
-            calculateRunningBalance(paymentHistory, closingBalance);
-        
+
+        // Per-row running balance starts from zero; if the all-time net is also zero the
+        // account is fully settled and we short-circuit rather than scanning for the last zero point.
+        BigDecimal allTimeNet = paymentHistory.stream()
+                .map(e -> isCreditType(e.getTransactionType()) ? e.getAmount() : e.getAmount().negate())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal closingBalance = allTimeNet.compareTo(BigDecimal.ZERO) == 0
+                ? BigDecimal.ZERO
+                : computeBalanceFromLastZeroPoint(distributorId);
+
+        List<PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance> paymentHistoryWithBalance =
+            calculateRunningBalance(paymentHistory);
+
         PaymentHistoryWithRunningBalanceResponse response = new PaymentHistoryWithRunningBalanceResponse();
         response.setPaymentHistory(paymentHistoryWithBalance);
         response.setClosingBalance(closingBalance);
         response.setDistributorId(distributorId);
-        
+
         return response;
     }
     
     private List<PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance> calculateRunningBalance(
-            List<DistributorLedger> paymentHistory, BigDecimal closingBalance) {
-        
+            List<DistributorLedger> paymentHistory) {
+
         List<PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance> result = new ArrayList<>();
-        
-        // Calculate opening balance by working backwards from closing balance
-        BigDecimal openingBalance = closingBalance;
-        List<DistributorLedger> reversedHistory = new ArrayList<>(paymentHistory);
-        Collections.reverse(reversedHistory); // Now oldest to newest
-        
-        // Calculate opening balance by subtracting all transactions from closing balance
-        for (DistributorLedger transaction : reversedHistory) {
-            if (isDebitType(transaction.getTransactionType())) {
-                openingBalance = openingBalance.add(transaction.getAmount());
-            } else if (isCreditType(transaction.getTransactionType())) {
-                openingBalance = openingBalance.subtract(transaction.getAmount());
-            }
-        }
 
-        // Now calculate running balance forward from opening balance
-        BigDecimal runningBalance = openingBalance;
+        // Input is newest-first; reverse to oldest-first for forward accumulation.
+        List<DistributorLedger> chronological = new ArrayList<>(paymentHistory);
+        Collections.reverse(chronological);
 
-        for (DistributorLedger transaction : reversedHistory) {
-            PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance item =
-                new PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance();
+        BigDecimal runningBalance = BigDecimal.ZERO;
 
-            // Apply transaction to get new balance
+        for (DistributorLedger transaction : chronological) {
             if (isDebitType(transaction.getTransactionType())) {
                 runningBalance = runningBalance.subtract(transaction.getAmount());
             } else if (isCreditType(transaction.getTransactionType())) {
                 runningBalance = runningBalance.add(transaction.getAmount());
             }
-            
+
+            PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance item =
+                new PaymentHistoryWithRunningBalanceResponse.PaymentHistoryWithBalance();
             item.setId(transaction.getId());
             item.setAmount(transaction.getAmount());
             item.setCreatedAt(transaction.getCreatedAt());
             item.setDescription(transaction.getDescription());
             item.setDistributorId(transaction.getDistributorId());
             item.setTransactionType(transaction.getTransactionType());
-            item.setCurrentCB(runningBalance); // Balance AFTER this transaction
-            
+            item.setCurrentCB(runningBalance);
+
             result.add(item);
         }
-        
-        // Reverse the list to maintain chronological order (newest first)
+
+        // Return newest-first for display.
         Collections.reverse(result);
-        
         return result;
     }
     
@@ -315,13 +362,19 @@ public class PaymentService {
         return response;
     }
     
+    @Transactional
     public com.nector.userservice.dto.payment.OrderApprovalResponse approvePIUsingCredit(Long orderId, Long distributorId) {
         // Get PI for the order
         ProformaInvoice pi = proformaInvoiceRepository.findByCartId(orderId)
             .orElseThrow(() -> new RuntimeException("Proforma Invoice not found for order: " + orderId));
 
-        // Get distributor and validate credit BEFORE updating any statuses
-        var distributor = distributorRepository.findById(distributorId)
+        // Idempotency guard: prevent double-deduction if PI already paid
+        if (pi.getPaymentStatus() == ProformaInvoice.PaymentStatus.PAID) {
+            throw new RuntimeException("Order #" + orderId + " is already paid. Cannot approve PI again.");
+        }
+
+        // Row-level lock on the distributor to serialize concurrent credit approvals.
+        var distributor = distributorRepository.findByIdForUpdate(distributorId)
             .orElseThrow(() -> new RuntimeException("Distributor not found: " + distributorId));
 
         BigDecimal currentCreditBalance = distributor.getCreditBalance();
@@ -375,18 +428,158 @@ public class PaymentService {
     }
 
     /**
+     * Unified order approval: combines ledger balance + credit balance.
+     * Allocation order: ledger first (advance deposits), credit as fallback.
+     *
+     * Ledger entry description encodes the exact split so the statement is self-auditable:
+     *   - Ledger only  → "Payment for Order #X (Ledger Balance)"
+     *   - Credit only  → "Payment for Order #X (using credit)"
+     *   - Combined     → "Payment for Order #X (Ledger ₹50000 + Credit ₹78500)"
+     *
+     * Always acquires a PESSIMISTIC_WRITE lock on the Distributor row to prevent
+     * concurrent approvals from double-spending either balance pool.
+     */
+    @Transactional
+    public UnifiedOrderApprovalResponse approveOrderUnified(Long orderId) {
+        Cart cart = cartRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        Long distributorId = cart.getDistributorId();
+
+        UnifiedOrderApprovalResponse response = new UnifiedOrderApprovalResponse();
+        response.setOrderId(orderId);
+        response.setDistributorId(distributorId);
+
+        // Idempotency guard on cart status
+        if (cart.getStatus() == Cart.CartStatus.PAYMENT_APPROVED) {
+            response.setStatus("ALREADY_APPROVED");
+            response.setMessage("Order " + orderId + " is already payment approved — no deduction made");
+            log.warn("approveOrderUnified: order {} already PAYMENT_APPROVED, skipping", orderId);
+            return response;
+        }
+
+        ProformaInvoice pi = proformaInvoiceRepository.findByCartId(orderId)
+                .orElseThrow(() -> new RuntimeException("Proforma Invoice not found for order: " + orderId));
+
+        // Idempotency guard on PI status
+        if (pi.getPaymentStatus() == ProformaInvoice.PaymentStatus.PAID) {
+            response.setStatus("ALREADY_APPROVED");
+            response.setMessage("PI for order " + orderId + " is already PAID — no deduction made");
+            log.warn("approveOrderUnified: PI for order {} already PAID, skipping", orderId);
+            return response;
+        }
+
+        BigDecimal orderAmount = pi.getAmount();
+        response.setOrderAmount(orderAmount);
+
+        // Row-level lock on distributor — serializes all concurrent approvals for this distributor
+        // so neither ledger balance nor creditBalance can be double-spent.
+        var distributor = distributorRepository.findByIdForUpdate(distributorId)
+                .orElseThrow(() -> new RuntimeException("Distributor not found: " + distributorId));
+
+        // Available balances
+        BigDecimal ledgerBalance = computeBalanceFromLastZeroPoint(distributorId);
+        BigDecimal effectiveLedger = ledgerBalance.max(BigDecimal.ZERO); // negative ledger = ₹0 contribution
+        BigDecimal creditBalance = distributor.getCreditBalance() != null
+                ? distributor.getCreditBalance() : BigDecimal.ZERO;
+        BigDecimal combinedAvailable = effectiveLedger.add(creditBalance);
+
+        log.info("approveOrderUnified: order={}, amount={}, effectiveLedger={}, creditBalance={}, combined={}",
+                orderId, orderAmount, effectiveLedger, creditBalance, combinedAvailable);
+
+        if (combinedAvailable.compareTo(orderAmount) < 0) {
+            BigDecimal shortfall = orderAmount.subtract(combinedAvailable);
+            response.setStatus("PENDING");
+            response.setMessage("Insufficient balance — required ₹" + orderAmount
+                    + ", available ₹" + combinedAvailable + " (shortfall ₹" + shortfall + ")");
+            response.setAvailableLedgerBalance(effectiveLedger);
+            response.setAvailableCreditBalance(creditBalance);
+            response.setCombinedAvailableBalance(combinedAvailable);
+            response.setShortfall(shortfall);
+            log.warn("approveOrderUnified: REJECTED order={} — shortfall={} (ledger={}, credit={})",
+                    orderId, shortfall, effectiveLedger, creditBalance);
+            return response;
+        }
+
+        // Allocate: ledger first, credit for the remainder
+        BigDecimal ledgerUsed  = effectiveLedger.min(orderAmount);
+        BigDecimal creditUsed  = orderAmount.subtract(ledgerUsed);
+
+        // Determine ledger entry description
+        String ledgerDescription;
+        if (creditUsed.compareTo(BigDecimal.ZERO) == 0) {
+            ledgerDescription = "Payment for Order #" + orderId + " (Ledger Balance)";
+        } else if (ledgerUsed.compareTo(BigDecimal.ZERO) == 0) {
+            ledgerDescription = "Payment for Order #" + orderId + " (using credit)";
+        } else {
+            ledgerDescription = String.format(
+                    "Payment for Order #%d (Ledger ₹%s + Credit ₹%s)",
+                    orderId,
+                    ledgerUsed.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString(),
+                    creditUsed.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString());
+        }
+
+        // Single DEBIT ledger entry for the full order amount — description encodes the split
+        updateDistributorBalance(distributorId, orderAmount, "DEBIT", ledgerDescription, LocalDateTime.now());
+
+        // Deduct credit portion from the entity field
+        if (creditUsed.compareTo(BigDecimal.ZERO) > 0) {
+            distributor.setCreditBalance(creditBalance.subtract(creditUsed));
+            distributorRepository.save(distributor);
+        }
+
+        // Update PI and cart
+        pi.setPaymentStatus(ProformaInvoice.PaymentStatus.PAID);
+        proformaInvoiceRepository.save(pi);
+        cart.setStatus(Cart.CartStatus.PAYMENT_APPROVED);
+        cartRepository.save(cart);
+
+        // Order tracking
+        ensureOrderTrackingExists(orderId);
+        updateAwaitingPaymentStep(orderId);
+        updatePaymentApprovedStep(orderId);
+
+        // Build success response
+        BigDecimal remainingLedger = ledgerBalance.subtract(ledgerUsed);
+        BigDecimal remainingCredit = creditBalance.subtract(creditUsed);
+
+        response.setStatus("APPROVED");
+        response.setLedgerBalanceUsed(ledgerUsed);
+        response.setCreditBalanceUsed(creditUsed);
+        response.setRemainingLedgerBalance(remainingLedger);
+        response.setRemainingCreditBalance(remainingCredit);
+
+        if (creditUsed.compareTo(BigDecimal.ZERO) == 0) {
+            response.setMessage("Order approved using ledger balance");
+        } else if (ledgerUsed.compareTo(BigDecimal.ZERO) == 0) {
+            response.setMessage("Order approved using credit balance");
+        } else {
+            response.setMessage(String.format(
+                    "Order approved using combined balance (Ledger ₹%s + Credit ₹%s)",
+                    ledgerUsed.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString(),
+                    creditUsed.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString()));
+        }
+
+        log.info("approveOrderUnified: APPROVED order={} — amount={}, ledgerUsed={}, creditUsed={}, remainingLedger={}, remainingCredit={}",
+                orderId, orderAmount, ledgerUsed, creditUsed, remainingLedger, remainingCredit);
+
+        return response;
+    }
+
+    /**
      * Adds credit amount to a distributor's credit balance.
      * This increases the distributor's creditBalance but cannot exceed creditLimit.
      * @param distributorId  the distributor to credit
      * @param amount         how much credit to add (must be > 0)
      * @param description    reason / remarks for the credit addition
      */
+    @Transactional
     public void addCreditToDistributor(Long distributorId, BigDecimal amount, String description) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Credit amount must be greater than zero");
         }
 
-        var distributor = distributorRepository.findById(distributorId)
+        var distributor = distributorRepository.findByIdForUpdate(distributorId)
             .orElseThrow(() -> new RuntimeException("Distributor not found: " + distributorId));
 
         BigDecimal currentCreditBalance = distributor.getCreditBalance() != null
@@ -410,8 +603,10 @@ public class PaymentService {
         distributor.setCreditBalance(newCreditBalance);
         distributorRepository.save(distributor);
 
-        // Create a ledger entry so the transaction appears in the ledger
-        updateDistributorBalance(distributorId, amount, "CREDIT", description, LocalDateTime.now());
+        // Create a ledger entry so the transaction appears in history. Tagged '(Credit Restored)'
+        // to identify it as a credit-line refill rather than a direct cash payment.
+        updateDistributorBalance(distributorId, amount, "CREDIT",
+                description + " (Credit Restored)", LocalDateTime.now());
     }
 
     public List<ProformaInvoice> getPendingPaymentApprovals() {
@@ -421,7 +616,7 @@ public class PaymentService {
     }
     
     private java.math.BigDecimal getDistributorBalance(Long distributorId) {
-        return distributorLedgerRepository.getDistributorBalance(distributorId);
+        return computeBalanceFromLastZeroPoint(distributorId);
     }
     
     private void updateDistributorLedger(Long distributorId, java.math.BigDecimal amount) {
@@ -430,31 +625,111 @@ public class PaymentService {
         updateDistributorBalance(distributorId, amount.abs(), transactionType, description, LocalDateTime.now());
     }
 
-    public Long addPaymentForApproval(Long distributorId, BigDecimal amount, String transactionType, String description, LocalDateTime date) {
+    public Long addPaymentFromRequest(com.nector.userservice.dto.payment.PaymentSubmissionRequest req) {
         PaymentApproval payment = new PaymentApproval();
-        payment.setDistributorId(distributorId);
-        payment.setAmount(amount);
-        payment.setTransactionType(transactionType);
-        payment.setDescription(description);
+        payment.setDistributorId(req.getDistributorId());
+        payment.setSalespersonId(req.getSalespersonId());
+        payment.setAmount(req.getAmount());
+        payment.setTransactionType(req.getTransactionType() != null ? req.getTransactionType().name() : null);
+        payment.setDescription(req.getDescription());
         payment.setStatus("PAYMENT_ADDED");
-        payment.setCreatedAt(date != null ? date : LocalDateTime.now());
-        PaymentApproval savedPayment = paymentApprovalRepository.save(payment);
-        return savedPayment.getId();
+        payment.setCreatedAt(req.getDate() != null ? req.getDate() : LocalDateTime.now());
+
+        if (req.getPaymentMode() != null) {
+            payment.setPaymentMode(req.getPaymentMode().name());
+            switch (req.getPaymentMode()) {
+                case RTGS, NEFT -> payment.setUtrTxnNo(req.getUtrNumber());
+                case CHEQUE -> {
+                    payment.setChequeNo(req.getChequeNumber());
+                    payment.setBankName(req.getBankName());
+                }
+                case IMPS, UPI -> payment.setRefNo(req.getTransactionNumber());
+                case CASH -> { /* no reference number */ }
+            }
+        }
+
+        return paymentApprovalRepository.save(payment).getId();
     }
 
-    public Long addPaymentForApprovalWithSalesperson(Long distributorId, Long salespersonId, BigDecimal amount, String transactionType, String description, LocalDateTime date) {
-        PaymentApproval payment = new PaymentApproval();
-        payment.setDistributorId(distributorId);
-        payment.setSalespersonId(salespersonId);
-        payment.setAmount(amount);
-        payment.setTransactionType(transactionType);
-        payment.setDescription(description);
-        payment.setStatus("PAYMENT_ADDED");
-        payment.setCreatedAt(date != null ? date : LocalDateTime.now());
-        PaymentApproval savedPayment = paymentApprovalRepository.save(payment);
-        return savedPayment.getId();
+    // kept for internal use by deprecated param-based endpoints
+    public Long addPaymentForApproval(Long distributorId, BigDecimal amount, String transactionType, String description,
+                                       LocalDateTime date, String paymentMode, String transactionNumber) {
+        com.nector.userservice.dto.payment.PaymentSubmissionRequest req =
+                new com.nector.userservice.dto.payment.PaymentSubmissionRequest();
+        req.setDistributorId(distributorId);
+        req.setAmount(amount);
+        req.setTransactionType(com.nector.userservice.enums.TransactionType.valueOf(transactionType));
+        req.setDescription(description);
+        req.setDate(date);
+        if (paymentMode != null) req.setPaymentMode(com.nector.userservice.enums.PaymentMode.valueOf(paymentMode));
+        req.setUtrNumber(transactionNumber);
+        req.setTransactionNumber(transactionNumber);
+        req.setChequeNumber(transactionNumber);
+        return addPaymentFromRequest(req);
     }
 
+    public Long addPaymentForApprovalWithSalesperson(Long distributorId, Long salespersonId, BigDecimal amount,
+                                                      String transactionType, String description, LocalDateTime date,
+                                                      String paymentMode, String transactionNumber) {
+        com.nector.userservice.dto.payment.PaymentSubmissionRequest req =
+                new com.nector.userservice.dto.payment.PaymentSubmissionRequest();
+        req.setDistributorId(distributorId);
+        req.setSalespersonId(salespersonId);
+        req.setAmount(amount);
+        req.setTransactionType(com.nector.userservice.enums.TransactionType.valueOf(transactionType));
+        req.setDescription(description);
+        req.setDate(date);
+        if (paymentMode != null) req.setPaymentMode(com.nector.userservice.enums.PaymentMode.valueOf(paymentMode));
+        req.setUtrNumber(transactionNumber);
+        req.setTransactionNumber(transactionNumber);
+        req.setChequeNumber(transactionNumber);
+        return addPaymentFromRequest(req);
+    }
+
+
+    public List<com.nector.userservice.dto.payment.PaymentReceivedLogResponse> getAllPaymentReceivedLogs() {
+        List<PaymentApproval> payments = paymentApprovalRepository.findAllByOrderByCreatedAtDesc();
+
+        return payments.stream().map(payment -> {
+            com.nector.userservice.dto.payment.PaymentReceivedLogResponse dto =
+                    new com.nector.userservice.dto.payment.PaymentReceivedLogResponse();
+
+            dto.setPaymentId(payment.getId());
+            dto.setDistributorId(payment.getDistributorId());
+            dto.setAmount(payment.getAmount());
+            dto.setTransactionType(payment.getTransactionType());
+            dto.setPaymentMode(payment.getPaymentMode());
+            dto.setDescription(payment.getDescription());
+            dto.setStatus(payment.getStatus());
+            dto.setCreatedAt(payment.getCreatedAt());
+            dto.setApprovedAt(payment.getApprovedAt());
+
+            // Mode-specific reference fields
+            dto.setUtrNumber(payment.getUtrTxnNo());           // RTGS / NEFT
+            dto.setChequeNumber(payment.getChequeNo());         // CHEQUE
+            dto.setBankName(payment.getBankName());             // CHEQUE
+            dto.setTransactionNumber(payment.getRefNo());       // IMPS / UPI
+
+            // Party name
+            distributorRepository.findById(payment.getDistributorId())
+                    .ifPresent(d -> dto.setPartyName(d.getFirstName() + " " + d.getLastName()));
+
+            // Name of person who added the payment
+            // — if salespersonId is set, it was added by an internal user (salesperson/accounts)
+            // — if null, the distributor added it themselves
+            if (payment.getSalespersonId() != null) {
+                userRepository.findById(payment.getSalespersonId())
+                        .ifPresent(u -> dto.setAddedByName(u.getFirstName() + " " + u.getLastName()));
+            } else {
+                distributorRepository.findById(payment.getDistributorId())
+                        .ifPresent(d -> dto.setAddedByName(d.getFirstName() + " " + d.getLastName() + " (Self)"));
+            }
+
+            return dto;
+        }).collect(java.util.stream.Collectors.toList());
+    }
+
+    @Transactional
     public void approvePayment(Long paymentId, Long approvedBy) {
         PaymentApproval payment = paymentApprovalRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Payment not found: " + paymentId));
@@ -463,52 +738,32 @@ public class PaymentService {
             throw new RuntimeException("Payment already processed");
         }
 
-        // Special handling for CREDIT transactions - restore creditBalance first
+        // For CREDIT transactions: incoming payment first restores credit line (up to limit),
+        // any excess becomes ledger balance. Both are logged in distributor_ledger for history,
+        // Both portions are recorded in distributor_ledger for full history.
         if ("CREDIT".equalsIgnoreCase(payment.getTransactionType())) {
-            var distributor = distributorRepository.findById(payment.getDistributorId())
+            var distributor = distributorRepository.findByIdForUpdate(payment.getDistributorId())
                     .orElseThrow(() -> new RuntimeException("Distributor not found: " + payment.getDistributorId()));
-            
+
             BigDecimal creditLimit = distributor.getCreditLimit() != null ? distributor.getCreditLimit() : BigDecimal.ZERO;
             BigDecimal creditBalance = distributor.getCreditBalance() != null ? distributor.getCreditBalance() : BigDecimal.ZERO;
             BigDecimal paymentAmount = payment.getAmount();
-            
-            // Check if creditBalance is less than creditLimit (distributor has used some credit)
-            if (creditBalance.compareTo(creditLimit) < 0) {
-                BigDecimal creditShortfall = creditLimit.subtract(creditBalance);
-                
-                if (paymentAmount.compareTo(creditShortfall) >= 0) {
-                    // Payment is enough to restore full credit and have余额
-                    // 1. Restore creditBalance to creditLimit
-                    distributor.setCreditBalance(creditLimit);
-                    distributorRepository.save(distributor);
-                    
-                    // 2. Calculate remaining amount to add to ledger
-                    BigDecimal remainingAmount = paymentAmount.subtract(creditShortfall);
-                    
-                    // Log both transactions
-                    if (creditShortfall.compareTo(BigDecimal.ZERO) > 0) {
-                        updateDistributorBalance(payment.getDistributorId(), creditShortfall,
-                                "CREDIT", payment.getDescription() + " (Credit Restored)", payment.getCreatedAt());
-                    }
 
-                    if (remainingAmount.compareTo(BigDecimal.ZERO) > 0) {
-                        updateDistributorBalance(payment.getDistributorId(), remainingAmount,
-                                "CREDIT", payment.getDescription() + " (Ledger Balance)", payment.getCreatedAt());
-                    }
-                } else {
-                    // Payment is less than shortfall - add entire amount to creditBalance only
-                    BigDecimal newCreditBalance = creditBalance.add(paymentAmount);
-                    distributor.setCreditBalance(newCreditBalance);
-                    distributorRepository.save(distributor);
+            BigDecimal shortfall = creditLimit.subtract(creditBalance).max(BigDecimal.ZERO);
+            BigDecimal creditRestore = paymentAmount.min(shortfall);
+            BigDecimal ledgerCredit = paymentAmount.subtract(creditRestore);
 
-                    // Log the transaction
-                    updateDistributorBalance(payment.getDistributorId(), paymentAmount,
-                            "CREDIT", payment.getDescription() + " (Credit Restored)", payment.getCreatedAt());
-                }
-            } else {
-                // creditBalance is already at limit or above - add entire amount to ledger
-                updateDistributorBalance(payment.getDistributorId(), payment.getAmount(),
-                        payment.getTransactionType(), payment.getDescription(), payment.getCreatedAt());
+            if (creditRestore.compareTo(BigDecimal.ZERO) > 0) {
+                distributor.setCreditBalance(creditBalance.add(creditRestore));
+                distributorRepository.save(distributor);
+
+                updateDistributorBalance(payment.getDistributorId(), creditRestore,
+                        "CREDIT", payment.getDescription() + " (Credit Restored)", payment.getCreatedAt());
+            }
+
+            if (ledgerCredit.compareTo(BigDecimal.ZERO) > 0) {
+                updateDistributorBalance(payment.getDistributorId(), ledgerCredit,
+                        "CREDIT", payment.getDescription() + " (Ledger Balance)", payment.getCreatedAt());
             }
         } else {
             // For DEBIT or other transaction types, process normally
@@ -621,6 +876,20 @@ public class PaymentService {
         return payments;
     }
 
+    public java.util.Map<String, BigDecimal> getCollectionAnalytics(Long distributorId) {
+        java.time.LocalDate today = java.time.LocalDate.now();
+        LocalDateTime monthStart = today.withDayOfMonth(1).atStartOfDay();
+        LocalDateTime monthEnd = today.withDayOfMonth(today.lengthOfMonth()).atTime(java.time.LocalTime.MAX);
+
+        BigDecimal monthly = paymentApprovalRepository.sumApprovedPaymentsByDistributorAndDateRange(distributorId, monthStart, monthEnd);
+        BigDecimal yearly = paymentApprovalRepository.sumAllLedgerUpdatedByDistributor(distributorId);
+
+        java.util.Map<String, BigDecimal> result = new java.util.LinkedHashMap<>();
+        result.put("collectionMonthly", monthly);
+        result.put("collectionYearly", yearly);
+        return result;
+    }
+
     public void processJournalVoucher(Long distributorId, JournalVoucherRequest request) {
         for (JournalVoucherEntry entry : request.getEntries()) {
             if (entry.getDebit() != null && entry.getDebit().compareTo(BigDecimal.ZERO) > 0) {
@@ -661,6 +930,36 @@ public class PaymentService {
 
     private boolean isDebitType(String transactionType) {
         return "DEBIT".equalsIgnoreCase(transactionType) || "JV_DEBIT".equalsIgnoreCase(transactionType);
+    }
+
+    // Returns the net balance of all entries since the last time the running balance hit exactly zero.
+    // When a distributor fully clears their account (balance == 0), that is a natural reset point.
+    // The "current balance" is the net from that zero point forward, so old carry-forwards don't pollute it.
+    public BigDecimal computeBalanceFromLastZeroPoint(Long distributorId) {
+        List<DistributorLedger> entries = distributorLedgerRepository.findByDistributorIdOrderByCreatedAtAsc(distributorId);
+        BigDecimal runningBalance = BigDecimal.ZERO;
+        BigDecimal partialBalance = BigDecimal.ZERO;
+        for (DistributorLedger entry : entries) {
+            BigDecimal delta = isCreditType(entry.getTransactionType())
+                    ? entry.getAmount()
+                    : entry.getAmount().negate();
+            runningBalance = runningBalance.add(delta);
+            partialBalance = partialBalance.add(delta);
+            if (runningBalance.compareTo(BigDecimal.ZERO) == 0) {
+                partialBalance = BigDecimal.ZERO;
+            }
+        }
+        return partialBalance;
+    }
+
+    // Rows that only move the credit line, never the ledger balance.
+    // Kept in the distributor_ledger table for frontend history but excluded from balance math.
+    private boolean isCreditLineOnly(DistributorLedger transaction) {
+        String description = transaction.getDescription();
+        if (description == null) {
+            return false;
+        }
+        return description.contains("(using credit)") || description.contains("(Credit Restored)");
     }
 
     public DistributorRepository getDistributorRepository() {
@@ -829,7 +1128,11 @@ public class PaymentService {
             
             BigDecimal totalAmount = cartRepository.findTotalCartAmountById(cartId);
             if (totalAmount == null) {
-                throw new RuntimeException("Cart total_cart_amount is null for cart: " + cartId);
+                totalAmount = cart.getCartItems().stream()
+                    .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+                log.warn("Cart {} had no persisted totalCartAmount, computed {} from {} items",
+                    cartId, totalAmount, cart.getCartItems().size());
             }
             log.info("Total amount from cart: {}", totalAmount);
             
@@ -891,7 +1194,7 @@ public class PaymentService {
     }
 
     public BigDecimal getCurrentLedgerBalance(Long distributorId) {
-        return distributorLedgerRepository.getDistributorBalance(distributorId);
+        return computeBalanceFromLastZeroPoint(distributorId);
     }
 
     /**
@@ -945,7 +1248,7 @@ public class PaymentService {
         response.setCreditUsed(creditUsed);
         response.setAvailablePercentage(availablePercentage);
         response.setStatus(status);
-        
+
         return response;
     }
 

@@ -3,6 +3,7 @@ package com.nector.userservice.service;
 import com.nector.userservice.common.UserStatus;
 import com.nector.userservice.common.UserUpdateRequest;
 import com.nector.userservice.model.User;
+import com.nector.userservice.repository.RoleRepository;
 import com.nector.userservice.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
 
     public User updateUser(Long userId, UserUpdateRequest req) {
         log.info("Entering updateUser() for userId: {}", userId);
@@ -42,7 +44,12 @@ public class UserService {
         Optional.ofNullable(req.getGender()).ifPresent(user::setGender);
         Optional.ofNullable(req.getCountry()).ifPresent(user::setCountry);
         Optional.ofNullable(req.getZip()).ifPresent(user::setZip);
-        Optional.ofNullable(req.getRoleType()).ifPresent(user::setRoleType);
+        Optional.ofNullable(req.getRoleType()).ifPresent(roleType -> {
+            if (!roleRepository.existsByRoleType(roleType)) {
+                throw new IllegalArgumentException("Invalid role type: " + roleType);
+            }
+            user.setRoleType(roleType);
+        });
         Optional.ofNullable(req.getPassword()).ifPresent(password -> {
             user.setPassword(password);
             user.setPasswordSetDate(java.time.LocalDateTime.now());

@@ -18,8 +18,15 @@ public class DealerInvoiceDto {
     private String sellerName;
     private String sellerAddress;
     private String sellerPhone;
+    private String sellerEmail;
     private String sellerGstin;
     private String sellerState;
+    private String sellerPan;
+    private String sellerBankAccountHolder;
+    private String sellerBankName;
+    private String sellerBankAccountNo;
+    private String sellerBankIfsc;
+    private String taxInWords;
 
     // Buyer = Dealer
     private String buyerName;

@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,17 +16,20 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/createUsers")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "User Management", description = "APIs for user operations")
 public class UserController {
-    
+
     private final UserService userService;
-    
+
     @PostMapping
     @Operation(summary = "Create new user", description = "Register a new user in the system")
     @ApiResponse(responseCode = "201", description = "User created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid input data")
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserRequest request) {
+        log.info("Entering createUser() for username: {}, roleType: {}", request.getUsername(), request.getRoleType());
         UserResponse response = userService.registerNewUser(request);
+        log.info("Exiting createUser() - created user with ID: {}, username: {}", response.getId(), response.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

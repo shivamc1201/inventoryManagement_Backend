@@ -25,4 +25,5 @@ public class OutwardItemRequest {
     private String referenceNumber;
 
     private String issuedTo;
+
 }

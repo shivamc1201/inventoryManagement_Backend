@@ -10,6 +10,9 @@ import com.nector.userservice.bom.mapper.BomMapper;
 import com.nector.userservice.bom.repository.BillOfMaterialRepository;
 import com.nector.userservice.bom.service.BomService;
 import com.nector.userservice.enums.ProductStatus;
+import com.nector.userservice.interceptors.reports.entity.ProductionLog;
+import com.nector.userservice.interceptors.reports.entity.ProductionLogComponent;
+import com.nector.userservice.interceptors.reports.repository.ProductionLogRepository;
 import com.nector.userservice.model.FinishedProduct;
 import com.nector.userservice.model.RawProduct;
 import com.nector.userservice.repository.FinishedProductRepository;
@@ -25,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -40,6 +44,7 @@ public class BomServiceImpl implements BomService {
     private final RawProductRepository rawProductRepository;
     private final FinishedProductRepository finishedProductRepository;
     private final RawMaterialInventoryLotRepository inventoryLotRepository;
+    private final ProductionLogRepository productionLogRepository;
 
     @Override
     public BomResponseDto create(BomRequestDto requestDto) {
@@ -153,6 +158,69 @@ public class BomServiceImpl implements BomService {
                 .totalMaterials(totalMaterials)
                 .averageRatePerUnit(averageRatePerUnit)
                 .build();
+    }
+
+    private void saveProductionLog(BillOfMaterial bom, FinishedProduct finishedProduct,
+                                   BigDecimal requestedQuantity, BigDecimal ratio,
+                                   BomProductionRequestDto requestDto) {
+        try {
+            String productionNumber = "PROD-" + System.currentTimeMillis();
+            while (productionLogRepository.existsByProductionNumber(productionNumber)) {
+                productionNumber = "PROD-" + System.currentTimeMillis();
+            }
+
+            BigDecimal totalRawMaterialCost = BigDecimal.ZERO;
+            ProductionLog productionLog = ProductionLog.builder()
+                    .productionNumber(productionNumber)
+                    .bomId(bom.getId())
+                    .finishedProductId(finishedProduct.getId())
+                    .finishedProductName(finishedProduct.getName())
+                    .batchNumber(requestDto.getBatchNumber())
+                    .quantityProduced(requestedQuantity)
+                    .outputUnit(bom.getOutputUnit())
+                    .productionDate(LocalDate.now())
+                    .status("COMPLETED")
+                    .build();
+
+            for (BomComponent component : bom.getComponents()) {
+                BigDecimal quantityPlanned = component.getQuantity().multiply(ratio).setScale(4, RoundingMode.HALF_UP);
+                BigDecimal componentAmount = component.getRate() != null
+                        ? quantityPlanned.multiply(component.getRate()).setScale(2, RoundingMode.HALF_UP)
+                        : BigDecimal.ZERO;
+                totalRawMaterialCost = totalRawMaterialCost.add(componentAmount);
+
+                ProductionLogComponent logComp = ProductionLogComponent.builder()
+                        .rawMaterialId(component.getRawMaterialId())
+                        .rawMaterialName(component.getRawMaterialName())
+                        .quantityPlanned(quantityPlanned)
+                        .quantityActual(quantityPlanned)
+                        .unit(component.getUnit())
+                        .rate(component.getRate())
+                        .amount(componentAmount)
+                        .varianceQty(BigDecimal.ZERO)
+                        .productionLog(productionLog)
+                        .build();
+                productionLog.getComponents().add(logComp);
+            }
+
+            BigDecimal totalAdditionalCost = bom.getTotalAdditionalCost() != null
+                    ? bom.getTotalAdditionalCost().multiply(ratio).setScale(2, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+            BigDecimal totalProductionCost = totalRawMaterialCost.add(totalAdditionalCost);
+            BigDecimal costPerUnit = requestedQuantity.compareTo(BigDecimal.ZERO) > 0
+                    ? totalProductionCost.divide(requestedQuantity, 4, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+
+            productionLog.setTotalRawMaterialCost(totalRawMaterialCost);
+            productionLog.setTotalAdditionalCost(totalAdditionalCost);
+            productionLog.setTotalProductionCost(totalProductionCost);
+            productionLog.setCostPerUnit(costPerUnit);
+
+            productionLogRepository.save(productionLog);
+            log.info("Saved production log: {}", productionNumber);
+        } catch (Exception e) {
+            log.error("Failed to save production log for BOM {}: {}", bom.getId(), e.getMessage());
+        }
     }
 
     private void computeCosts(BillOfMaterial bom) {
@@ -357,6 +425,8 @@ public class BomServiceImpl implements BomService {
         finishedProductRepository.save(finishedProduct);
         log.info("Added {} {} of finished product: {}. New stock: {}",
                 requestedQuantity, bom.getOutputUnit(), finishedProduct.getName(), newFinishedProductStock);
+
+        saveProductionLog(bom, finishedProduct, requestedQuantity, ratio, requestDto);
 
         return BomProductionResponseDto.builder()
                 .bomId(bom.getId())

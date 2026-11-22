@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -42,6 +43,14 @@ public interface EmployeeKpiAssignmentRepository extends JpaRepository<EmployeeK
            "WHERE eka.employeeId = :employeeId AND eka.status = :status")
     Integer sumWeightageByEmployeeIdAndStatus(@Param("employeeId") Long employeeId,
                                               @Param("status") KPIStatus status);
+
+    @Query("SELECT SUM(eka.weightage) FROM EmployeeKpiAssignment eka " +
+           "WHERE eka.employeeId = :employeeId AND eka.status = :status " +
+           "AND eka.assignedMonth = :month AND eka.assignedYear = :year")
+    Integer sumWeightageByEmployeeIdAndStatusAndMonth(@Param("employeeId") Long employeeId,
+                                                      @Param("status") KPIStatus status,
+                                                      @Param("month") int month,
+                                                      @Param("year") int year);
 
     /**
      * Find assignments that OVERLAP a given date range (used for monthly result generation).
@@ -95,6 +104,16 @@ public interface EmployeeKpiAssignmentRepository extends JpaRepository<EmployeeK
                                                                        @Param("endDate") LocalDate endDate);
 
     @Query("SELECT eka FROM EmployeeKpiAssignment eka " +
+           "WHERE eka.employeeId = :employeeId AND eka.kpiId = :kpiId " +
+           "AND eka.status = :status " +
+           "AND eka.assignedMonth = :month AND eka.assignedYear = :year")
+    Optional<EmployeeKpiAssignment> findByEmployeeIdAndKpiIdAndStatusAndMonth(@Param("employeeId") Long employeeId,
+                                                                               @Param("kpiId") Long kpiId,
+                                                                               @Param("status") KPIStatus status,
+                                                                               @Param("month") int month,
+                                                                               @Param("year") int year);
+
+    @Query("SELECT eka FROM EmployeeKpiAssignment eka " +
            "WHERE eka.employeeId = :employeeId " +
            "AND eka.startDate <= CURRENT_DATE AND eka.endDate >= CURRENT_DATE " +
            "AND eka.status = 'ACTIVE'")
@@ -137,6 +156,11 @@ public interface EmployeeKpiAssignmentRepository extends JpaRepository<EmployeeK
 
     @Query("SELECT DISTINCT eka.employeeId FROM EmployeeKpiAssignment eka WHERE eka.status = :status")
     List<Long> findDistinctEmployeeIdsByStatus(@Param("status") KPIStatus status);
+
+    @Query("SELECT COALESCE(SUM(eka.targetValue), 0) FROM EmployeeKpiAssignment eka JOIN eka.kpiMaster km " +
+           "WHERE eka.assignedMonth = :month AND eka.assignedYear = :year " +
+           "AND km.kpiName = 'Sale Target' AND eka.status = 'ACTIVE'")
+    BigDecimal sumSaleTargetByMonthAndYear(@Param("month") int month, @Param("year") int year);
 
     /**
      * Find active KPI assignments for an employee by EXACT KPI name match.

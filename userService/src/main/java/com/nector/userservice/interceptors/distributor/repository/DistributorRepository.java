@@ -2,9 +2,11 @@ package com.nector.userservice.interceptors.distributor.repository;
 
 import com.nector.userservice.interceptors.distributor.model.Distributor;
 import com.nector.userservice.interceptors.distributor.model.DistributorStatus;
+import jakarta.persistence.LockModeType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -24,6 +26,10 @@ public interface DistributorRepository extends JpaRepository<Distributor, Long> 
     long countByMonthAndYear(@Param("month") int month, @Param("year") int year);
 
     List<Distributor> findBySalespersonId(Long salespersonId);
+    List<Distributor> findBySalespersonIdIn(List<Long> salespersonIds);
+
+    @Query("SELECT d.id FROM Distributor d WHERE d.salespersonId IN :salespersonIds")
+    List<Long> findIdsBySalespersonIdIn(@Param("salespersonIds") List<Long> salespersonIds);
 
     Long countBySalespersonIdAndStatus(Long salespersonId, DistributorStatus status);
 
@@ -35,4 +41,9 @@ public interface DistributorRepository extends JpaRepository<Distributor, Long> 
 
     @Query("SELECT COUNT(d) FROM Distributor d")
     long countAllDistributors();
+
+    // Row-level lock for read-modify-write on creditBalance during credit/payment approval.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT d FROM Distributor d WHERE d.id = :id")
+    Optional<Distributor> findByIdForUpdate(@Param("id") Long id);
 }

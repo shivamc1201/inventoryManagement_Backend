@@ -32,7 +32,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.nector.userservice.common.RoleType;
 import com.nector.userservice.model.User;
 import com.nector.userservice.model.SalesPerson;
 import com.nector.userservice.repository.UserRepository;
@@ -112,12 +111,32 @@ public class DistributorServiceImpl implements DistributorService {
             ledgerRequest.setCompanyId(1L); // Default company ID
             ledgerRequest.setDistributorId(savedDistributor.getId());
             ledgerRequest.setAccountName(savedDistributor.getFirstName() + " - Ledger Account");
-            ledgerRequest.setCreditLimit(BigDecimal.ZERO);
+            ledgerRequest.setCreditLimit(savedDistributor.getCreditLimit() != null
+                    ? savedDistributor.getCreditLimit() : BigDecimal.ZERO);
 
             ledgerAccountService.createLedgerAccount(ledgerRequest, "system");
             log.info("Ledger account created for distributor: {}", savedDistributor.getId());
         } catch (Exception e) {
             log.warn("Failed to create ledger account for distributor: {}", savedDistributor.getId(), e);
+        }
+
+        // Add credit facility as CREDIT entry so the cash ledger reflects the granted credit
+        if (savedDistributor.getCreditLimit() != null
+                && savedDistributor.getCreditLimit().compareTo(BigDecimal.ZERO) > 0) {
+            try {
+                com.nector.userservice.model.DistributorLedger creditEntry = new com.nector.userservice.model.DistributorLedger();
+                creditEntry.setDistributorId(savedDistributor.getId());
+                creditEntry.setAmount(savedDistributor.getCreditLimit());
+                creditEntry.setTransactionType("CREDIT");
+                creditEntry.setDescription("Credit Facility Granted - Limit Rs." + savedDistributor.getCreditLimit());
+                creditEntry.setCreatedAt(LocalDateTime.now());
+                distributorLedgerRepository.save(creditEntry);
+                log.info("Credit facility CREDIT entry added for distributor {} amount {}",
+                        savedDistributor.getId(), savedDistributor.getCreditLimit());
+            } catch (Exception e) {
+                log.warn("Failed to add credit facility ledger entry for distributor {}: {}",
+                        savedDistributor.getId(), e.getMessage());
+            }
         }
 
         log.info("Distributor created successfully with ID: {}", savedDistributor.getId());
@@ -213,6 +232,7 @@ public class DistributorServiceImpl implements DistributorService {
         confirmation.setGdnNumber(request.getGdnNumber());
         confirmation.setStatus(request.getStatus());
         confirmation.setOverallRating(request.getOverallRating());
+        confirmation.setReceivedBy(request.getReceivedBy());
         confirmation.setFeedback(request.getFeedback());
         confirmation.setRemarks(request.getRemarks());
         confirmation.setApprovalStatus(requiresApproval ?

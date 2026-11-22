@@ -4,6 +4,7 @@ import com.nector.userservice.dto.DealerCreateRequest;
 import com.nector.userservice.dto.DealerUpdateRequest;
 import com.nector.userservice.dto.DealerResponse;
 import com.nector.userservice.exception.BusinessException;
+import com.nector.userservice.model.DealerStatus;
 import com.nector.userservice.interceptors.distributor.model.Distributor;
 import com.nector.userservice.interceptors.distributor.repository.DistributorRepository;
 import com.nector.userservice.model.Dealer;
@@ -83,14 +84,18 @@ public class DealerService {
     }
 
     @Transactional(readOnly = true)
-    public List<DealerResponse> getActiveDealers(Long distributorId, String search) {
-        log.info("Fetching active dealers for distributor: {}", distributorId);
+    public List<DealerResponse> getActiveDealers(String search) {
+        log.info("Fetching all dealers");
 
         List<Dealer> dealers;
         if (search != null && !search.trim().isEmpty()) {
-            dealers = dealerRepository.searchActiveDealers(distributorId, search.trim());
+            String term = search.trim().toLowerCase();
+            dealers = dealerRepository.findAll().stream()
+                    .filter(d -> d.getFullName().toLowerCase().contains(term)
+                            || d.getPhone().toLowerCase().contains(term))
+                    .collect(Collectors.toList());
         } else {
-            dealers = dealerRepository.findByDistributorIdAndIsActiveTrue(distributorId);
+            dealers = dealerRepository.findAll();
         }
 
         return dealers.stream()
@@ -165,15 +170,17 @@ public class DealerService {
     }
 
     @Transactional
-    public void softDeleteDealer(Long id, Long distributorId) {
-        log.info("Soft deleting dealer with ID: {} for distributor: {}", id, distributorId);
+    public DealerResponse updateDealerStatus(Long id, DealerStatus status, Long distributorId) {
+        log.info("Updating dealer {} status to {} for distributor: {}", id, status, distributorId);
 
         Dealer dealer = dealerRepository.findByIdAndDistributorId(id, distributorId)
                 .orElseThrow(() -> new BusinessException("Dealer not found or access denied"));
 
-        dealer.setIsActive(false);
-        dealerRepository.save(dealer);
-        log.info("Soft deleted dealer with ID: {}", id);
+        dealer.setStatus(status);
+        dealer.setIsActive(status == DealerStatus.ACTIVE);
+        Dealer saved = dealerRepository.save(dealer);
+        log.info("Updated dealer {} status to {}", id, status);
+        return convertToResponse(saved);
     }
 
     private DealerResponse convertToResponse(Dealer dealer) {
@@ -186,7 +193,8 @@ public class DealerService {
         Distributor distributor = distributorRepository.findById(dealer.getDistributorId())
                 .orElse(null);
         if (distributor != null) {
-            response.setDistributorName(distributor.getFirstName() + " " + distributor.getLastName());
+            String lastName = distributor.getLastName();
+            response.setDistributorName(lastName != null ? distributor.getFirstName() + " " + lastName : distributor.getFirstName());
         }
         
         // Fetch salesperson name if assigned
@@ -202,6 +210,7 @@ public class DealerService {
         response.setPhone(dealer.getPhone());
         response.setAddress(dealer.getAddress());
         response.setIsActive(dealer.getIsActive());
+        response.setStatus(dealer.getStatus());
         response.setCreatedAt(dealer.getCreatedAt());
         response.setUpdatedAt(dealer.getUpdatedAt());
         return response;

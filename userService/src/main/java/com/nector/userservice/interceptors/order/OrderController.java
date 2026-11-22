@@ -5,7 +5,9 @@ import com.nector.userservice.cloudinary.CloudinaryStorageService;
 import com.nector.userservice.dto.cart.CartResponse;
 import com.nector.userservice.model.ProformaInvoice;
 import com.nector.userservice.repository.ProformaInvoiceRepository;
+import com.nector.userservice.dto.payment.UnifiedOrderApprovalResponse;
 import com.nector.userservice.service.CartService;
+import com.nector.userservice.service.PaymentService;
 import com.nector.userservice.service.ProformaInvoiceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -27,6 +29,7 @@ import java.util.Map;
 public class OrderController {
 
     private final CartService cartService;
+    private final PaymentService paymentService;
     private final ProformaInvoiceService proformaInvoiceService;
     private final ProformaInvoiceRepository proformaInvoiceRepository;
     private final CloudinaryStorageService cloudinaryStorageService;
@@ -46,6 +49,27 @@ public class OrderController {
     public ResponseEntity<CartResponse> approveOrder(@PathVariable Long cartId) {
         CartResponse approvedCart = cartService.approveCart(cartId);
         return ResponseEntity.ok(approvedCart);
+    }
+
+    @PostMapping("/{orderId}/approve")
+    @Operation(
+        summary = "Unified order payment approval",
+        description = "Approves payment for an order using combined ledger + credit balance. " +
+                      "Ledger balance is consumed first; credit is used for any remainder. " +
+                      "distributorId is derived server-side from the order — do not pass it from the client.")
+    @ApiResponse(responseCode = "200", description = "Approval result — check 'status' field (APPROVED / PENDING / ALREADY_APPROVED)")
+    public ResponseEntity<UnifiedOrderApprovalResponse> approveOrderUnified(@PathVariable Long orderId) {
+        try {
+            UnifiedOrderApprovalResponse result = paymentService.approveOrderUnified(orderId);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("approveOrderUnified failed for order {}: {}", orderId, e.getMessage(), e);
+            UnifiedOrderApprovalResponse err = new UnifiedOrderApprovalResponse();
+            err.setOrderId(orderId);
+            err.setStatus("ERROR");
+            err.setMessage(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(err);
+        }
     }
 
     @GetMapping("/all-placed-carts")

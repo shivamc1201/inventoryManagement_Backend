@@ -22,6 +22,10 @@ import com.nector.userservice.repository.ProductInwardApprovalRepository;
 import com.nector.userservice.repository.PromotionalItemRepository;
 import com.nector.userservice.repository.RawProductRepository;
 import com.nector.userservice.repository.ScrapItemRepository;
+import com.nector.userservice.stock.entity.StockTransaction;
+import com.nector.userservice.stock.service.StockTransactionService;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -47,6 +51,7 @@ public class ProductInwardApprovalServiceImpl implements ProductInwardApprovalSe
     private final ScrapItemService scrapItemService;
     private final MachinePartService machinePartService;
     private final ObjectMapper objectMapper;
+    private final StockTransactionService stockTransactionService;
 
     @Override
     @Transactional
@@ -158,20 +163,53 @@ public class ProductInwardApprovalServiceImpl implements ProductInwardApprovalSe
     private void applyProductUpdate(ProductInwardApproval approval) {
         switch (approval.getProductType()) {
             case RAW_PRODUCT -> {
+                // createInventoryLot inside updateRawProduct already writes to stock_transactions
                 RawProductRequest request = deserialize(approval.getRequestPayload(), RawProductRequest.class);
                 rawProductService.updateRawProduct(approval.getProductId(), request);
             }
             case PROMOTIONAL_ITEM -> {
                 PromotionalItemRequest request = deserialize(approval.getRequestPayload(), PromotionalItemRequest.class);
+                PromotionalItem current = promotionalItemRepository.findById(approval.getProductId()).orElse(null);
+                int oldQty = current != null && current.getQuantity() != null ? current.getQuantity() : 0;
                 promotionalItemService.updatePromotionalItem(approval.getProductId(), request);
+                int delta = (request.getQuantity() != null ? request.getQuantity() : 0) - oldQty;
+                if (delta > 0 && current != null) {
+                    stockTransactionService.record(
+                        StockTransaction.ItemType.PROMOTIONAL, approval.getProductId(),
+                        current.getItemCode(), current.getName(),
+                        StockTransaction.TxnType.INWARD, BigDecimal.valueOf(delta),
+                        current.getUnit() != null ? current.getUnit().name() : null,
+                        current.getVendorName(), null, null, LocalDate.now());
+                }
             }
             case SCRAP_ITEM -> {
                 ScrapItemRequest request = deserialize(approval.getRequestPayload(), ScrapItemRequest.class);
+                ScrapItem currentScrap = scrapItemRepository.findById(approval.getProductId()).orElse(null);
+                int oldQty = currentScrap != null && currentScrap.getQuantity() != null ? currentScrap.getQuantity() : 0;
                 scrapItemService.updateScrapItem(approval.getProductId(), request);
+                int delta = (request.getQuantity() != null ? request.getQuantity() : 0) - oldQty;
+                if (delta > 0 && currentScrap != null) {
+                    stockTransactionService.record(
+                        StockTransaction.ItemType.SCRAP, approval.getProductId(),
+                        currentScrap.getItemCode(), currentScrap.getName(),
+                        StockTransaction.TxnType.INWARD, BigDecimal.valueOf(delta),
+                        currentScrap.getUnit() != null ? currentScrap.getUnit().name() : null,
+                        currentScrap.getVendorName(), null, null, LocalDate.now());
+                }
             }
             case MACHINE_PART -> {
                 UpdateMachinePart request = deserialize(approval.getRequestPayload(), UpdateMachinePart.class);
+                MachinePart currentPart = machinePartRepository.findById(approval.getProductId()).orElse(null);
+                int oldQty = currentPart != null && currentPart.getQuantity() != null ? currentPart.getQuantity() : 0;
                 machinePartService.updateMachinePart(approval.getProductId(), request);
+                int delta = (request.getQuantity() != null ? request.getQuantity() : 0) - oldQty;
+                if (delta > 0 && currentPart != null) {
+                    stockTransactionService.record(
+                        StockTransaction.ItemType.SPARE_PART, approval.getProductId(),
+                        currentPart.getPartNumber(), currentPart.getName(),
+                        StockTransaction.TxnType.INWARD, BigDecimal.valueOf(delta),
+                        currentPart.getUnit(), currentPart.getVendor(), null, null, LocalDate.now());
+                }
             }
         }
     }

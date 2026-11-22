@@ -13,7 +13,7 @@ public enum Features {
     DISTRIBUTOR("Distributor", "/distributor"),
     INVENTORY("Inventory", "/inventory"), // Parent for all Inventory sub-features
     SALES("Sales", "/sales"), // Parent for all Sales sub-features
-    REPORTS("Reports", "/reports"),
+    REPORTING_MANAGER("Reporting Manager", "/sales/salesperson-onboarding"),
     COMPLAINT("Complaint", "/complaint"),
     PRODUCTS("Products", "/products"), // Parent for all Product sub-features
     ORDER_DETAILS("OrderDetails", "/order-details"),
@@ -45,7 +45,38 @@ public enum Features {
 
     // --- Transaction Sub-Items ---
     TRANSACTION_CASHBOOK("Cashbook", "/transaction/cashbook"),
-    TRANSACTION_MASTER("Transaction Master", "/transaction/master");
+    TRANSACTION_MASTER("Transaction Master", "/transaction/master"),
+
+    // --- HR Sub-Items ---
+    ADMIN_APPROVAL("Admin Approval", "/hr/admin-approval"),
+
+    // --- Accounts Sub-Items ---
+    ACCOUNTS_MASTER("Accounts Master", "/accounts/master"),
+    ACCOUNTS_PAYMENT_REQUESTS("Payment Requests", "/accounts/payment-requests"),
+    ACCOUNTS_PI_UPDATE("PI Update", "/accounts/pi-update"),
+
+    // --- HR KRA/KPI ---
+    HR_KRA_KPI("HR KRA / KPI", "/hr/kra-kpi"),
+
+    // --- Support Sub-Items ---
+    COMPLAINTS_MANAGEMENT("Complaints Management", "/complaint/complaints_management"),
+
+    // --- Notifications & Offers ---
+    NOTIFICATIONS_AND_OFFERS("Notifications & Offers", "/notifications-offers"),
+
+    // --- Reports Section ---
+    REPORTS("Reports", "/reports"),
+    REPORT_MIS_DASHBOARD("MIS Dashboard", "/reports/mis-dashboard"),
+    REPORT_INVENTORY("Inventory Reports", "/reports/inventory"),
+    REPORT_STOCK_MOVEMENT("Stock Movement", "/reports/stock-movement"),
+    REPORT_BATCH_MANAGEMENT("Batch Management", "/reports/batch-management"),
+    REPORT_PRODUCTION("Production Reports", "/reports/production"),
+    REPORT_SALES("Sales Reports", "/reports/sales"),
+    REPORT_RECEIVABLES("Receivables & Collections", "/reports/receivables"),
+    REPORT_SALES_ORDERS("Sales Orders", "/reports/sales-orders"),
+    REPORT_DISPATCH("Dispatch & Delivery", "/reports/dispatch"),
+    REPORT_INVENTORY_ISSUES("Inventory Issues", "/reports/inventory-issues"),
+    REPORT_SCRAP("Scrap Management", "/reports/scrap");
 
     // Getters
     // --- Enum Attributes ---

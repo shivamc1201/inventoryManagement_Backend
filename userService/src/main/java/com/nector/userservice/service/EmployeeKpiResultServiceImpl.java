@@ -176,9 +176,35 @@ public class EmployeeKpiResultServiceImpl implements EmployeeKpiResultService {
     @Override
     @Transactional(readOnly = true)
     public List<KpiResultResponse> getResultsByMonthAndYear(Integer month, Integer year) {
-        return resultRepository.findByMonthAndYear(month, year)
-                .stream()
-                .map(r -> mapToResponse(r, getEmployeeNameById(r.getEmployeeId())))
+        List<EmployeeKpiResult> stored = resultRepository.findByMonthAndYear(month, year);
+        if (!stored.isEmpty()) {
+            return stored.stream()
+                    .map(r -> mapToResponse(r, getEmployeeNameById(r.getEmployeeId())))
+                    .collect(Collectors.toList());
+        }
+
+        // No stored results — compute live from assignments for that month
+        List<EmployeeKpiAssignment> allAssignments = assignmentRepository.findAllByMonthAndYear(month, year);
+        return allAssignments.stream()
+                .collect(Collectors.groupingBy(EmployeeKpiAssignment::getEmployeeId))
+                .entrySet().stream()
+                .map(entry -> {
+                    Long empId = entry.getKey();
+                    List<EmployeeKpiAssignment> empAssignments = entry.getValue();
+                    BigDecimal totalScore = kpiCalculator.calculateTotalWeightedScore(empAssignments);
+                    KPIGrade grade = kpiCalculator.calculateGrade(totalScore);
+                    return KpiResultResponse.builder()
+                            .id(null)
+                            .employeeId(empId)
+                            .employeeName(getEmployeeName(empAssignments, empId))
+                            .month(month)
+                            .year(year)
+                            .totalScore(totalScore)
+                            .finalGrade(grade)
+                            .gradeMeaning(grade.getMeaning())
+                            .generatedAt(null)
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
 

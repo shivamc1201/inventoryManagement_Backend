@@ -24,6 +24,7 @@ public class SalesPersonResponse {
     private UserStatus status;
     private String firstName;
     private String lastName;
+    private String password;
     
     // Contact information
     private String contactNo;

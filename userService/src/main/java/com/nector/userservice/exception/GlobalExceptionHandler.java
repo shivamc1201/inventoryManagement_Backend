@@ -34,17 +34,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidFormatException.class)
     public ResponseEntity<Map<String, String>> handleInvalidFormatException(InvalidFormatException ex) {
         Map<String, String> error = new HashMap<>();
-        // Check if the invalid value was for RoleType enum
-        if (ex.getTargetType() != null && "RoleType".equals(ex.getTargetType().getSimpleName())) {
-            error.put("error", "Invalid roleType. Allowed values are: "
-                    + "PLANT_OFFICER, SALES_OFFICER, ACCOUNT_OFFICER, REGIONAL_SALES_MGR, "
-                    + "ACCOUNT_MGR, LOGISTICS_OFFICER, LOGISTICS_MGR, BUSINESS_DEV_MGR, "
-                    + "HR_EXECUTIVE, PLANT_EXECUTIVE, SALES_EXECUTIVE, ACCOUNT_EXECUTIVE, "
-                    + "STATE_SALES_MGR, NATIONAL_SALES_MGR, HR_MGR, PLANT_MGR, "
-                    + "ZONAL_SALES_MGR, ADMIN, AREA_SALES_MGR");
-        } else {
-            error.put("error", "Invalid request format");
-        }
+        error.put("error", "Invalid request format");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
     
@@ -114,7 +104,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, String>> handleIllegalState(IllegalStateException ex) {
         Map<String, String> error = new HashMap<>();
-        error.put("error", "Invalid operation - request cannot be processed");
+        error.put("error", ex.getMessage() != null ? ex.getMessage() : "Invalid operation - request cannot be processed");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
     
@@ -207,15 +197,18 @@ public class GlobalExceptionHandler {
         Throwable cause = ex.getCause();
         if (cause instanceof InvalidFormatException ife && ife.getTargetType() != null) {
             String typeName = ife.getTargetType().getSimpleName();
-            if ("RoleType".equals(typeName)) {
-                error.put("error", "Invalid roleType. Allowed values are: "
-                        + "PLANT_OFFICER, SALES_OFFICER, ACCOUNT_OFFICER, REGIONAL_SALES_MGR, "
-                        + "ACCOUNT_MGR, LOGISTICS_OFFICER, LOGISTICS_MGR, BUSINESS_DEV_MGR, "
-                        + "HR_EXECUTIVE, PLANT_EXECUTIVE, SALES_EXECUTIVE, ACCOUNT_EXECUTIVE, "
-                        + "STATE_SALES_MGR, NATIONAL_SALES_MGR, HR_MGR, PLANT_MGR, "
-                        + "ZONAL_SALES_MGR, ADMIN, AREA_SALES_MGR");
-            } else {
-                error.put("error", "Invalid value '" + ife.getValue() + "' for field of type " + typeName);
+            switch (typeName) {
+                case "PaymentMode" -> error.put("error",
+                        "Invalid paymentMode '" + ife.getValue() + "'. Allowed values are: RTGS, NEFT, IMPS, UPI, CHEQUE, CASH");
+                case "TransactionType" -> error.put("error",
+                        "Invalid transactionType '" + ife.getValue() + "'. Allowed values are: CREDIT, DEBIT");
+                case "KPICategory" -> error.put("error",
+                        "Invalid kpiCategory '" + ife.getValue() + "'. Allowed values are: KRA, KPI");
+                case "KPIMeasurementUnit" -> error.put("error",
+                        "Invalid measurementUnit '" + ife.getValue() + "'. Allowed values are: AMOUNT, COUNT, PERCENTAGE, VISITS");
+                case "KPIFrequency" -> error.put("error",
+                        "Invalid frequency '" + ife.getValue() + "'. Allowed values are: DAILY, WEEKLY, MONTHLY, YEARLY");
+                default -> error.put("error", "Invalid value '" + ife.getValue() + "' for field of type " + typeName);
             }
         } else {
             error.put("error", "Invalid or malformed request body");

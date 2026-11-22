@@ -3,6 +3,7 @@ package com.nector.userservice.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.ToString;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -10,7 +11,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "sales_KPI_update")
+@Table(name = "sales_KPI_update", uniqueConstraints = {
+        @UniqueConstraint(name = "uq_sales_kpi_emp_date", columnNames = {"emp_code", "date"})
+})
 @Data
 public class SalesKpiUpdate {
 
@@ -24,11 +27,13 @@ public class SalesKpiUpdate {
     @Column(nullable = false, length = 20)
     private String empCode;
 
+    @ToString.Exclude
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
 
+    @ToString.Exclude
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sales_person_id")
@@ -44,6 +49,7 @@ public class SalesKpiUpdate {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @ToString.Exclude
     @OneToMany(mappedBy = "salesKpiUpdate", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SalesKpiMeetingDetail> meetingDetails = new ArrayList<>();
 

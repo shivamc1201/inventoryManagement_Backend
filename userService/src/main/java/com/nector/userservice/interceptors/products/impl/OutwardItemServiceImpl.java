@@ -4,8 +4,13 @@ import com.nector.userservice.exception.ResourceNotFoundException;
 import com.nector.userservice.interceptors.products.model.OutwardItemRequest;
 import com.nector.userservice.interceptors.products.model.OutwardItemResponse;
 import com.nector.userservice.interceptors.products.service.OutwardItemService;
+import com.nector.userservice.interceptors.products.service.ScrapOutwardApprovalService;
 import com.nector.userservice.model.OutwardItemTransaction;
 import com.nector.userservice.repository.OutwardItemTransactionRepository;
+import com.nector.userservice.stock.entity.StockTransaction;
+import com.nector.userservice.stock.service.StockTransactionService;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,6 +25,8 @@ import java.util.stream.Collectors;
 public class OutwardItemServiceImpl implements OutwardItemService {
 
     private final OutwardItemTransactionRepository outwardItemRepository;
+    private final ScrapOutwardApprovalService scrapOutwardApprovalService;
+    private final StockTransactionService stockTransactionService;
 
     @Override
     @Transactional
@@ -41,7 +48,36 @@ public class OutwardItemServiceImpl implements OutwardItemService {
         OutwardItemTransaction savedTransaction = outwardItemRepository.save(transaction);
         log.info("Outward item transaction created successfully with ID: {}", savedTransaction.getId());
 
+        StockTransaction.ItemType stockItemType = switch (savedTransaction.getItemType()) {
+            case SPARE_PARTS       -> StockTransaction.ItemType.SPARE_PART;
+            case PROMOTIONAL_ITEMS -> StockTransaction.ItemType.PROMOTIONAL;
+            case SCRAP_MATERIAL    -> StockTransaction.ItemType.SCRAP;
+        };
+        stockTransactionService.record(
+            stockItemType, savedTransaction.getId(),
+            savedTransaction.getMaterialCode(), savedTransaction.getMaterialName(),
+            StockTransaction.TxnType.OUTWARD,
+            savedTransaction.getQuantity() != null ? BigDecimal.valueOf(savedTransaction.getQuantity()) : null,
+            savedTransaction.getUnit() != null ? savedTransaction.getUnit().name() : null,
+            savedTransaction.getIssuedTo(), null, savedTransaction.getReferenceNumber(),
+            LocalDate.now());
+
+        if (OutwardItemTransaction.ItemType.SCRAP_MATERIAL == savedTransaction.getItemType()
+                && OutwardItemTransaction.TransactionType.OUTWARD_GIVING == savedTransaction.getTransactionType()) {
+            scrapOutwardApprovalService.createApproval(savedTransaction);
+            log.info("Scrap outward approval created for transaction ID: {}", savedTransaction.getId());
+        }
+
         return mapToResponse(savedTransaction);
+    }
+
+    @Override
+    @Transactional
+    public List<OutwardItemResponse> bulkCreateOutwardItems(List<OutwardItemRequest> requests) {
+        log.info("Bulk creating {} outward item transactions", requests.size());
+        return requests.stream()
+                .map(this::createOutwardItem)
+                .collect(Collectors.toList());
     }
 
     @Override

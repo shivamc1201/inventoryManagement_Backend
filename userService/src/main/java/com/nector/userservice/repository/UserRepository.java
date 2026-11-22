@@ -1,6 +1,5 @@
 package com.nector.userservice.repository;
 
-import com.nector.userservice.common.RoleType;
 import com.nector.userservice.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -21,14 +20,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByUsername(String username);
 
-    List<User> findByRoleType(RoleType roleType);
+    List<User> findByRoleType(String roleType);
 
-    List<User> findByRoleTypeIn(List<RoleType> roleTypes);
+    List<User> findByRoleTypeIn(List<String> roleTypes);
 
-    @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.roles r LEFT JOIN FETCH r.permissions WHERE u.username = :username")
+    @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.roles r WHERE u.username = :username")
     Optional<User> findByUsernameWithRolesAndPermissions(@Param("username") String username);
 
-    @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.roles r LEFT JOIN FETCH r.permissions WHERE u.id = :id")
+    @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.roles r WHERE u.id = :id")
     Optional<User> findByIdWithRolesAndPermissions(@Param("id") Long id);
 
     @Modifying
@@ -39,5 +38,4 @@ public interface UserRepository extends JpaRepository<User, Long> {
     long countAllUsers();
 
     Optional<User> findByEmployeeRollNo(String employeeRollNo);
-
 }

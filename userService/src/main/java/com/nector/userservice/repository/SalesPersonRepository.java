@@ -15,11 +15,15 @@ public interface SalesPersonRepository extends JpaRepository<SalesPerson, Long> 
 
     Optional<SalesPerson> findByEmployeeRollNo(String employeeRollNo);
 
+    Optional<SalesPerson> findByEmployeeRollNoIgnoreCase(String employeeRollNo);
+
     boolean existsByEmployeeRollNo(String employeeRollNo);
 
     List<SalesPerson> findByRole(SalesRole role);
 
     List<SalesPerson> findByZone(String zone);
+
+    List<SalesPerson> findByRegion(String region);
 
     List<SalesPerson> findByManagerId(Long managerId);
 
@@ -59,4 +63,6 @@ public interface SalesPersonRepository extends JpaRepository<SalesPerson, Long> 
 
     @Query("SELECT COUNT(sp) FROM SalesPerson sp WHERE sp.active = true")
     long countActiveSalesPersons();
+
+    Optional<SalesPerson> findFirstByRoleAndActiveTrueOrderByIdAsc(SalesRole role);
 }

@@ -139,7 +139,7 @@ public class PaymentService {
             updateAwaitingPaymentStep(orderId);
             
             // Deduct amount from distributor balance
-            updateDistributorLedger(distributorId, orderAmount.negate());
+            updateDistributorBalance(distributorId, orderAmount, "DEBIT", orderLedgerDescription(orderId), LocalDateTime.now());
             // Update PI payment status
             updateProformaInvoiceStatus(orderId, ProformaInvoice.PaymentStatus.PAID);
             // Update Cart status to PAYMENT_APPROVED
@@ -183,6 +183,33 @@ public class PaymentService {
             .toList();
     }
     
+    /** Ledger description for an order deduction, e.g. "Against # ORD-403". Same text for every approval path. */
+    private String orderLedgerDescription(Long orderId) {
+        return "Against # ORD-" + orderId;
+    }
+
+    /**
+     * Ledger description for an approved incoming payment, e.g. "BY-Payment #BKIDA26325195875".
+     * Reference = UTR (RTGS/NEFT), cheque no. (CHEQUE) or transaction no. (IMPS/UPI);
+     * falls back to the free-text description, then the payment id, so the row is never blank.
+     */
+    private String paymentLedgerDescription(PaymentApproval payment) {
+        String ref = firstNonBlank(payment.getUtrTxnNo(), payment.getChequeNo(), payment.getRefNo(), payment.getDescription());
+        if (ref == null) {
+            ref = String.valueOf(payment.getId());
+        }
+        return "BY-Payment #" + ref;
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String v : values) {
+            if (v != null && !v.trim().isEmpty()) {
+                return v.trim();
+            }
+        }
+        return null;
+    }
+
     public void updateDistributorBalance(Long distributorId, BigDecimal amount, String transactionType, String description, LocalDateTime date) {
         DistributorLedger ledger = new DistributorLedger();
         ledger.setDistributorId(distributorId);
@@ -337,7 +364,7 @@ public class PaymentService {
             updateAwaitingPaymentStep(orderId);
             
             // Deduct amount from distributor ledger
-            updateDistributorBalance(distributorId, piAmount, "DEBIT", "Payment for Order #" + orderId, LocalDateTime.now());
+            updateDistributorBalance(distributorId, piAmount, "DEBIT", orderLedgerDescription(orderId), LocalDateTime.now());
             
             // Update PI status to PAID
             pi.setPaymentStatus(ProformaInvoice.PaymentStatus.PAID);
@@ -409,7 +436,7 @@ public class PaymentService {
         distributorRepository.save(distributor);
 
         // Create a ledger entry for audit trail
-        updateDistributorBalance(distributorId, orderAmount, "DEBIT", "Payment for Order #" + orderId + " (using credit)", LocalDateTime.now());
+        updateDistributorBalance(distributorId, orderAmount, "DEBIT", orderLedgerDescription(orderId), LocalDateTime.now());
 
         // Update order tracking Step 6: Approved from Accounts
         updatePaymentApprovedStep(orderId);
@@ -431,10 +458,8 @@ public class PaymentService {
      * Unified order approval: combines ledger balance + credit balance.
      * Allocation order: ledger first (advance deposits), credit as fallback.
      *
-     * Ledger entry description encodes the exact split so the statement is self-auditable:
-     *   - Ledger only  → "Payment for Order #X (Ledger Balance)"
-     *   - Credit only  → "Payment for Order #X (using credit)"
-     *   - Combined     → "Payment for Order #X (Ledger ₹50000 + Credit ₹78500)"
+     * The single DEBIT ledger entry always reads "Against # ORD-X" regardless of the
+     * ledger/credit split (see {@link #orderLedgerDescription(Long)}).
      *
      * Always acquires a PESSIMISTIC_WRITE lock on the Distributor row to prevent
      * concurrent approvals from double-spending either balance pool.
@@ -505,21 +530,10 @@ public class PaymentService {
         BigDecimal ledgerUsed  = effectiveLedger.min(orderAmount);
         BigDecimal creditUsed  = orderAmount.subtract(ledgerUsed);
 
-        // Determine ledger entry description
-        String ledgerDescription;
-        if (creditUsed.compareTo(BigDecimal.ZERO) == 0) {
-            ledgerDescription = "Payment for Order #" + orderId + " (Ledger Balance)";
-        } else if (ledgerUsed.compareTo(BigDecimal.ZERO) == 0) {
-            ledgerDescription = "Payment for Order #" + orderId + " (using credit)";
-        } else {
-            ledgerDescription = String.format(
-                    "Payment for Order #%d (Ledger ₹%s + Credit ₹%s)",
-                    orderId,
-                    ledgerUsed.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString(),
-                    creditUsed.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString());
-        }
+        // Ledger entry description is the same for every order deduction: "Against # ORD-<id>"
+        String ledgerDescription = orderLedgerDescription(orderId);
 
-        // Single DEBIT ledger entry for the full order amount — description encodes the split
+        // Single DEBIT ledger entry for the full order amount
         updateDistributorBalance(distributorId, orderAmount, "DEBIT", ledgerDescription, LocalDateTime.now());
 
         // Deduct credit portion from the entity field
@@ -758,12 +772,12 @@ public class PaymentService {
                 distributorRepository.save(distributor);
 
                 updateDistributorBalance(payment.getDistributorId(), creditRestore,
-                        "CREDIT", payment.getDescription() + " (Credit Restored)", payment.getCreatedAt());
+                        "CREDIT", paymentLedgerDescription(payment) + " (Credit Restored)", payment.getCreatedAt());
             }
 
             if (ledgerCredit.compareTo(BigDecimal.ZERO) > 0) {
                 updateDistributorBalance(payment.getDistributorId(), ledgerCredit,
-                        "CREDIT", payment.getDescription() + " (Ledger Balance)", payment.getCreatedAt());
+                        "CREDIT", paymentLedgerDescription(payment), payment.getCreatedAt());
             }
         } else {
             // For DEBIT or other transaction types, process normally
@@ -950,16 +964,6 @@ public class PaymentService {
             }
         }
         return partialBalance;
-    }
-
-    // Rows that only move the credit line, never the ledger balance.
-    // Kept in the distributor_ledger table for frontend history but excluded from balance math.
-    private boolean isCreditLineOnly(DistributorLedger transaction) {
-        String description = transaction.getDescription();
-        if (description == null) {
-            return false;
-        }
-        return description.contains("(using credit)") || description.contains("(Credit Restored)");
     }
 
     public DistributorRepository getDistributorRepository() {

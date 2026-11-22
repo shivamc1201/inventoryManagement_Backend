@@ -17,7 +17,8 @@ public class PaymentSubmissionRequest {
     @NotNull(message = "distributorId is required")
     private Long distributorId;
 
-    @NotNull(message = "salespersonId is required")
+    // Optional: set when a salesperson/accounts user adds the payment on behalf of the party.
+    // Left null when the distributor adds their own payment ("Self" in payment logs).
     private Long salespersonId;
 
     @NotNull(message = "amount is required")

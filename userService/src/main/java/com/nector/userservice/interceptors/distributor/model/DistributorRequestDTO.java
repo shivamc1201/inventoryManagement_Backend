@@ -64,9 +64,9 @@ public class DistributorRequestDTO {
     @Schema(description = "Unique username", example = "johndoe123")
     private String username;
 
-    @NotBlank(message = "Password is required")
-    @Size(min = 8, message = "Password must be at least 8 characters")
-    @Schema(description = "User password", example = "SecurePass123!")
+    // Required on create (checked in the service). On update, empty keeps the current password.
+    @Pattern(regexp = "(?s)^$|^.{8,}$", message = "Password must be at least 8 characters")
+    @Schema(description = "User password (required on create, optional on update)", example = "SecurePass123!")
     private String password;
 
 

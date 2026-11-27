@@ -53,6 +53,8 @@ public class SalesPerson {
     @Column(unique = true, nullable = false, length = 50)
     private String username;
 
+    // WRITE_ONLY: never serialized into API responses
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
     @Column(nullable = false)
     private String password;
 

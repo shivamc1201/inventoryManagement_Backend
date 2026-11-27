@@ -33,7 +33,19 @@ public class OrderController {
     private final ProformaInvoiceService proformaInvoiceService;
     private final ProformaInvoiceRepository proformaInvoiceRepository;
     private final CloudinaryStorageService cloudinaryStorageService;
+    private final HierarchyOrderService hierarchyOrderService;
 
+
+    @GetMapping("/hierarchy-orders")
+    @Operation(summary = "Get orders for the sales hierarchy view",
+            description = "All orders with their owning salesperson, role and zone. All filters are optional.")
+    public ResponseEntity<List<HierarchyOrderResponse>> getHierarchyOrders(
+            @RequestParam(required = false) String zone,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) Long salespersonId,
+            @RequestParam(required = false) String status) {
+        return ResponseEntity.ok(hierarchyOrderService.getOrders(zone, role, salespersonId, status));
+    }
 
     @GetMapping("/pending-order-approvals")
     @Operation(summary = "Get pending order approvals", description = "Retrieves all pending orders approval requests")

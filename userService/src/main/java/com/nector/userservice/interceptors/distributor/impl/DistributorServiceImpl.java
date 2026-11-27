@@ -70,6 +70,10 @@ public class DistributorServiceImpl implements DistributorService {
     public DistributorResponseDTO createDistributor(DistributorRequestDTO request) {
         log.info("Creating distributor with email: {}", request.getContactEmail());
 
+        if (request.getPassword() == null || request.getPassword().isBlank()) {
+            throw new IllegalArgumentException("Password is required");
+        }
+
         if (distributorRepository.existsByContactEmail(request.getContactEmail())) {
             throw new IllegalArgumentException(
                     "Distributor with email already exists: " + request.getContactEmail());

@@ -18,6 +18,8 @@ public class Distributor {
     @Column(name = "username", nullable = false, length = 100)
     private String username;
 
+    // WRITE_ONLY: never serialized into API responses
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
     @Column(name = "password", nullable = false, length = 100)
     private String password;
     

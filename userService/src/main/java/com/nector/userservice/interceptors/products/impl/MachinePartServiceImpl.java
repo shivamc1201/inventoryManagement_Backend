@@ -76,14 +76,16 @@ public class MachinePartServiceImpl implements MachinePartService {
         part.setPurchaseDate(request.getPurchaseDate());
         part.setWarrantyExpiryDate(request.getWarrantyExpiryDate());
         part.setQuantity(request.getQuantity());
-        part.setUnit(request.getUnit());
-        part.setPrice(request.getPrice());
         part.setCondition(request.getCondition());
-        part.setHsn(request.getHsn());
-        part.setTaxRate(request.getTaxRate());
+        // The Inward form does not send these, so a missing value must not erase the stored one
+        if (request.getUnit() != null) part.setUnit(request.getUnit());
+        if (request.getPrice() != null) part.setPrice(request.getPrice());
+        if (request.getHsn() != null) part.setHsn(request.getHsn());
+        if (request.getTaxRate() != null) part.setTaxRate(request.getTaxRate());
         if (request.getRate() != null) part.setRate(request.getRate());
         if (request.getGst() != null) part.setGst(request.getGst());
         if (request.getGrossAmount() != null) part.setGrossAmount(request.getGrossAmount());
+        if (request.getStatus() != null) part.setStatus(request.getStatus());
 
         MachinePart updatedPart = machinePartRepository.save(part);
         log.info("Machine part updated successfully with ID: {}", updatedPart.getId());
@@ -200,6 +202,8 @@ public class MachinePartServiceImpl implements MachinePartService {
         response.setUnit(part.getUnit());
         response.setPrice(part.getPrice());
         response.setCondition(part.getCondition());
+        response.setHsn(part.getHsn());
+        response.setTaxRate(part.getTaxRate());
         response.setActive(part.getActive());
         response.setCreatedAt(part.getCreatedAt());
         response.setUpdatedAt(part.getUpdatedAt());

@@ -29,9 +29,11 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
     
+    // WRITE_ONLY: accepted in requests, never serialized into API responses
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
     @Column(nullable = false)
     private String password;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserStatus status;

@@ -217,42 +217,13 @@ public class RoleFeaturePermissionController {
     // Helper
     // ----------------------------------------------------------------
 
+    // Uses the same mapping as GET /features, so every listed feature can be looked up
     private Features findFeatureById(Integer featureId) {
-        return switch (featureId) {
-            case 1  -> Features.DASHBOARD;
-            case 2  -> Features.ACCOUNTS;
-            case 3  -> Features.HR;
-            case 4  -> Features.DISTRIBUTOR;
-            case 5  -> Features.INVENTORY;
-            case 6  -> Features.SALES;
-            case 7  -> Features.REPORTING_MANAGER;
-            case 8  -> Features.COMPLAINT;
-            case 9  -> Features.PRODUCTS;
-            case 10 -> Features.ORDER_DETAILS;
-            case 11 -> Features.LOGISTIC;
-            case 12 -> Features.USER_RIGHTS;
-            case 13 -> Features.DISPATCH;
-            case 14 -> Features.PRODUCTS_FINISHED_PRODUCTS;
-            case 15 -> Features.PRODUCTS_RAW_MATERIALS;
-            case 16 -> Features.PRODUCTS_MACHINE_PARTS;
-            case 17 -> Features.INVENTORY_MASTERS;
-            case 18 -> Features.INVENTORY_TRANSACTIONS;
-            case 19 -> Features.INVENTORY_TRANSACTIONS_PROFORMA_INVOICE;
-            case 20 -> Features.INVENTORY_TRANSACTIONS_PO_DEPOSIT_RECEIPTS_LIST;
-            case 21 -> Features.INVENTORY_TRANSACTIONS_PO_LIST;
-            case 22 -> Features.INVENTORY_TRANSACTIONS_OUTWARD_CHALLAN;
-            case 23 -> Features.INVENTORY_TRANSACTIONS_SALE_INVOICE;
-            case 24 -> Features.INVENTORY_INWARD;
-            case 25 -> Features.INVENTORY_OUTWARD;
-            case 26 -> Features.TRANSACTION_CASHBOOK;
-            case 27 -> Features.TRANSACTION_MASTER;
-            case 28 -> Features.ADMIN_APPROVAL;
-            case 29 -> Features.ACCOUNTS_MASTER;
-            case 30 -> Features.ACCOUNTS_PAYMENT_REQUESTS;
-            case 31 -> Features.ACCOUNTS_PI_UPDATE;
-            case 32 -> Features.HR_KRA_KPI;
-            case 33 -> Features.COMPLAINTS_MANAGEMENT;
-            default -> throw new IllegalArgumentException("Unknown feature ID: " + featureId);
-        };
+        for (Features feature : Features.values()) {
+            if (featureId != null && com.nector.userservice.common.RoleFeatureMapping.getFeatureId(feature) == featureId) {
+                return feature;
+            }
+        }
+        throw new IllegalArgumentException("Unknown feature ID: " + featureId);
     }
 }

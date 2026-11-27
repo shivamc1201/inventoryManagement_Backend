@@ -29,6 +29,8 @@ public class PendingOnboardingRequest {
     @Column(nullable = false, unique = true)
     private String email;
 
+    // WRITE_ONLY: never serialized into API responses
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
     @Column(nullable = false)
     private String password;
 

@@ -1,5 +1,6 @@
 package com.nector.userservice.interceptors.products.impl;
 
+import com.nector.userservice.enums.ProductStatus;
 import com.nector.userservice.model.MachinePart;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -65,4 +66,6 @@ public class UpdateMachinePart {
     private BigDecimal gst;
 
     private BigDecimal grossAmount;
+
+    private ProductStatus status;
 }

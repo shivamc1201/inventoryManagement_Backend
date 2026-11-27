@@ -308,7 +308,6 @@ public class SalesPersonService {
         response.setStatus(salesPerson.getStatus());
         response.setFirstName(salesPerson.getFirstName());
         response.setLastName(salesPerson.getLastName());
-        response.setPassword(salesPerson.getPassword());
 
         // Contact information
         response.setContactNo(salesPerson.getContactNo());

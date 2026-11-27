@@ -66,6 +66,9 @@ public class UserUpdateRequest {
     @Schema(description = "Role type", example = "ACCOUNT_MGR")
     private String roleType;
 
+    @Size(max = 50)
+    private String employeeRollNo;
+
     @Size(min = 6, max = 100, message = "Password must be between 6 and 100 characters")
     @Schema(description = "User password (optional, only updates if provided)", example = "newPassword123")
     private String password;

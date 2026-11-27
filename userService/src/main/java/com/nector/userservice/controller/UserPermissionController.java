@@ -78,7 +78,7 @@ public class UserPermissionController {
             log.info("Exiting updateUser() - updated user: {}", updatedUser.getUsername());
             return ResponseEntity.ok(
                     Map.of("message", "User updated successfully", "username", updatedUser.getUsername(),
-                            "status", updatedUser.getStatus(), "password", updatedUser.getPassword())
+                            "status", updatedUser.getStatus())
             );
         } catch (EntityNotFoundException e) {
             log.warn("Exiting updateUser() - userId: {} not found", userId);
@@ -150,7 +150,6 @@ public class UserPermissionController {
         response.setLastLoginTime(savedUser.getLastLoginTime());
         response.setLoggedIn(savedUser.isLoggedIn());
         response.setPasswordSetDate(savedUser.getPasswordSetDate());
-        response.setPassword(savedUser.getPassword());
         response.setEmployeeRollNo(savedUser.getEmployeeRollNo());
         return response;
     }

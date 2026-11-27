@@ -222,6 +222,8 @@ public class PromotionalItemServiceImpl implements PromotionalItemService {
         response.setPerItemPrice(perItemPrice);
         
         response.setMinimumThreshold(item.getMinimumThreshold());
+        response.setHsn(item.getHsn());
+        response.setTaxRate(item.getTaxRate());
         response.setActive(item.getActive());
         int qty = item.getQuantity() != null ? item.getQuantity() : 0;
         int minThreshold = item.getMinimumThreshold() != null ? item.getMinimumThreshold() : 0;

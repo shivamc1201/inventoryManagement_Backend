@@ -44,6 +44,7 @@ public class UserService {
         Optional.ofNullable(req.getGender()).ifPresent(user::setGender);
         Optional.ofNullable(req.getCountry()).ifPresent(user::setCountry);
         Optional.ofNullable(req.getZip()).ifPresent(user::setZip);
+        Optional.ofNullable(req.getEmployeeRollNo()).ifPresent(user::setEmployeeRollNo);
         Optional.ofNullable(req.getRoleType()).ifPresent(roleType -> {
             if (!roleRepository.existsByRoleType(roleType)) {
                 throw new IllegalArgumentException("Invalid role type: " + roleType);

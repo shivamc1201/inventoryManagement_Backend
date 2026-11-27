@@ -25,6 +25,8 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
     
     List<Cart> findByStatus(Cart.CartStatus status);
 
+    List<Cart> findByStatusIn(List<Cart.CartStatus> statuses);
+
     @Query("SELECT c FROM Cart c WHERE c.status = :status")
     List<Cart> findCartsByStatus(@Param("status") Cart.CartStatus status);
 

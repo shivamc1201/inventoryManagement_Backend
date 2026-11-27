@@ -32,7 +32,7 @@ public class UserResponse {
     private LocalDateTime lastLoginTime;
     private boolean isLoggedIn;
     private LocalDateTime passwordSetDate;
-    private String password;
+    // No password field on purpose: credentials must never be sent back to clients.
     private String employeeRollNo;
     private String roleType;
     private UserOnboardingType userOnboardingType;

@@ -72,7 +72,6 @@ public class DistributorMapper {
         dto.setStatus(entity.getStatus());
         dto.setCreatedOn(entity.getCreatedOn());
         dto.setUpdatedOn(entity.getUpdatedOn());
-        dto.setPassword(entity.getPassword());
         dto.setUsername(entity.getUsername());
         dto.setEmail(entity.getContactEmail());
         dto.setAccountNumber(entity.getAccountNumber());
@@ -106,7 +105,10 @@ public class DistributorMapper {
         entity.setPanNumber(dto.getPanNumber());
         entity.setGstNumber(dto.getGstNumber());
         entity.setStatus(dto.getStatus());
-        entity.setPassword(dto.getPassword());
+        // Blank means "keep the current password" (clients never receive it, so they cannot echo it back)
+        if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+            entity.setPassword(dto.getPassword());
+        }
         entity.setUsername(dto.getUsername());
         entity.setAccountName(dto.getAccountName());
         entity.setAccountNumber(dto.getAccountNumber());

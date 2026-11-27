@@ -1,8 +1,11 @@
 package com.nector.userservice.unit.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+
+import java.math.BigDecimal;
 
 @Data
 public class UnitRequestDTO {
@@ -30,4 +33,14 @@ public class UnitRequestDTO {
     
     @NotBlank(message = "Status is required")
     private String status;
+
+    // ---- Finished Product only (optional) ----
+    @PositiveOrZero(message = "Price cannot be negative")
+    private BigDecimal price;
+
+    @PositiveOrZero(message = "Quantity cannot be negative")
+    private Integer quantity;
+
+    @PositiveOrZero(message = "Minimum threshold cannot be negative")
+    private Integer minimumThreshold;
 }

@@ -48,6 +48,8 @@ public class ScrapItemServiceImpl implements ScrapItemService {
         item.setPrice(request.getPrice());
         item.setQuantity(request.getQuantity());
         item.setMinimumThreshold(request.getMinimumThreshold());
+        item.setHsn(request.getHsn());
+        item.setTaxRate(request.getTaxRate());
         item.setVendorId(request.getVendorId());
         item.setVendorName(request.getVendorName());
         item.setTransportName(request.getTransportName());

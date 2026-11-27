@@ -24,8 +24,8 @@ public class SalesPersonResponse {
     private UserStatus status;
     private String firstName;
     private String lastName;
-    private String password;
-    
+    // No password field on purpose: credentials must never be sent back to clients.
+
     // Contact information
     private String contactNo;
     private String alternateContactNo;

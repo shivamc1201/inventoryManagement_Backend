@@ -71,8 +71,7 @@ public class DistributorResponseDTO {
     @Schema(description = "User email address", example = "john.doe@example.com")
     private String email;
 
-    @Schema(description = "User password", example = "pass")
-    private String password;
+    // No password field on purpose: credentials must never be sent back to clients.
 
     @Schema(description = "accountNumber", example = "11111111222")
     private String accountNumber;

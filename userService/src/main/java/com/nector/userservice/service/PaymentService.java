@@ -904,36 +904,46 @@ public class PaymentService {
         return result;
     }
 
+    // A JV credit is incoming money: credit is a loan, so restore it first and ledger the rest.
+    // Transactional, so if any line fails nothing from the voucher is saved.
+    @Transactional
     public void processJournalVoucher(Long distributorId, JournalVoucherRequest request) {
+        // Row-level lock so concurrent approvals cannot overwrite the credit balance
+        var distributor = distributorRepository.findByIdForUpdate(distributorId)
+                .orElseThrow(() -> new RuntimeException("Distributor not found with ID: " + distributorId));
+
         for (JournalVoucherEntry entry : request.getEntries()) {
-            if (entry.getDebit() != null && entry.getDebit().compareTo(BigDecimal.ZERO) > 0) {
-                distributorRepository.findById(distributorId).ifPresentOrElse(
-                        distributor -> {
-                            if (!entry.getAccountNumber().equals(distributor.getAccountNumber())) {
-                                throw new RuntimeException("Account number " + entry.getAccountNumber() + " does not match distributor's account number " + distributor.getAccountNumber());
-                            }
-                        },
-                        () -> {
-                            throw new RuntimeException("Distributor not found with ID: " + distributorId);
-                        }
-                );
-                updateDistributorBalance(distributorId, entry.getDebit(), "JV_DEBIT",
-                        entry.getDescription() + " - " + request.getNarration(), request.getDate());
+            boolean hasDebit = entry.getDebit() != null && entry.getDebit().compareTo(BigDecimal.ZERO) > 0;
+            boolean hasCredit = entry.getCredit() != null && entry.getCredit().compareTo(BigDecimal.ZERO) > 0;
+            if (!hasDebit && !hasCredit) {
+                continue;
+            }
+            if (!entry.getAccountNumber().equals(distributor.getAccountNumber())) {
+                throw new RuntimeException("Account number " + entry.getAccountNumber() + " does not match distributor's account number " + distributor.getAccountNumber());
+            }
+            String description = entry.getDescription() + " - " + request.getNarration();
+
+            if (hasDebit) {
+                updateDistributorBalance(distributorId, entry.getDebit(), "JV_DEBIT", description, request.getDate());
             }
 
-            if (entry.getCredit() != null && entry.getCredit().compareTo(BigDecimal.ZERO) > 0) {
-                distributorRepository.findById(distributorId).ifPresentOrElse(
-                        distributor -> {
-                            if (!entry.getAccountNumber().equals(distributor.getAccountNumber())) {
-                                throw new RuntimeException("Account number " + entry.getAccountNumber() + " does not match distributor's account number " + distributor.getAccountNumber());
-                            }
-                        },
-                        () -> {
-                            throw new RuntimeException("Distributor not found with ID: " + distributorId);
-                        }
-                );
-                updateDistributorBalance(distributorId, entry.getCredit(), "JV_CREDIT",
-                        entry.getDescription() + " - " + request.getNarration(), request.getDate());
+            if (hasCredit) {
+                BigDecimal creditLimit = distributor.getCreditLimit() != null ? distributor.getCreditLimit() : BigDecimal.ZERO;
+                BigDecimal creditBalance = distributor.getCreditBalance() != null ? distributor.getCreditBalance() : BigDecimal.ZERO;
+
+                BigDecimal shortfall = creditLimit.subtract(creditBalance).max(BigDecimal.ZERO);
+                BigDecimal creditRestore = entry.getCredit().min(shortfall);
+                BigDecimal ledgerCredit = entry.getCredit().subtract(creditRestore);
+
+                if (creditRestore.compareTo(BigDecimal.ZERO) > 0) {
+                    distributor.setCreditBalance(creditBalance.add(creditRestore));
+                    distributorRepository.save(distributor);
+                    updateDistributorBalance(distributorId, creditRestore, "JV_CREDIT",
+                            description + " (Credit Restored)", request.getDate());
+                }
+                if (ledgerCredit.compareTo(BigDecimal.ZERO) > 0) {
+                    updateDistributorBalance(distributorId, ledgerCredit, "JV_CREDIT", description, request.getDate());
+                }
             }
         }
     }
